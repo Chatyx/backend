@@ -1,5 +1,11 @@
 package logging
 
+import (
+	"fmt"
+	"strings"
+	"sync"
+)
+
 const (
 	Trace   = "trace"
 	Debug   = "debug"
@@ -33,6 +39,9 @@ type Logger interface {
 
 // LogConfig describes configuration to init logging.
 type LogConfig struct {
+	// LoggerKind is one of the logging type: "logrus". Default value is "logrus".
+	LoggerKind string
+
 	// LogLevel is one of logging level: "trace", "debug", "info", "warning", "error".
 	LogLevel string
 
@@ -56,13 +65,41 @@ type LogConfig struct {
 	MaxBackups int
 }
 
-var gLogger Logger
+const (
+	logrusKind = "logrus"
+)
+
+var (
+	logger Logger
+	once   sync.Once
+)
+
+func InitLogger(cfg LogConfig) {
+	var err error
+
+	once.Do(func() {
+		loggerKind := strings.ToLower(cfg.LoggerKind)
+		if loggerKind == "" {
+			loggerKind = logrusKind
+		}
+
+		switch loggerKind {
+		case logrusKind:
+			logger, err = getLogrusLogger(cfg)
+			if err != nil {
+				panic(err)
+			}
+		default:
+			panic(fmt.Sprintf("unsupported logger kind %q", cfg.LoggerKind))
+		}
+	})
+}
 
 // GetLogger returns logger if it isn't empty. Otherwise, it will panic.
 func GetLogger() Logger {
-	if gLogger == nil {
-		panic("failed to get logger before initialization")
+	if logger == nil {
+		panic("failed to get logger before initialization, call InitLogger()")
 	}
 
-	return gLogger
+	return logger
 }

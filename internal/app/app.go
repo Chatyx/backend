@@ -28,15 +28,13 @@ type App struct {
 	logger logging.Logger
 }
 
-func NewApp(cfg *config.Config) (*App, error) {
+func NewApp(cfg *config.Config) *App {
 	logger := logging.GetLogger()
 	mux := http.NewServeMux()
 
 	pool, err := initPG(cfg.Postgres)
 	if err != nil {
-		logger.WithError(err).Error("Unable to connect to database")
-
-		return nil, fmt.Errorf("unable to connect to database")
+		logger.WithError(err).Fatal("Unable to connect to database")
 	}
 
 	_ = pg.NewUserRepository(pool)
@@ -49,7 +47,7 @@ func NewApp(cfg *config.Config) (*App, error) {
 			ReadTimeout:  15 * time.Second,
 			WriteTimeout: 15 * time.Second,
 		},
-	}, nil
+	}
 }
 
 func initPG(cfg config.PostgresConfig) (*pgxpool.Pool, error) {

@@ -75,14 +75,9 @@ func (l *LogrusLogger) Fatal(args ...interface{}) {
 	l.entry.Fatal(args...)
 }
 
-// LogrusInit initializes the global logger.
-func LogrusInit(cfg LogConfig) {
-	if gLogger != nil {
-		panic("logger has already initialized")
-	}
-
-	logger := logrus.New()
-	logger.SetFormatter(&logrus.TextFormatter{
+func getLogrusLogger(cfg LogConfig) (*LogrusLogger, error) {
+	l := logrus.New()
+	l.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 	})
 
@@ -93,19 +88,19 @@ func LogrusInit(cfg LogConfig) {
 
 	switch logLevel {
 	case Trace:
-		logger.SetLevel(logrus.TraceLevel)
+		l.SetLevel(logrus.TraceLevel)
 	case Debug:
-		logger.SetLevel(logrus.DebugLevel)
+		l.SetLevel(logrus.DebugLevel)
 	case Info:
-		logger.SetLevel(logrus.InfoLevel)
+		l.SetLevel(logrus.InfoLevel)
 	case Warning:
-		logger.SetLevel(logrus.WarnLevel)
+		l.SetLevel(logrus.WarnLevel)
 	case Error:
-		logger.SetLevel(logrus.ErrorLevel)
+		l.SetLevel(logrus.ErrorLevel)
 	case Fatal:
-		logger.SetLevel(logrus.FatalLevel)
+		l.SetLevel(logrus.FatalLevel)
 	default:
-		panic(fmt.Sprintf("unsupported log level %s", cfg.LogLevel))
+		return nil, fmt.Errorf("unsupported log level %s", cfg.LogLevel)
 	}
 
 	writers := []io.Writer{os.Stdout}
@@ -113,16 +108,16 @@ func LogrusInit(cfg LogConfig) {
 	if cfg.LogFilePath != "" {
 		logDirPath, err := filepath.Abs(filepath.Dir(cfg.LogFilePath))
 		if err != nil {
-			panic(fmt.Sprintf("failed to get base log dir: %v", err))
+			return nil, fmt.Errorf("failed to get base log dir: %v", err)
 		}
 
 		if err = os.MkdirAll(logDirPath, 0o750); err != nil {
-			panic(fmt.Sprintf("failed to create log dir %s: %v", logDirPath, err))
+			return nil, fmt.Errorf("failed to create log dir %s: %v", logDirPath, err)
 		}
 
 		logFile, err := os.OpenFile(cfg.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o660)
 		if err != nil {
-			panic(fmt.Sprintf("failed to create or open log file %s: %v", cfg.LogFilePath, err))
+			return nil, fmt.Errorf("failed to create or open log file %s: %v", cfg.LogFilePath, err)
 		}
 
 		writers = append(writers, logFile)
@@ -139,7 +134,7 @@ func LogrusInit(cfg LogConfig) {
 		}
 	}
 
-	logger.SetOutput(io.MultiWriter(writers...))
+	l.SetOutput(io.MultiWriter(writers...))
 
-	gLogger = &LogrusLogger{entry: logrus.NewEntry(logger)}
+	return &LogrusLogger{entry: logrus.NewEntry(l)}, nil
 }

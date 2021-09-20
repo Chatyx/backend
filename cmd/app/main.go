@@ -17,7 +17,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	logging.LogrusInit(logging.LogConfig{
+	logging.InitLogger(logging.LogConfig{
 		LogLevel:    "debug",
 		LogFilePath: "./logs/all.log",
 		NeedRotate:  true,
@@ -25,15 +25,11 @@ func main() {
 		MaxBackups:  5,
 	})
 
-	logger := logging.GetLogger()
 	cfg := config.GetConfig(cfgPath)
+	application := app.NewApp(cfg)
+	logger := logging.GetLogger()
 
-	application, err := app.NewApp(cfg)
-	if err != nil {
-		logger.WithError(err).Fatal("Error occurred while getting the application instance")
-	}
-
-	if err = application.Run(); err != nil {
+	if err := application.Run(); err != nil {
 		logger.WithError(err).Fatal("Error occurred while running the application")
 	}
 }
