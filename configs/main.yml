@@ -1,0 +1,15 @@
+is_debug: true
+listen:
+  type: port
+  bind_id: 127.0.0.1
+  bind_port: 8000
+auth:
+  sign_key: qwerty
+  access_token_ttl: 900      # 15 minutes
+  refresh_token_ttl: 2592000 # 30 days
+postgres:
+  host: 127.0.0.1
+  port: 5432
+  database: scht_database
+  username: scht_user
+  password: scht_password
