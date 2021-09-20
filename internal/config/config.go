@@ -48,7 +48,7 @@ func GetConfig(path string) *Config {
 		cfg = &Config{}
 		logger := logging.GetLogger()
 
-		if _, err := os.Stat(envFilePath); os.IsExist(err) {
+		if _, err := os.Stat(envFilePath); err == nil {
 			if err = godotenv.Load(envFilePath); err != nil {
 				logger.WithError(err).Fatal("Failed to loading env variable from %s file", envFilePath)
 			}
