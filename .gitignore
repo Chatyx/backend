@@ -14,5 +14,8 @@ builds/
 # Output of the go coverage tool
 *.out
 
+# Logs
+logs/
+
 # IDE files
 .idea/

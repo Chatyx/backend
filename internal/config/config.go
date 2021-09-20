@@ -1,8 +1,6 @@
 package config
 
 import (
-	"fmt"
-
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
@@ -36,7 +34,7 @@ type Config struct {
 func GetConfig(path string) (*Config, error) {
 	cfg := &Config{}
 	if err := cleanenv.ReadConfig(path, cfg); err != nil {
-		return nil, fmt.Errorf("failed to get config due %v", err)
+		return nil, err
 	}
 
 	return cfg, nil

@@ -1,6 +1,11 @@
 run:
   timeout: 1m
 
+linters-settings:
+  funlen:
+    lines: 65
+    statements: 40
+
 linters:
   disable-all: true
   enable:

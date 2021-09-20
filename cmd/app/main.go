@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
-	"log"
 
 	"github.com/Mort4lis/scht-backend/internal/app"
 	"github.com/Mort4lis/scht-backend/internal/config"
+	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 var cfgPath string
@@ -17,13 +17,23 @@ func init() {
 func main() {
 	flag.Parse()
 
+	logging.LogrusInit(logging.LogConfig{
+		LogLevel:    "debug",
+		LogFilePath: "./logs/all.log",
+		NeedRotate:  true,
+		MaxSize:     100,
+		MaxBackups:  5,
+	})
+
+	logger := logging.GetLogger()
+
 	cfg, err := config.GetConfig(cfgPath)
 	if err != nil {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("Error occurred while getting the config")
 	}
 
 	application := app.NewApp(cfg)
 	if err = application.Run(); err != nil {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("Error occurred while running the application")
 	}
 }
