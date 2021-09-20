@@ -10,6 +10,6 @@ auth:
 postgres:
   host: 127.0.0.1
   port: 5432
-  database: scht_database
+  database: scht_db
   username: scht_user
   password: scht_password

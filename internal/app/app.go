@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -12,9 +13,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Mort4lis/scht-backend/pkg/logging"
+	pg "github.com/Mort4lis/scht-backend/internal/repositories/postgres"
+
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/Mort4lis/scht-backend/internal/config"
+	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 type App struct {
@@ -24,9 +28,18 @@ type App struct {
 	logger logging.Logger
 }
 
-func NewApp(cfg *config.Config) *App {
+func NewApp(cfg *config.Config) (*App, error) {
 	logger := logging.GetLogger()
 	mux := http.NewServeMux()
+
+	pool, err := initPG(cfg.Postgres)
+	if err != nil {
+		logger.WithError(err).Error("Unable to connect to database")
+		return nil, fmt.Errorf("unable to connect to database")
+	}
+
+	userRepo := pg.NewUserRepository(pool)
+	fmt.Println(userRepo)
 
 	return &App{
 		cfg:    cfg,
@@ -36,7 +49,24 @@ func NewApp(cfg *config.Config) *App {
 			ReadTimeout:  15 * time.Second,
 			WriteTimeout: 15 * time.Second,
 		},
+	}, nil
+}
+
+func initPG(cfg config.PostgresConfig) (*pgxpool.Pool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	dsn := fmt.Sprintf(
+		"postgresql://%s:%s@%s:%d/%s",
+		cfg.Username, cfg.Password,
+		cfg.Host, cfg.Port, cfg.Database,
+	)
+	pool, err := pgxpool.Connect(ctx, dsn)
+	if err != nil {
+		return nil, err
 	}
+
+	return pool, nil
 }
 
 func (app *App) Run() error {

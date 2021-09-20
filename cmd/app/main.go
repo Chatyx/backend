@@ -32,7 +32,11 @@ func main() {
 		logger.WithError(err).Fatal("Error occurred while getting the config")
 	}
 
-	application := app.NewApp(cfg)
+	application, err := app.NewApp(cfg)
+	if err != nil {
+		logger.WithError(err).Fatal("Error occurred while getting the application instance")
+	}
+
 	if err = application.Run(); err != nil {
 		logger.WithError(err).Fatal("Error occurred while running the application")
 	}
