@@ -26,11 +26,7 @@ func main() {
 	})
 
 	logger := logging.GetLogger()
-
-	cfg, err := config.GetConfig(cfgPath)
-	if err != nil {
-		logger.WithError(err).Fatal("Error occurred while getting the config")
-	}
+	cfg := config.GetConfig(cfgPath)
 
 	application, err := app.NewApp(cfg)
 	if err != nil {

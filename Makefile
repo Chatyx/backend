@@ -1,3 +1,6 @@
+#!make
+include .env
+
 lint:
 	golangci-lint run
 
@@ -11,3 +14,6 @@ postgres:
 		--env POSTGRES_PASSWORD=scht_password \
 		--env POSTGRES_DB=scht_db \
 		--publish 5432:5432 postgres:12.1
+
+echo:
+	echo ${SCHT_PG_DATABASE}

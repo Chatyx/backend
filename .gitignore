@@ -17,5 +17,8 @@ builds/
 # Logs
 logs/
 
+# Envfile
+.env
+
 # IDE files
 .idea/

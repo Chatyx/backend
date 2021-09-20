@@ -35,11 +35,11 @@ func NewApp(cfg *config.Config) (*App, error) {
 	pool, err := initPG(cfg.Postgres)
 	if err != nil {
 		logger.WithError(err).Error("Unable to connect to database")
+
 		return nil, fmt.Errorf("unable to connect to database")
 	}
 
-	userRepo := pg.NewUserRepository(pool)
-	fmt.Println(userRepo)
+	_ = pg.NewUserRepository(pool)
 
 	return &App{
 		cfg:    cfg,
@@ -61,6 +61,7 @@ func initPG(cfg config.PostgresConfig) (*pgxpool.Pool, error) {
 		cfg.Username, cfg.Password,
 		cfg.Host, cfg.Port, cfg.Database,
 	)
+
 	pool, err := pgxpool.Connect(ctx, dsn)
 	if err != nil {
 		return nil, err

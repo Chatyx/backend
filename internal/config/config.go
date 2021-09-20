@@ -1,8 +1,15 @@
 package config
 
 import (
+	"os"
+	"sync"
+
+	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 )
+
+const envFilePath = ".env"
 
 type ListenConfig struct {
 	Type     string `yaml:"type"      env-default:"port"`
@@ -31,11 +38,26 @@ type Config struct {
 	Postgres PostgresConfig `yaml:"postgres"`
 }
 
-func GetConfig(path string) (*Config, error) {
-	cfg := &Config{}
-	if err := cleanenv.ReadConfig(path, cfg); err != nil {
-		return nil, err
-	}
+var (
+	cfg  *Config
+	once sync.Once
+)
 
-	return cfg, nil
+func GetConfig(path string) *Config {
+	once.Do(func() {
+		cfg = &Config{}
+		logger := logging.GetLogger()
+
+		if _, err := os.Stat(envFilePath); os.IsExist(err) {
+			if err = godotenv.Load(envFilePath); err != nil {
+				logger.WithError(err).Fatal("Failed to loading env variable from %s file", envFilePath)
+			}
+		}
+
+		if err := cleanenv.ReadConfig(path, cfg); err != nil {
+			logger.WithError(err).Fatal("Failed to reading config file %s", path)
+		}
+	})
+
+	return cfg
 }
