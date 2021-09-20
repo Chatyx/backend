@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/natefinch/lumberjack"
-
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,6 +25,10 @@ func (l *LogrusLogger) WithFields(fields Fields) Logger {
 
 func (l *LogrusLogger) WithError(err error) Logger {
 	return &LogrusLogger{entry: l.entry.WithError(err)}
+}
+
+func (l *LogrusLogger) Tracef(format string, args ...interface{}) {
+	l.entry.Tracef(format, args...)
 }
 
 func (l *LogrusLogger) Debugf(format string, args ...interface{}) {
@@ -46,6 +49,10 @@ func (l *LogrusLogger) Errorf(format string, args ...interface{}) {
 
 func (l *LogrusLogger) Fatalf(format string, args ...interface{}) {
 	l.entry.Fatalf(format, args...)
+}
+
+func (l *LogrusLogger) Trace(args ...interface{}) {
+	l.entry.Trace(args...)
 }
 
 func (l *LogrusLogger) Debug(args ...interface{}) {
@@ -85,16 +92,18 @@ func LogrusInit(cfg LogConfig) {
 	}
 
 	switch logLevel {
-	case "trace":
+	case Trace:
 		logger.SetLevel(logrus.TraceLevel)
-	case "debug":
+	case Debug:
 		logger.SetLevel(logrus.DebugLevel)
-	case "info":
+	case Info:
 		logger.SetLevel(logrus.InfoLevel)
-	case "warning":
+	case Warning:
 		logger.SetLevel(logrus.WarnLevel)
-	case "error":
+	case Error:
 		logger.SetLevel(logrus.ErrorLevel)
+	case Fatal:
+		logger.SetLevel(logrus.FatalLevel)
 	default:
 		panic(fmt.Sprintf("unsupported log level %s", cfg.LogLevel))
 	}
