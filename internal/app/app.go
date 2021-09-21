@@ -24,6 +24,7 @@ import (
 type App struct {
 	cfg    *config.Config
 	server *http.Server
+	dbPool *pgxpool.Pool
 
 	logger logging.Logger
 }
@@ -32,15 +33,16 @@ func NewApp(cfg *config.Config) *App {
 	logger := logging.GetLogger()
 	mux := http.NewServeMux()
 
-	pool, err := initPG(cfg.Postgres)
+	dbPool, err := initPG(cfg.Postgres)
 	if err != nil {
 		logger.WithError(err).Fatal("Unable to connect to database")
 	}
 
-	_ = pg.NewUserRepository(pool)
+	_ = pg.NewUserRepository(dbPool)
 
 	return &App{
 		cfg:    cfg,
+		dbPool: dbPool,
 		logger: logger,
 		server: &http.Server{
 			Handler:      mux,
@@ -129,6 +131,8 @@ func (app *App) gracefulShutdown() error {
 
 	sig := <-quit
 	app.logger.Infof("Caught signal %s. Shutting down...", sig)
+
+	app.dbPool.Close()
 
 	return app.server.Close()
 }

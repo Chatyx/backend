@@ -14,14 +14,14 @@ import (
 )
 
 type UserRepository struct {
-	pool *pgxpool.Pool
+	dbPool *pgxpool.Pool
 
 	logger logging.Logger
 }
 
-func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
+func NewUserRepository(dbPool *pgxpool.Pool) *UserRepository {
 	return &UserRepository{
-		pool:   pool,
+		dbPool: dbPool,
 		logger: logging.GetLogger(),
 	}
 }
@@ -36,7 +36,7 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 		FROM users
 	`
 
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := r.dbPool.Query(ctx, query)
 	if err != nil {
 		r.logger.WithError(err).Error("Unable to list users from database")
 
@@ -89,7 +89,7 @@ func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (
 		) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
 	`
 
-	if err := r.pool.QueryRow(
+	if err := r.dbPool.QueryRow(
 		ctx, query,
 		dto.Username, dto.Password, dto.FirstName,
 		dto.LastName, dto.Email, dto.BirthDate, dto.Department,
@@ -132,7 +132,7 @@ func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue
 		updatedAt sql.NullTime
 	)
 
-	row := r.pool.QueryRow(ctx, query, fieldValue)
+	row := r.dbPool.QueryRow(ctx, query, fieldValue)
 	if err := row.Scan(
 		&user.ID, &user.Username, &user.Password,
 		&user.FirstName, &user.LastName, &user.Email,
@@ -164,7 +164,7 @@ func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
 		WHERE id = $1 
 	`
 
-	if _, err := r.pool.Exec(
+	if _, err := r.dbPool.Exec(
 		ctx, query,
 		user.ID,
 		user.Username, user.Password,
