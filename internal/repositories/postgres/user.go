@@ -80,25 +80,26 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 	return users, nil
 }
 
-func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
+func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
+	id := ""
 	query := `
 		INSERT INTO users(
 			username, password, first_name, 
 			last_name, email, birth_date, department
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
 	`
 
-	if _, err := r.pool.Exec(
+	if err := r.pool.QueryRow(
 		ctx, query,
-		user.Username, user.Password, user.FirstName,
-		user.LastName, user.Email, user.BirthDate, user.Department,
-	); err != nil {
+		dto.Username, dto.Password, dto.FirstName,
+		dto.LastName, dto.Email, dto.BirthDate, dto.Department,
+	).Scan(&id); err != nil {
 		r.logger.WithError(err).Error("Error occurred while creating user into the database")
 
-		return err
+		return nil, err
 	}
 
-	return nil
+	return r.GetByID(ctx, id)
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
