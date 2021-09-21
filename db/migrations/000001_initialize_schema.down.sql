@@ -1,0 +1,11 @@
+BEGIN;
+
+DROP TABLE IF EXISTS messages;
+
+DROP TABLE IF EXISTS users_chats;
+
+DROP TABLE IF EXISTS chats;
+
+DROP TABLE IF EXISTS users;
+
+END;
