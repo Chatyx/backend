@@ -3,7 +3,6 @@ package validator
 import (
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -24,15 +23,6 @@ func New() (*validator.Validate, error) {
 
 		return fieldName
 	})
-
-	err := validate.RegisterValidation("sql-date", func(fl validator.FieldLevel) bool {
-		_, err := time.Parse("2006-04-02", fl.Field().String())
-
-		return err == nil
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	return validate, nil
 }

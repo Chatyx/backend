@@ -2,9 +2,10 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
+
+	"github.com/jackc/pgtype"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/utils"
@@ -50,25 +51,20 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 	users := make([]*domain.User, 0)
 
 	for rows.Next() {
-		user := new(domain.User)
-		updatedAt := new(sql.NullTime)
+		var user domain.User
 
 		if err = rows.Scan(
 			&user.ID, &user.Username, &user.Password,
 			&user.FirstName, &user.LastName, &user.Email,
 			&user.BirthDate, &user.Department, &user.IsDeleted,
-			&user.CreatedAt, updatedAt,
+			&user.CreatedAt, &user.UpdatedAt,
 		); err != nil {
 			r.logger.WithError(err).Error("Unable to scan user")
 
 			return nil, err
 		}
 
-		if updatedAt.Valid {
-			user.UpdatedAt = &updatedAt.Time
-		}
-
-		users = append(users, user)
+		users = append(users, &user)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -81,8 +77,11 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 }
 
 func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
-	id := ""
-	createdAt := new(sql.NullTime)
+	var (
+		id        string
+		createdAt pgtype.Timestamptz
+	)
+
 	query := `
 		INSERT INTO users(
 			username, password, first_name, 
@@ -94,7 +93,7 @@ func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (
 		ctx, query,
 		dto.Username, dto.Password, dto.FirstName,
 		dto.LastName, dto.Email, dto.BirthDate, dto.Department,
-	).Scan(&id, createdAt); err != nil {
+	).Scan(&id, &createdAt); err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			r.logger.WithError(err).Debug("user with such fields is already exist")
 
@@ -116,7 +115,8 @@ func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (
 		BirthDate:  dto.BirthDate,
 		Department: dto.Department,
 	}
-	if createdAt.Valid {
+
+	if createdAt.Status == pgtype.Present {
 		user.CreatedAt = &createdAt.Time
 	}
 
@@ -138,25 +138,24 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*d
 }
 
 func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue interface{}) (*domain.User, error) {
+	var user domain.User
+
 	query := fmt.Sprintf(`
 		SELECT 
 			id, username, password, 
 			first_name, last_name, email, 
-			birth_date::text, department, is_deleted, 
+			birth_date, department, is_deleted, 
 			created_at, updated_at
 		FROM users WHERE %s = $1 AND is_deleted IS FALSE`,
 		fieldName,
 	)
-
-	user := new(domain.User)
-	updatedAt := new(sql.NullTime)
 
 	row := r.dbPool.QueryRow(ctx, query, fieldValue)
 	if err := row.Scan(
 		&user.ID, &user.Username, &user.Password,
 		&user.FirstName, &user.LastName, &user.Email,
 		&user.BirthDate, &user.Department, &user.IsDeleted,
-		&user.CreatedAt, updatedAt,
+		&user.CreatedAt, &user.UpdatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			r.logger.Debugf("user is not found with %s = %s", fieldName, fieldValue)
@@ -166,14 +165,10 @@ func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue
 
 		r.logger.WithError(err).Errorf("Error occurred while getting user by %s", fieldName)
 
-		return nil, nil
+		return nil, err
 	}
 
-	if updatedAt.Valid {
-		user.UpdatedAt = &updatedAt.Time
-	}
-
-	return user, nil
+	return &user, nil
 }
 
 func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error) {
@@ -183,9 +178,11 @@ func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (
 		return nil, domain.ErrUserNotFound
 	}
 
-	isDeleted := false
-	createdAt := new(sql.NullTime)
-	updatedAt := new(sql.NullTime)
+	var (
+		isDeleted bool
+		createdAt pgtype.Timestamptz
+		updatedAt pgtype.Timestamptz
+	)
 
 	query := `
 		UPDATE users SET
@@ -202,7 +199,7 @@ func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (
 		dto.Username, dto.Password,
 		dto.FirstName, dto.LastName, dto.Email,
 		dto.BirthDate, dto.Department,
-	).Scan(&isDeleted, createdAt, updatedAt); err != nil {
+	).Scan(&isDeleted, &createdAt, &updatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			r.logger.Debugf("user is not found with id = %s", dto.ID)
 
@@ -231,11 +228,12 @@ func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (
 		Department: dto.Department,
 		IsDeleted:  isDeleted,
 	}
-	if createdAt.Valid {
+
+	if createdAt.Status == pgtype.Present {
 		user.CreatedAt = &createdAt.Time
 	}
 
-	if updatedAt.Valid {
+	if updatedAt.Status == pgtype.Present {
 		user.UpdatedAt = &updatedAt.Time
 	}
 
