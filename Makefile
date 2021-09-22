@@ -30,4 +30,4 @@ downgrade:
 	docker run --rm -v ${PWD}/db/migrations:/migrations \
     	--network host migrate/migrate \
         -path=/migrations/ \
-        -database postgres://${SCHT_PG_USERNAME}:${SCHT_PG_PASSWORD}@${SCHT_PG_HOST}:${SCHT_PG_PORT}/${SCHT_PG_DATABASE}?sslmode=disable down -all
+        -database postgres://${SCHT_PG_USERNAME}:${SCHT_PG_PASSWORD}@${SCHT_PG_HOST}:${SCHT_PG_PORT}/${SCHT_PG_DATABASE}?sslmode=disable down 1

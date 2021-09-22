@@ -49,3 +49,7 @@ func (s *userService) GetByID(ctx context.Context, id string) (*domain.User, err
 func (s *userService) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
 	return s.repo.GetByUsername(ctx, username)
 }
+
+func (s *userService) Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error) {
+	return s.repo.Update(ctx, dto)
+}

@@ -175,28 +175,68 @@ func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue
 	return user, nil
 }
 
-func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
+func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error) {
+	if !utils.IsValidUUID(dto.ID) {
+		r.logger.Debugf("user is not found with id = %s", dto.ID)
+
+		return nil, domain.ErrUserNotFound
+	}
+
+	isDeleted := false
+	createdAt := new(sql.NullTime)
+	updatedAt := new(sql.NullTime)
+
 	query := `
 		UPDATE users SET
 			username = $2, password = $3, 
 			first_name = $4, last_name = $5, email = $6, 
-			birth_date = $7, department = $8, is_deleted = $9, 
-			created_at = $10, updated_at = $11
+			birth_date = $7, department = $8
 		WHERE id = $1 
+		RETURNING is_deleted, created_at, updated_at
 	`
 
-	if _, err := r.dbPool.Exec(
+	if err := r.dbPool.QueryRow(
 		ctx, query,
-		user.ID,
-		user.Username, user.Password,
-		user.FirstName, user.LastName, user.Email,
-		user.BirthDate, user.Department, user.IsDeleted,
-		user.CreatedAt, user.UpdatedAt,
-	); err != nil {
+		dto.ID,
+		dto.Username, dto.Password,
+		dto.FirstName, dto.LastName, dto.Email,
+		dto.BirthDate, dto.Department,
+	).Scan(&isDeleted, createdAt, updatedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			r.logger.Debugf("user is not found with id = %s", dto.ID)
+
+			return nil, domain.ErrUserNotFound
+		}
+
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			r.logger.WithError(err).Debug("user with such fields is already exist")
+
+			return nil, domain.ErrUserUniqueViolation
+		}
+
 		r.logger.WithError(err).Error("Error occurred while updating user into the database")
 
-		return err
+		return nil, err
 	}
 
-	return nil
+	user := &domain.User{
+		ID:         dto.ID,
+		Username:   dto.Username,
+		Password:   dto.Password,
+		Email:      dto.Email,
+		FirstName:  dto.FirstName,
+		LastName:   dto.LastName,
+		BirthDate:  dto.BirthDate,
+		Department: dto.Department,
+		IsDeleted:  isDeleted,
+	}
+	if createdAt.Valid {
+		user.CreatedAt = &createdAt.Time
+	}
+
+	if updatedAt.Valid {
+		user.UpdatedAt = &updatedAt.Time
+	}
+
+	return user, nil
 }

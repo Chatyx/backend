@@ -51,7 +51,7 @@ func (h *UserHandler) Register(router *httprouter.Router) {
 	router.DELETE(detailUserURI, h.Delete)
 }
 
-func (h *UserHandler) List(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (h *UserHandler) List(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	users, err := h.service.List(req.Context())
 	if err != nil {
 		h.RespondError(w, err)
@@ -73,7 +73,7 @@ func (h *UserHandler) Detail(w http.ResponseWriter, req *http.Request, params ht
 	h.RespondSuccess(http.StatusOK, w, user)
 }
 
-func (h *UserHandler) Create(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (h *UserHandler) Create(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	dto := domain.CreateUserDTO{}
 	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
 		h.RespondError(w, err)
@@ -98,7 +98,29 @@ func (h *UserHandler) Create(w http.ResponseWriter, req *http.Request, params ht
 }
 
 func (h *UserHandler) Update(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	panic("unimplemented")
+	dto := domain.UpdateUserDTO{}
+	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
+		h.RespondError(w, err)
+
+		return
+	}
+
+	dto.ID = params.ByName("id")
+
+	if err := h.Validate(dto); err != nil {
+		h.RespondError(w, err)
+
+		return
+	}
+
+	user, err := h.service.Update(req.Context(), dto)
+	if err != nil {
+		h.RespondError(w, err)
+
+		return
+	}
+
+	h.RespondSuccess(http.StatusOK, w, user)
 }
 
 func (h *UserHandler) Delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {

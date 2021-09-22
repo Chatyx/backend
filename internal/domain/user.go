@@ -24,6 +24,12 @@ func (c *CreateUserDTO) DecodeFrom(r io.Reader) error {
 	return json.NewDecoder(r).Decode(c)
 }
 
+type UpdateUserDTO struct {
+	CreateUserDTO
+
+	ID string `json:"id" validate:"required"`
+}
+
 type User struct {
 	ID         string     `json:"id"`
 	Username   string     `json:"username"`
