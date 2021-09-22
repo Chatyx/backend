@@ -53,3 +53,7 @@ func (s *userService) GetByUsername(ctx context.Context, username string) (*doma
 func (s *userService) Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error) {
 	return s.repo.Update(ctx, dto)
 }
+
+func (s *userService) Delete(ctx context.Context, id string) error {
+	return s.repo.Delete(ctx, id)
+}

@@ -124,5 +124,12 @@ func (h *UserHandler) Update(w http.ResponseWriter, req *http.Request, params ht
 }
 
 func (h *UserHandler) Delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	panic("unimplemented")
+	err := h.service.Delete(req.Context(), params.ByName("id"))
+	if err != nil {
+		h.RespondError(w, err)
+
+		return
+	}
+
+	h.RespondSuccess(http.StatusNoContent, w, nil)
 }

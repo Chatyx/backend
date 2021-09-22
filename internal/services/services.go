@@ -12,6 +12,7 @@ type UserService interface {
 	GetByID(ctx context.Context, id string) (*domain.User, error)
 	GetByUsername(ctx context.Context, username string) (*domain.User, error)
 	Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error)
+	Delete(ctx context.Context, id string) error
 }
 
 type ServiceContainer struct {

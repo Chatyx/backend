@@ -36,6 +36,7 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 			birth_date::text, department, is_deleted, 
 			created_at, updated_at
 		FROM users
+		WHERE is_deleted IS FALSE
 	`
 
 	rows, err := r.dbPool.Query(ctx, query)
@@ -143,7 +144,7 @@ func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue
 			first_name, last_name, email, 
 			birth_date::text, department, is_deleted, 
 			created_at, updated_at
-		FROM users WHERE %s = $1`,
+		FROM users WHERE %s = $1 AND is_deleted IS FALSE`,
 		fieldName,
 	)
 
@@ -191,7 +192,7 @@ func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (
 			username = $2, password = $3, 
 			first_name = $4, last_name = $5, email = $6, 
 			birth_date = $7, department = $8
-		WHERE id = $1 
+		WHERE id = $1 AND is_deleted IS FALSE
 		RETURNING is_deleted, created_at, updated_at
 	`
 
@@ -239,4 +240,33 @@ func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (
 	}
 
 	return user, nil
+}
+
+func (r *UserRepository) Delete(ctx context.Context, id string) error {
+	if !utils.IsValidUUID(id) {
+		r.logger.Debugf("user is not found with id = %s", id)
+
+		return domain.ErrUserNotFound
+	}
+
+	query := `
+		UPDATE users SET
+			is_deleted = TRUE
+		WHERE id = $1 AND is_deleted IS FALSE
+	`
+
+	cmgTag, err := r.dbPool.Exec(ctx, query, id)
+	if err != nil {
+		r.logger.WithError(err).Error("Error occurred while updating user into the database")
+
+		return err
+	}
+
+	if cmgTag.RowsAffected() == 0 {
+		r.logger.Debugf("user is not found with id = %s", id)
+
+		return domain.ErrUserNotFound
+	}
+
+	return nil
 }

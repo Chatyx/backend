@@ -52,6 +52,12 @@ func (h *Handler) Validate(s interface{}) error {
 }
 
 func (h *Handler) RespondSuccess(statusCode int, w http.ResponseWriter, encoder utils.JSONEncoder) {
+	if encoder == nil {
+		w.WriteHeader(statusCode)
+
+		return
+	}
+
 	respBody, err := encoder.Encode()
 	if err != nil {
 		h.logger.WithError(err).Error("Error occurred while encoding response structure")
