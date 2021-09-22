@@ -6,14 +6,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Mort4lis/scht-backend/internal/utils"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
-
-	"github.com/go-playground/validator/v10"
-
 	"github.com/Mort4lis/scht-backend/internal/services"
+	"github.com/Mort4lis/scht-backend/internal/utils"
+	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
 )
 

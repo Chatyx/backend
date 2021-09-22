@@ -10,7 +10,7 @@ type PasswordHasher interface {
 type BCryptPasswordHasher struct{}
 
 func (h BCryptPasswordHasher) Hash(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
 	if err != nil {
 		return "", err
 	}

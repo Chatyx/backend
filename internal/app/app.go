@@ -13,12 +13,14 @@ import (
 	"syscall"
 	"time"
 
-	pg "github.com/Mort4lis/scht-backend/internal/repositories/postgres"
-
-	"github.com/jackc/pgx/v4/pgxpool"
-
 	"github.com/Mort4lis/scht-backend/internal/config"
+	handlers "github.com/Mort4lis/scht-backend/internal/delivery/http"
+	pg "github.com/Mort4lis/scht-backend/internal/repositories/postgres"
+	"github.com/Mort4lis/scht-backend/internal/services"
+	password "github.com/Mort4lis/scht-backend/pkg/hasher"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/Mort4lis/scht-backend/pkg/validator"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type App struct {
@@ -31,21 +33,31 @@ type App struct {
 
 func NewApp(cfg *config.Config) *App {
 	logger := logging.GetLogger()
-	mux := http.NewServeMux()
 
 	dbPool, err := initPG(cfg.Postgres)
 	if err != nil {
 		logger.WithError(err).Fatal("Unable to connect to database")
 	}
 
-	_ = pg.NewUserRepository(dbPool)
+	hasher := password.BCryptPasswordHasher{}
+
+	validate, err := validator.New()
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to init validator")
+	}
+
+	userRepo := pg.NewUserRepository(dbPool)
+	userService := services.NewUserService(userRepo, hasher)
+	container := services.ServiceContainer{
+		User: userService,
+	}
 
 	return &App{
 		cfg:    cfg,
 		dbPool: dbPool,
 		logger: logger,
 		server: &http.Server{
-			Handler:      mux,
+			Handler:      handlers.Init(container, validate),
 			ReadTimeout:  15 * time.Second,
 			WriteTimeout: 15 * time.Second,
 		},

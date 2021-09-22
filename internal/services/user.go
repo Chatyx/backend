@@ -10,26 +10,26 @@ import (
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
-type UserService struct {
+type userService struct {
 	repo   repositories.UserRepository
 	hasher hasher.PasswordHasher
 
 	logger logging.Logger
 }
 
-func NewUserService(repo repositories.UserRepository, hasher hasher.PasswordHasher) *UserService {
-	return &UserService{
+func NewUserService(repo repositories.UserRepository, hasher hasher.PasswordHasher) UserService {
+	return &userService{
 		repo:   repo,
 		hasher: hasher,
 		logger: logging.GetLogger(),
 	}
 }
 
-func (s *UserService) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+func (s *userService) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
 	return s.repo.GetByUsername(ctx, username)
 }
 
-func (s *UserService) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
+func (s *userService) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
 	hash, err := s.hasher.Hash(dto.Password)
 	if err != nil {
 		s.logger.WithError(err).Error("Error occurred while hashing password")

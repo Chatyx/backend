@@ -9,6 +9,8 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/utils"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -48,25 +50,22 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 
 	for rows.Next() {
 		user := new(domain.User)
-
-		var (
-			birthDate sql.NullTime
-			updatedAt sql.NullTime
-		)
+		updatedAt := new(sql.NullTime)
 
 		if err = rows.Scan(
 			&user.ID, &user.Username, &user.Password,
 			&user.FirstName, &user.LastName, &user.Email,
-			&birthDate, &user.Department, &user.IsDeleted,
-			&user.CreatedAt, &updatedAt,
+			&user.BirthDate, &user.Department, &user.IsDeleted,
+			&user.CreatedAt, updatedAt,
 		); err != nil {
 			r.logger.WithError(err).Error("Unable to scan user")
 
 			return nil, err
 		}
 
-		user.BirthDate = birthDate.Time
-		user.UpdatedAt = updatedAt.Time
+		if updatedAt.Valid {
+			user.UpdatedAt = &updatedAt.Time
+		}
 
 		users = append(users, user)
 	}
@@ -82,24 +81,45 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 
 func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
 	id := ""
+	createdAt := new(sql.NullTime)
 	query := `
 		INSERT INTO users(
 			username, password, first_name, 
 			last_name, email, birth_date, department
-		) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at
 	`
 
 	if err := r.dbPool.QueryRow(
 		ctx, query,
 		dto.Username, dto.Password, dto.FirstName,
 		dto.LastName, dto.Email, dto.BirthDate, dto.Department,
-	).Scan(&id); err != nil {
+	).Scan(&id, createdAt); err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			r.logger.WithError(err).Debug("user with such fields is already exist")
+
+			return nil, domain.ErrUserUniqueViolation
+		}
+
 		r.logger.WithError(err).Error("Error occurred while creating user into the database")
 
 		return nil, err
 	}
 
-	return r.GetByID(ctx, id)
+	user := &domain.User{
+		ID:         id,
+		Username:   dto.Username,
+		Password:   dto.Password,
+		Email:      dto.Email,
+		FirstName:  dto.FirstName,
+		LastName:   dto.LastName,
+		BirthDate:  dto.BirthDate,
+		Department: dto.Department,
+	}
+	if createdAt.Valid {
+		user.CreatedAt = &createdAt.Time
+	}
+
+	return user, nil
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
@@ -119,28 +139,24 @@ func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue
 		SELECT 
 			id, username, password, 
 			first_name, last_name, email, 
-			birth_date, department, is_deleted, 
+			birth_date::text, department, is_deleted, 
 			created_at, updated_at
 		FROM users WHERE %s = $1`,
 		fieldName,
 	)
 
 	user := new(domain.User)
-
-	var (
-		birthDate sql.NullTime
-		updatedAt sql.NullTime
-	)
+	updatedAt := new(sql.NullTime)
 
 	row := r.dbPool.QueryRow(ctx, query, fieldValue)
 	if err := row.Scan(
 		&user.ID, &user.Username, &user.Password,
 		&user.FirstName, &user.LastName, &user.Email,
-		&birthDate, &user.Department, &user.IsDeleted,
-		&user.CreatedAt, &updatedAt,
+		&user.BirthDate, &user.Department, &user.IsDeleted,
+		&user.CreatedAt, updatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("user is not found")
+			return nil, domain.ErrUserNotFound
 		}
 
 		r.logger.WithError(err).Errorf("Error occurred while getting user by %s", fieldName)
@@ -148,8 +164,9 @@ func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue
 		return nil, nil
 	}
 
-	user.BirthDate = birthDate.Time
-	user.UpdatedAt = updatedAt.Time
+	if updatedAt.Valid {
+		user.UpdatedAt = &updatedAt.Time
+	}
 
 	return user, nil
 }
