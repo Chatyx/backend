@@ -25,8 +25,8 @@ func NewUserService(repo repositories.UserRepository, hasher hasher.PasswordHash
 	}
 }
 
-func (s *userService) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
-	return s.repo.GetByUsername(ctx, username)
+func (s *userService) List(ctx context.Context) ([]*domain.User, error) {
+	return s.repo.List(ctx)
 }
 
 func (s *userService) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
@@ -40,4 +40,12 @@ func (s *userService) Create(ctx context.Context, dto domain.CreateUserDTO) (*do
 	dto.Password = hash
 
 	return s.repo.Create(ctx, dto)
+}
+
+func (s *userService) GetByID(ctx context.Context, id string) (*domain.User, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+func (s *userService) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+	return s.repo.GetByUsername(ctx, username)
 }

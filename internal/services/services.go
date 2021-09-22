@@ -7,8 +7,10 @@ import (
 )
 
 type UserService interface {
-	GetByUsername(ctx context.Context, username string) (*domain.User, error)
+	List(ctx context.Context) ([]*domain.User, error)
 	Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error)
+	GetByID(ctx context.Context, id string) (*domain.User, error)
+	GetByUsername(ctx context.Context, username string) (*domain.User, error)
 }
 
 type ServiceContainer struct {

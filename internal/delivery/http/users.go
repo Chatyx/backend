@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
@@ -14,6 +15,14 @@ const (
 	listUserURL   = "/api/users"
 	detailUserURI = "/api/users/:id"
 )
+
+type UserListResponse struct {
+	List []*domain.User `json:"list"`
+}
+
+func (r UserListResponse) Encode() ([]byte, error) {
+	return json.Marshal(r)
+}
 
 type UserHandler struct {
 	*Handler
@@ -43,11 +52,25 @@ func (h *UserHandler) Register(router *httprouter.Router) {
 }
 
 func (h *UserHandler) List(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	panic("unimplemented")
+	users, err := h.service.List(req.Context())
+	if err != nil {
+		h.RespondError(w, err)
+
+		return
+	}
+
+	h.RespondSuccess(http.StatusOK, w, UserListResponse{List: users})
 }
 
 func (h *UserHandler) Detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	panic("unimplemented")
+	user, err := h.service.GetByID(req.Context(), params.ByName("id"))
+	if err != nil {
+		h.RespondError(w, err)
+
+		return
+	}
+
+	h.RespondSuccess(http.StatusOK, w, user)
 }
 
 func (h *UserHandler) Create(w http.ResponseWriter, req *http.Request, params httprouter.Params) {

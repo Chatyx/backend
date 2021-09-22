@@ -33,7 +33,7 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 		SELECT 
 			id, username, password, 
 			first_name, last_name, email, 
-			birth_date, department, is_deleted, 
+			birth_date::text, department, is_deleted, 
 			created_at, updated_at
 		FROM users
 	`
@@ -124,7 +124,9 @@ func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (
 
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	if !utils.IsValidUUID(id) {
-		return nil, fmt.Errorf("user is not found")
+		r.logger.Debugf("user is not found with id = %s", id)
+
+		return nil, domain.ErrUserNotFound
 	}
 
 	return r.getBy(ctx, "id", id)
@@ -156,6 +158,8 @@ func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue
 		&user.CreatedAt, updatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			r.logger.Debugf("user is not found with %s = %s", fieldName, fieldValue)
+
 			return nil, domain.ErrUserNotFound
 		}
 
