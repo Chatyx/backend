@@ -59,8 +59,8 @@ func NewApp(cfg *config.Config) *App {
 		UserService:     userService,
 		Hasher:          hasher,
 		TokenManager:    tokenManager,
-		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
-		RefreshTokenTTL: cfg.Auth.RefreshTokenTTL,
+		AccessTokenTTL:  time.Duration(cfg.Auth.AccessTokenTTL) * time.Minute,
+		RefreshTokenTTL: time.Duration(cfg.Auth.RefreshTokenTTL) * time.Minute,
 	})
 	container := services.ServiceContainer{
 		User: userService,
