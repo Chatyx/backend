@@ -6,14 +6,14 @@ type userCtxKey struct{}
 
 var userKey = userCtxKey{}
 
-func NewContextFromUser(ctx context.Context, user *User) context.Context {
-	return context.WithValue(ctx, userKey, user)
+func NewContextFromUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userKey, userID)
 }
 
-func UserFromContext(ctx context.Context) *User {
-	if user, ok := ctx.Value(userKey).(*User); ok {
-		return user
+func UserIDFromContext(ctx context.Context) string {
+	if id, ok := ctx.Value(userKey).(string); ok {
+		return id
 	}
 
-	return nil
+	return ""
 }

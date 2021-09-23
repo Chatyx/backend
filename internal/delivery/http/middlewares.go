@@ -17,13 +17,19 @@ func AuthorizationMiddleware(handler httprouter.Handle, as services.AuthService)
 			return
 		}
 
-		user, err := as.Authorize(req.Context(), accessToken)
+		claims, err := as.Authorize(accessToken)
 		if err != nil {
-			RespondError(w, err)
+			switch err {
+			case domain.ErrInvalidToken:
+				RespondError(w, ErrInvalidAuthorizationToken)
+			default:
+				RespondError(w, err)
+			}
+
 			return
 		}
 
-		ctx := domain.NewContextFromUser(req.Context(), user)
+		ctx := domain.NewContextFromUserID(req.Context(), claims.Subject)
 
 		handler(w, req.WithContext(ctx), params)
 	}

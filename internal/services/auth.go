@@ -95,23 +95,13 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (domain.
 	panic("implement me")
 }
 
-func (s *authService) Authorize(ctx context.Context, accessToken string) (*domain.User, error) {
+func (s *authService) Authorize(accessToken string) (domain.Claims, error) {
 	var claims domain.Claims
 
 	if err := s.tokenManager.Parse(accessToken, &claims); err != nil {
 		s.logger.WithError(err).Debug("invalid access token")
-		return nil, domain.ErrInvalidToken
+		return claims, domain.ErrInvalidToken
 	}
 
-	user, err := s.userService.GetByID(ctx, claims.Subject)
-	if err != nil {
-		s.logger.WithError(err).Errorf(
-			"Error occurred while getting authorized user with id = %s",
-			claims.Subject,
-		)
-
-		return nil, err
-	}
-
-	return user, nil
+	return claims, nil
 }

@@ -18,7 +18,7 @@ type UserService interface {
 type AuthService interface {
 	SignIn(ctx context.Context, dto domain.SignInDTO) (domain.JWTPair, error)
 	Refresh(ctx context.Context, refreshToken string) (domain.JWTPair, error)
-	Authorize(ctx context.Context, accessToken string) (*domain.User, error)
+	Authorize(accessToken string) (domain.Claims, error)
 }
 
 type ServiceContainer struct {
