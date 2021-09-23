@@ -40,25 +40,25 @@ func (h *AuthHandler) Register(router *httprouter.Router) {
 func (h *AuthHandler) SignIn(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var dto domain.SignInDTO
 	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
 	if err := h.Validate(dto); err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
 	pair, err := h.service.SignIn(req.Context(), dto)
 	if err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
-	h.RespondSuccess(http.StatusOK, w, pair)
+	RespondSuccess(http.StatusOK, w, pair)
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, req *http.Request, params httprouter.Params) {

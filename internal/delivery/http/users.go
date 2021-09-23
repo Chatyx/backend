@@ -54,53 +54,53 @@ func (h *UserHandler) Register(router *httprouter.Router) {
 func (h *UserHandler) List(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	users, err := h.service.List(req.Context())
 	if err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
-	h.RespondSuccess(http.StatusOK, w, UserListResponse{List: users})
+	RespondSuccess(http.StatusOK, w, UserListResponse{List: users})
 }
 
 func (h *UserHandler) Detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	user, err := h.service.GetByID(req.Context(), params.ByName("id"))
 	if err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
-	h.RespondSuccess(http.StatusOK, w, user)
+	RespondSuccess(http.StatusOK, w, user)
 }
 
 func (h *UserHandler) Create(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	dto := domain.CreateUserDTO{}
 	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
 	if err := h.Validate(dto); err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
 	user, err := h.service.Create(req.Context(), dto)
 	if err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
-	h.RespondSuccess(http.StatusCreated, w, user)
+	RespondSuccess(http.StatusCreated, w, user)
 }
 
 func (h *UserHandler) Update(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	dto := domain.UpdateUserDTO{}
 	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
@@ -108,28 +108,28 @@ func (h *UserHandler) Update(w http.ResponseWriter, req *http.Request, params ht
 	dto.ID = params.ByName("id")
 
 	if err := h.Validate(dto); err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
 	user, err := h.service.Update(req.Context(), dto)
 	if err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
-	h.RespondSuccess(http.StatusOK, w, user)
+	RespondSuccess(http.StatusOK, w, user)
 }
 
 func (h *UserHandler) Delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	err := h.service.Delete(req.Context(), params.ByName("id"))
 	if err != nil {
-		h.RespondError(w, err)
+		RespondError(w, err)
 
 		return
 	}
 
-	h.RespondSuccess(http.StatusNoContent, w, nil)
+	RespondSuccess(http.StatusNoContent, w, nil)
 }

@@ -63,4 +63,8 @@ var (
 		StatusCode: http.StatusBadRequest,
 		Message:    "invalid username or password",
 	}
+	ErrInvalidToken = AppError{
+		StatusCode: http.StatusUnauthorized,
+		Message:    "invalid token",
+	}
 )

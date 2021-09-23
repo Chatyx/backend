@@ -97,3 +97,31 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 func (s *authService) Refresh(ctx context.Context, refreshToken string) (domain.JWTPair, error) {
 	panic("implement me")
 }
+
+func (s *authService) Authorize(ctx context.Context, accessToken string) (*domain.User, error) {
+	var claims domain.Claims
+
+	if err := s.tokenManager.Parse(accessToken, &claims); err != nil {
+		if errors.Is(err, auth.ErrInvalidTokenParse) {
+			s.logger.WithError(err).Debug("invalid access token")
+
+			return nil, domain.ErrInvalidToken
+		}
+
+		s.logger.WithError(err).Error("Error occurred while parsing access token")
+
+		return nil, err
+	}
+
+	user, err := s.userService.GetByID(ctx, claims.Subject)
+	if err != nil {
+		s.logger.WithError(err).Errorf(
+			"Error occurred while getting authorized user with id = %s",
+			claims.Subject,
+		)
+
+		return nil, domain.ErrInternalServer
+	}
+
+	return user, nil
+}

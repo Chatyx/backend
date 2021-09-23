@@ -2,9 +2,11 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/services"
@@ -51,17 +53,36 @@ func (h *Handler) Validate(s interface{}) error {
 	return nil
 }
 
-func (h *Handler) RespondSuccess(statusCode int, w http.ResponseWriter, encoder utils.JSONEncoder) {
+func ExtractTokenFromHeader(header string) (string, error) {
+	if header == "" {
+		return "", errors.New("authorization header is empty")
+	}
+
+	headerParts := strings.Split(header, " ")
+	if len(headerParts) != 2 {
+		return "", errors.New("authorization header must contains with two parts")
+	}
+
+	if headerParts[0] != "Bearer" {
+		return "", errors.New("authorization header doesn't begin with Bearer")
+	}
+
+	return headerParts[1], nil
+}
+
+func RespondSuccess(statusCode int, w http.ResponseWriter, encoder utils.JSONEncoder) {
 	if encoder == nil {
 		w.WriteHeader(statusCode)
 
 		return
 	}
 
+	logger := logging.GetLogger()
+
 	respBody, err := encoder.Encode()
 	if err != nil {
-		h.logger.WithError(err).Error("Error occurred while encoding response structure")
-		h.RespondError(w, err)
+		logger.WithError(err).Error("Error occurred while encoding response structure")
+		RespondError(w, err)
 
 		return
 	}
@@ -70,23 +91,25 @@ func (h *Handler) RespondSuccess(statusCode int, w http.ResponseWriter, encoder 
 	w.WriteHeader(statusCode)
 
 	if _, err = w.Write(respBody); err != nil {
-		h.logger.WithError(err).Error("Error occurred while writing response body")
+		logger.WithError(err).Error("Error occurred while writing response body")
 
 		return
 	}
 }
 
-func (h *Handler) RespondError(w http.ResponseWriter, err error) {
+func RespondError(w http.ResponseWriter, err error) {
 	appErr, ok := err.(domain.AppError)
 	if !ok {
-		h.RespondError(w, domain.ErrInternalServer)
+		RespondError(w, domain.ErrInternalServer)
 
 		return
 	}
 
+	logger := logging.GetLogger()
+
 	respBody, err := json.Marshal(appErr)
 	if err != nil {
-		h.logger.WithError(err).Error("Error occurred while marshalling application error")
+		logger.WithError(err).Error("Error occurred while marshalling application error")
 
 		return
 	}
@@ -95,7 +118,7 @@ func (h *Handler) RespondError(w http.ResponseWriter, err error) {
 	w.WriteHeader(appErr.StatusCode)
 
 	if _, err = w.Write(respBody); err != nil {
-		h.logger.WithError(err).Error("Error occurred while writing response body")
+		logger.WithError(err).Error("Error occurred while writing response body")
 	}
 }
 
