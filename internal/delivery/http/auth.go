@@ -51,7 +51,13 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, req *http.Request, _ httprou
 
 	pair, err := h.service.SignIn(req.Context(), dto)
 	if err != nil {
-		RespondError(w, err)
+		switch err {
+		case domain.ErrInvalidCredentials:
+			RespondError(w, ResponseError{StatusCode: http.StatusUnauthorized, Message: err.Error()})
+		default:
+			RespondError(w, err)
+		}
+
 		return
 	}
 
