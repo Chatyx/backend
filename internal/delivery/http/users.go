@@ -47,7 +47,7 @@ func (h *UserHandler) Register(router *httprouter.Router) {
 	router.GET(listUserURL, h.List)
 	router.POST(listUserURL, h.Create)
 	router.GET(detailUserURI, h.Detail)
-	router.PUT(detailUserURI, h.Update)
+	router.PATCH(detailUserURI, h.Update)
 	router.DELETE(detailUserURI, h.Delete)
 }
 

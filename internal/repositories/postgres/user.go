@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgtype"
 
@@ -34,7 +35,7 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 		SELECT 
 			id, username, password, 
 			first_name, last_name, email, 
-			birth_date::text, department, is_deleted, 
+			birth_date, department, is_deleted, 
 			created_at, updated_at
 		FROM users
 		WHERE is_deleted IS FALSE
@@ -178,28 +179,23 @@ func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (
 		return nil, domain.ErrUserNotFound
 	}
 
-	var (
-		isDeleted bool
-		createdAt pgtype.Timestamptz
-		updatedAt pgtype.Timestamptz
-	)
+	query, args := r.buildUpdateQuery(dto)
+	if len(args) == 1 {
+		r.logger.Debugf("no need to update user with id = %s", dto.ID)
 
-	query := `
-		UPDATE users SET
-			username = $2, password = $3, 
-			first_name = $4, last_name = $5, email = $6, 
-			birth_date = $7, department = $8
-		WHERE id = $1 AND is_deleted IS FALSE
-		RETURNING is_deleted, created_at, updated_at
-	`
+		return nil, domain.ErrUserNoNeedUpdate
+	}
+
+	var user domain.User
 
 	if err := r.dbPool.QueryRow(
-		ctx, query,
-		dto.ID,
-		dto.Username, dto.Password,
-		dto.FirstName, dto.LastName, dto.Email,
-		dto.BirthDate, dto.Department,
-	).Scan(&isDeleted, &createdAt, &updatedAt); err != nil {
+		ctx, query, args...,
+	).Scan(
+		&user.ID, &user.Username, &user.Password,
+		&user.FirstName, &user.LastName, &user.Email,
+		&user.BirthDate, &user.Department, &user.IsDeleted,
+		&user.CreatedAt, &user.UpdatedAt,
+	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			r.logger.Debugf("user is not found with id = %s", dto.ID)
 
@@ -217,27 +213,67 @@ func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (
 		return nil, err
 	}
 
-	user := &domain.User{
-		ID:         dto.ID,
-		Username:   dto.Username,
-		Password:   dto.Password,
-		Email:      dto.Email,
-		FirstName:  dto.FirstName,
-		LastName:   dto.LastName,
-		BirthDate:  dto.BirthDate,
-		Department: dto.Department,
-		IsDeleted:  isDeleted,
+	return &user, nil
+}
+
+func (r *UserRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (query string, args []interface{}) {
+	num := 2
+	setConditions := make([]string, 0)
+
+	args = append(args, dto.ID)
+
+	if dto.Username != "" {
+		setConditions = append(setConditions, fmt.Sprintf("username = $%d", num))
+		args = append(args, dto.Username)
+		num++
 	}
 
-	if createdAt.Status == pgtype.Present {
-		user.CreatedAt = &createdAt.Time
+	if dto.Password != "" {
+		setConditions = append(setConditions, fmt.Sprintf("password = $%d", num))
+		args = append(args, dto.Password)
+		num++
 	}
 
-	if updatedAt.Status == pgtype.Present {
-		user.UpdatedAt = &updatedAt.Time
+	if dto.Email != "" {
+		setConditions = append(setConditions, fmt.Sprintf("email = $%d", num))
+		args = append(args, dto.Email)
+		num++
 	}
 
-	return user, nil
+	if dto.FirstName != "" {
+		setConditions = append(setConditions, fmt.Sprintf("first_name = $%d", num))
+		args = append(args, dto.FirstName)
+		num++
+	}
+
+	if dto.LastName != "" {
+		setConditions = append(setConditions, fmt.Sprintf("last_name = $%d", num))
+		args = append(args, dto.LastName)
+		num++
+	}
+
+	if dto.BirthDate != nil {
+		setConditions = append(setConditions, fmt.Sprintf("birth_date = $%d", num))
+		args = append(args, dto.BirthDate)
+		num++
+	}
+
+	if dto.Department != "" {
+		setConditions = append(setConditions, fmt.Sprintf("department = $%d", num))
+		args = append(args, dto.Department)
+	}
+
+	query = fmt.Sprintf(`
+		UPDATE users SET %s
+			WHERE id = $1 AND is_deleted IS FALSE
+		RETURNING
+			id, username, password, 
+			first_name, last_name, email, 
+			birth_date, department, is_deleted, 
+			created_at, updated_at
+	`, strings.Join(setConditions, ", "))
+
+	return query, args
 }
 
 func (r *UserRepository) Delete(ctx context.Context, id string) error {

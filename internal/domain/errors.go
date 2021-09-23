@@ -1,6 +1,9 @@
 package domain
 
-import "net/http"
+import (
+	"net/http"
+	"reflect"
+)
 
 type ErrorFields map[string]string
 
@@ -12,6 +15,15 @@ type AppError struct {
 
 func (e AppError) Error() string {
 	return e.Message
+}
+
+func (e AppError) Is(err error) bool {
+	target, ok := err.(AppError)
+	if !ok {
+		return false
+	}
+
+	return reflect.DeepEqual(e, target)
 }
 
 func NewValidationError(fields ErrorFields) AppError {
@@ -42,5 +54,9 @@ var (
 	ErrUserUniqueViolation = AppError{
 		StatusCode: http.StatusBadRequest,
 		Message:    "user with such username or email is already exist",
+	}
+	ErrUserNoNeedUpdate = AppError{
+		StatusCode: http.StatusBadRequest,
+		Message:    "no need to update user",
 	}
 )

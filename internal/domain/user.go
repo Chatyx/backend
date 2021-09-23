@@ -25,8 +25,22 @@ func (c *CreateUserDTO) DecodeFrom(r io.Reader) error {
 }
 
 type UpdateUserDTO struct {
-	CreateUserDTO
-	ID string `json:"id" validate:"required"`
+	ID         string     `json:"id"         validate:"required"`
+	Username   string     `json:"username"   validate:"omitempty,max=50"`
+	Password   string     `json:"password"   validate:"omitempty,min=8,max=27"`
+	Email      string     `json:"email"      validate:"omitempty,email,max=255"`
+	FirstName  string     `json:"first_name" validate:"omitempty,max=50"`
+	LastName   string     `json:"last_name"  validate:"omitempty,max=50"`
+	BirthDate  *time.Time `json:"birth_date"`
+	Department string     `json:"department" validate:"omitempty,max=255"`
+}
+
+func (c *UpdateUserDTO) Decode(payload []byte) error {
+	return json.Unmarshal(payload, c)
+}
+
+func (c *UpdateUserDTO) DecodeFrom(r io.Reader) error {
+	return json.NewDecoder(r).Decode(c)
 }
 
 type User struct {

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Mort4lis/scht-backend/pkg/hasher"
 
@@ -51,7 +52,27 @@ func (s *userService) GetByUsername(ctx context.Context, username string) (*doma
 }
 
 func (s *userService) Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error) {
-	return s.repo.Update(ctx, dto)
+	if dto.Password != "" {
+		hash, err := s.hasher.Hash(dto.Password)
+		if err != nil {
+			s.logger.WithError(err).Error("Error occurred while hashing password")
+
+			return nil, err
+		}
+
+		dto.Password = hash
+	}
+
+	user, err := s.repo.Update(ctx, dto)
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNoNeedUpdate) {
+			return s.GetByID(ctx, dto.ID)
+		}
+
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s *userService) Delete(ctx context.Context, id string) error {
