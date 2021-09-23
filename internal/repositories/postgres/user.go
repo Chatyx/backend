@@ -44,7 +44,6 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 	rows, err := r.dbPool.Query(ctx, query)
 	if err != nil {
 		r.logger.WithError(err).Error("Unable to list users from database")
-
 		return nil, err
 	}
 	defer rows.Close()
@@ -61,7 +60,6 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 			&user.CreatedAt, &user.UpdatedAt,
 		); err != nil {
 			r.logger.WithError(err).Error("Unable to scan user")
-
 			return nil, err
 		}
 
@@ -70,7 +68,6 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 
 	if err = rows.Err(); err != nil {
 		r.logger.WithError(err).Error("Error occurred while reading users")
-
 		return nil, err
 	}
 
@@ -97,7 +94,6 @@ func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (
 	).Scan(&id, &createdAt); err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			r.logger.WithError(err).Debug("user with such fields is already exist")
-
 			return nil, domain.ErrUserUniqueViolation
 		}
 

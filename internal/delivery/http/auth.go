@@ -41,26 +41,21 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, req *http.Request, _ httprou
 	var dto domain.SignInDTO
 	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
 		RespondError(w, err)
-
 		return
 	}
 
 	if err := h.Validate(dto); err != nil {
 		RespondError(w, err)
-
 		return
 	}
 
 	pair, err := h.service.SignIn(req.Context(), dto)
 	if err != nil {
 		RespondError(w, err)
-
 		return
 	}
 
 	RespondSuccess(http.StatusOK, w, pair)
 }
 
-func (h *AuthHandler) Refresh(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-
-}
+func (h *AuthHandler) Refresh(w http.ResponseWriter, req *http.Request, params httprouter.Params) {}

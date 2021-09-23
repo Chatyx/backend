@@ -51,7 +51,6 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			s.logger.Debugf("failed to login user %q: user doesn't exists", dto.Username)
-
 			return domain.JWTPair{}, domain.ErrInvalidCredentials
 		}
 
@@ -60,7 +59,6 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 
 	if !s.hasher.CompareHashAndPassword(user.Password, dto.Password) {
 		s.logger.Debugf("failed to login user %q: password mismatch", dto.Username)
-
 		return domain.JWTPair{}, domain.ErrInvalidCredentials
 	}
 
@@ -77,7 +75,6 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 	accessToken, err := s.tokenManager.NewAccessToken(claims)
 	if err != nil {
 		s.logger.WithError(err).Error("Error occurred while creating a new access token")
-
 		return domain.JWTPair{}, err
 	}
 
@@ -102,15 +99,8 @@ func (s *authService) Authorize(ctx context.Context, accessToken string) (*domai
 	var claims domain.Claims
 
 	if err := s.tokenManager.Parse(accessToken, &claims); err != nil {
-		if errors.Is(err, auth.ErrInvalidTokenParse) {
-			s.logger.WithError(err).Debug("invalid access token")
-
-			return nil, domain.ErrInvalidToken
-		}
-
-		s.logger.WithError(err).Error("Error occurred while parsing access token")
-
-		return nil, err
+		s.logger.WithError(err).Debug("invalid access token")
+		return nil, domain.ErrInvalidToken
 	}
 
 	user, err := s.userService.GetByID(ctx, claims.Subject)
@@ -120,7 +110,7 @@ func (s *authService) Authorize(ctx context.Context, accessToken string) (*domai
 			claims.Subject,
 		)
 
-		return nil, domain.ErrInternalServer
+		return nil, err
 	}
 
 	return user, nil

@@ -56,8 +56,8 @@ linters:
     - wsl
     - gocritic
     - prealloc
-    - nlreturn
     - unparam
+    # - nlreturn
     # - revive
     # - dupl
     # - gochecknoglobals

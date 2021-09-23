@@ -111,7 +111,6 @@ func (app *App) Run() error {
 		appDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 		if err != nil {
 			logger.WithError(err).Error("Failed to get the application directory")
-
 			return fmt.Errorf("failed to get the application directory")
 		}
 
@@ -131,7 +130,6 @@ func (app *App) Run() error {
 
 	if lisErr != nil {
 		logger.WithError(lisErr).Errorf("Failed to listen %s", lisType)
-
 		return fmt.Errorf("failed to listen %s", lisType)
 	}
 

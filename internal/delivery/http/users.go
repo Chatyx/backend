@@ -55,7 +55,6 @@ func (h *UserHandler) List(w http.ResponseWriter, req *http.Request, _ httproute
 	users, err := h.service.List(req.Context())
 	if err != nil {
 		RespondError(w, err)
-
 		return
 	}
 
@@ -65,7 +64,12 @@ func (h *UserHandler) List(w http.ResponseWriter, req *http.Request, _ httproute
 func (h *UserHandler) Detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	user, err := h.service.GetByID(req.Context(), params.ByName("id"))
 	if err != nil {
-		RespondError(w, err)
+		switch err {
+		case domain.ErrUserNotFound:
+			RespondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		default:
+			RespondError(w, err)
+		}
 
 		return
 	}
@@ -77,19 +81,22 @@ func (h *UserHandler) Create(w http.ResponseWriter, req *http.Request, _ httprou
 	dto := domain.CreateUserDTO{}
 	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
 		RespondError(w, err)
-
 		return
 	}
 
 	if err := h.Validate(dto); err != nil {
 		RespondError(w, err)
-
 		return
 	}
 
 	user, err := h.service.Create(req.Context(), dto)
 	if err != nil {
-		RespondError(w, err)
+		switch err {
+		case domain.ErrUserUniqueViolation:
+			RespondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+		default:
+			RespondError(w, err)
+		}
 
 		return
 	}
@@ -115,7 +122,14 @@ func (h *UserHandler) Update(w http.ResponseWriter, req *http.Request, params ht
 
 	user, err := h.service.Update(req.Context(), dto)
 	if err != nil {
-		RespondError(w, err)
+		switch err {
+		case domain.ErrUserUniqueViolation:
+			RespondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+		case domain.ErrUserNotFound:
+			RespondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		default:
+			RespondError(w, err)
+		}
 
 		return
 	}
@@ -126,7 +140,12 @@ func (h *UserHandler) Update(w http.ResponseWriter, req *http.Request, params ht
 func (h *UserHandler) Delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	err := h.service.Delete(req.Context(), params.ByName("id"))
 	if err != nil {
-		RespondError(w, err)
+		switch err {
+		case domain.ErrUserNotFound:
+			RespondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		default:
+			RespondError(w, err)
+		}
 
 		return
 	}

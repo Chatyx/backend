@@ -2,13 +2,11 @@ package http
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
-	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/services"
 	"github.com/Mort4lis/scht-backend/internal/utils"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -24,8 +22,7 @@ type Handler struct {
 func (h *Handler) DecodeJSONFromBody(body io.ReadCloser, decoder utils.JSONDecoder) error {
 	if err := decoder.DecodeFrom(body); err != nil {
 		h.logger.WithError(err).Debug("Invalid json body")
-
-		return domain.ErrInvalidJSON
+		return ErrInvalidJSON
 	}
 
 	defer func() {
@@ -39,7 +36,7 @@ func (h *Handler) DecodeJSONFromBody(body io.ReadCloser, decoder utils.JSONDecod
 
 func (h *Handler) Validate(s interface{}) error {
 	if err := h.validate.Struct(s); err != nil {
-		fields := domain.ErrorFields{}
+		fields := ErrorFields{}
 		for _, err := range err.(validator.ValidationErrors) {
 			fields[err.Field()] = fmt.Sprintf(
 				"field validation for '%s' failed on the '%s' tag",
@@ -47,24 +44,33 @@ func (h *Handler) Validate(s interface{}) error {
 			)
 		}
 
-		return domain.NewValidationError(fields)
+		return ResponseError{
+			StatusCode: http.StatusBadRequest,
+			Message:    "validation error",
+			Fields:     fields,
+		}
 	}
 
 	return nil
 }
 
 func ExtractTokenFromHeader(header string) (string, error) {
+	logger := logging.GetLogger()
+
 	if header == "" {
-		return "", errors.New("authorization header is empty")
+		logger.Debug("authorization header is empty")
+		return "", ErrInvalidAuthorizationToken
 	}
 
 	headerParts := strings.Split(header, " ")
 	if len(headerParts) != 2 {
-		return "", errors.New("authorization header must contains with two parts")
+		logger.Debug("authorization header must contains with two parts")
+		return "", ErrInvalidAuthorizationToken
 	}
 
 	if headerParts[0] != "Bearer" {
-		return "", errors.New("authorization header doesn't begin with Bearer")
+		logger.Debug("authorization header doesn't begin with Bearer")
+		return "", ErrInvalidAuthorizationToken
 	}
 
 	return headerParts[1], nil
@@ -73,7 +79,6 @@ func ExtractTokenFromHeader(header string) (string, error) {
 func RespondSuccess(statusCode int, w http.ResponseWriter, encoder utils.JSONEncoder) {
 	if encoder == nil {
 		w.WriteHeader(statusCode)
-
 		return
 	}
 
@@ -92,16 +97,14 @@ func RespondSuccess(statusCode int, w http.ResponseWriter, encoder utils.JSONEnc
 
 	if _, err = w.Write(respBody); err != nil {
 		logger.WithError(err).Error("Error occurred while writing response body")
-
 		return
 	}
 }
 
 func RespondError(w http.ResponseWriter, err error) {
-	appErr, ok := err.(domain.AppError)
+	appErr, ok := err.(ResponseError)
 	if !ok {
-		RespondError(w, domain.ErrInternalServer)
-
+		RespondError(w, ErrInternalServer)
 		return
 	}
 
@@ -110,7 +113,6 @@ func RespondError(w http.ResponseWriter, err error) {
 	respBody, err := json.Marshal(appErr)
 	if err != nil {
 		logger.WithError(err).Error("Error occurred while marshalling application error")
-
 		return
 	}
 
