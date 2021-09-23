@@ -26,11 +26,12 @@ func (r UserListResponse) Encode() ([]byte, error) {
 
 type UserHandler struct {
 	*Handler
-	service services.UserService
-	logger  logging.Logger
+	us     services.UserService
+	as     services.AuthService
+	logger logging.Logger
 }
 
-func NewUserHandler(service services.UserService, validate *validator.Validate) *UserHandler {
+func NewUserHandler(us services.UserService, as services.AuthService, validate *validator.Validate) *UserHandler {
 	logger := logging.GetLogger()
 
 	return &UserHandler{
@@ -38,21 +39,22 @@ func NewUserHandler(service services.UserService, validate *validator.Validate) 
 			logger:   logger,
 			validate: validate,
 		},
-		service: service,
-		logger:  logger,
+		us:     us,
+		as:     as,
+		logger: logger,
 	}
 }
 
 func (h *UserHandler) Register(router *httprouter.Router) {
-	router.GET(listUserURL, h.List)
+	router.GET(listUserURL, AuthorizationMiddleware(h.List, h.as))
 	router.POST(listUserURL, h.Create)
-	router.GET(detailUserURI, h.Detail)
-	router.PATCH(detailUserURI, h.Update)
-	router.DELETE(detailUserURI, h.Delete)
+	router.GET(detailUserURI, AuthorizationMiddleware(h.Detail, h.as))
+	router.PATCH(detailUserURI, AuthorizationMiddleware(h.Update, h.as))
+	router.DELETE(detailUserURI, AuthorizationMiddleware(h.Delete, h.as))
 }
 
 func (h *UserHandler) List(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	users, err := h.service.List(req.Context())
+	users, err := h.us.List(req.Context())
 	if err != nil {
 		RespondError(w, err)
 		return
@@ -62,7 +64,7 @@ func (h *UserHandler) List(w http.ResponseWriter, req *http.Request, _ httproute
 }
 
 func (h *UserHandler) Detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	user, err := h.service.GetByID(req.Context(), params.ByName("id"))
+	user, err := h.us.GetByID(req.Context(), params.ByName("id"))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:
@@ -89,7 +91,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, req *http.Request, _ httprou
 		return
 	}
 
-	user, err := h.service.Create(req.Context(), dto)
+	user, err := h.us.Create(req.Context(), dto)
 	if err != nil {
 		switch err {
 		case domain.ErrUserUniqueViolation:
@@ -120,7 +122,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, req *http.Request, params ht
 		return
 	}
 
-	user, err := h.service.Update(req.Context(), dto)
+	user, err := h.us.Update(req.Context(), dto)
 	if err != nil {
 		switch err {
 		case domain.ErrUserUniqueViolation:
@@ -138,7 +140,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, req *http.Request, params ht
 }
 
 func (h *UserHandler) Delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	err := h.service.Delete(req.Context(), params.ByName("id"))
+	err := h.us.Delete(req.Context(), params.ByName("id"))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:

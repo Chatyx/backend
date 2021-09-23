@@ -127,7 +127,7 @@ func RespondError(w http.ResponseWriter, err error) {
 func Init(container services.ServiceContainer, validate *validator.Validate) http.Handler {
 	router := httprouter.New()
 
-	NewUserHandler(container.User, validate).Register(router)
+	NewUserHandler(container.User, container.Auth, validate).Register(router)
 	NewAuthHandler(container.Auth, validate).Register(router)
 
 	return router
