@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Mort4lis/scht-backend/pkg/auth"
+
 	"github.com/Mort4lis/scht-backend/internal/config"
 	handlers "github.com/Mort4lis/scht-backend/internal/delivery/http"
 	pg "github.com/Mort4lis/scht-backend/internal/repositories/postgres"
@@ -41,6 +43,11 @@ func NewApp(cfg *config.Config) *App {
 
 	hasher := password.BCryptPasswordHasher{}
 
+	tokenManager, err := auth.NewTokenManager(cfg.Auth.SignKey)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to create new token manager")
+	}
+
 	validate, err := validator.New()
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to init validator")
@@ -48,8 +55,16 @@ func NewApp(cfg *config.Config) *App {
 
 	userRepo := pg.NewUserRepository(dbPool)
 	userService := services.NewUserService(userRepo, hasher)
+	authService := services.NewAuthService(services.AuthServiceConfig{
+		UserService:     userService,
+		Hasher:          hasher,
+		TokenManager:    tokenManager,
+		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
+		RefreshTokenTTL: cfg.Auth.RefreshTokenTTL,
+	})
 	container := services.ServiceContainer{
 		User: userService,
+		Auth: authService,
 	}
 
 	return &App{

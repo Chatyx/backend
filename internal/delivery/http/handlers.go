@@ -103,6 +103,7 @@ func Init(container services.ServiceContainer, validate *validator.Validate) htt
 	router := httprouter.New()
 
 	NewUserHandler(container.User, validate).Register(router)
+	NewAuthHandler(container.Auth, validate).Register(router)
 
 	return router
 }

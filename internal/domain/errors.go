@@ -59,4 +59,8 @@ var (
 		StatusCode: http.StatusBadRequest,
 		Message:    "no need to update user",
 	}
+	ErrInvalidCredentials = AppError{
+		StatusCode: http.StatusBadRequest,
+		Message:    "invalid username or password",
+	}
 )

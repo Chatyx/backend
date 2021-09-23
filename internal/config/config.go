@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"sync"
+	"time"
 
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/ilyakaznacheev/cleanenv"
@@ -18,9 +19,9 @@ type ListenConfig struct {
 }
 
 type AuthConfig struct {
-	SignKey         string `yaml:"sign_key"          env:"SCHT_AUTH_SIGN_KEY" env-required:"true"`
-	AccessTokenTTL  int    `yaml:"access_token_ttl"  env-default:"900"`
-	RefreshTokenTTL int    `yaml:"refresh_token_ttl" env-default:"2592000"`
+	SignKey         string        `yaml:"sign_key"          env:"SCHT_AUTH_SIGN_KEY" env-required:"true"`
+	AccessTokenTTL  time.Duration `yaml:"access_token_ttl"  env-default:"15"`
+	RefreshTokenTTL time.Duration `yaml:"refresh_token_ttl" env-default:"43200"`
 }
 
 type PostgresConfig struct {
@@ -57,6 +58,9 @@ func GetConfig(path string) *Config {
 		if err := cleanenv.ReadConfig(path, cfg); err != nil {
 			logger.WithError(err).Fatal("Failed to reading config file %s", path)
 		}
+
+		cfg.Auth.AccessTokenTTL *= time.Minute
+		cfg.Auth.RefreshTokenTTL *= time.Minute
 	})
 
 	return cfg

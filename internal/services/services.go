@@ -15,6 +15,12 @@ type UserService interface {
 	Delete(ctx context.Context, id string) error
 }
 
+type AuthService interface {
+	SignIn(ctx context.Context, dto domain.SignInDTO) (domain.JWTPair, error)
+	Refresh(ctx context.Context, refreshToken string) (domain.JWTPair, error)
+}
+
 type ServiceContainer struct {
 	User UserService
+	Auth AuthService
 }
