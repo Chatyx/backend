@@ -13,3 +13,8 @@ postgres:
   database: scht_db
   username: scht_user
   password: scht_password
+redis:
+  host: 127.0.0.1
+  port: 6379
+  username: scht_user
+  password: scht_password

@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/go-playground/validator/v10 v10.9.0
+	github.com/go-redis/redis/v8 v8.11.3 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/ilyakaznacheev/cleanenv v1.2.5
 	github.com/jackc/pgconn v1.10.0
@@ -16,6 +17,7 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/sirupsen/logrus v1.8.1
+	go.opentelemetry.io/otel v0.16.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/sys v0.0.0-20210917161153-d61c044b1678 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect

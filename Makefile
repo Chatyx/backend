@@ -16,6 +16,11 @@ postgres:
 		--env TZ=Europe/Moscow \
 		--publish ${SCHT_PG_PORT}:5432 postgres:12.1
 
+redis:
+	docker stop scht-redis || true
+	docker run --detach --name=scht-redis \
+		--publish ${SCHT_REDIS_PORT}:6379 redis:6.2.5
+
 create-migration:
 	docker run --rm -v ${PWD}/db/migrations:/migrations \
 		migrate/migrate create -ext sql -dir /migrations -seq $(NAME)

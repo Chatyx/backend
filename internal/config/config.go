@@ -31,11 +31,19 @@ type PostgresConfig struct {
 	Password string `yaml:"password" env:"SCHT_PG_PASSWORD" env-required:"true"`
 }
 
+type RedisConfig struct {
+	Host     string `yaml:"host"     env:"SCHT_REDIS_HOST"     env-required:"true"`
+	Port     int    `yaml:"port"     env:"SCHT_REDIS_PORT"     env-required:"true"`
+	Username string `yaml:"username" env:"SCHT_REDIS_USERNAME" env-required:"true"`
+	Password string `yaml:"password" env:"SCHT_REDIS_PASSWORD" env-required:"true"`
+}
+
 type Config struct {
 	IsDebug  bool           `yaml:"is_debug" env-default:"false"`
 	Listen   ListenConfig   `yaml:"listen"`
 	Auth     AuthConfig     `yaml:"auth"`
 	Postgres PostgresConfig `yaml:"postgres"`
+	Redis    RedisConfig    `yaml:"redis"`
 }
 
 var (

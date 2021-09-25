@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-redis/redis/v8"
+
 	"github.com/Mort4lis/scht-backend/pkg/auth"
 
 	"github.com/Mort4lis/scht-backend/internal/config"
@@ -26,9 +28,10 @@ import (
 )
 
 type App struct {
-	cfg    *config.Config
-	server *http.Server
-	dbPool *pgxpool.Pool
+	cfg         *config.Config
+	server      *http.Server
+	dbPool      *pgxpool.Pool
+	redisClient *redis.Client
 
 	logger logging.Logger
 }
@@ -38,7 +41,12 @@ func NewApp(cfg *config.Config) *App {
 
 	dbPool, err := initPG(cfg.Postgres)
 	if err != nil {
-		logger.WithError(err).Fatal("Unable to connect to database")
+		logger.WithError(err).Fatal("Unable to connect to postgres")
+	}
+
+	redisClient, err := initRedis(cfg.Redis)
+	if err != nil {
+		logger.WithError(err).Fatal("Unable to connect to redis")
 	}
 
 	hasher := password.BCryptPasswordHasher{}
@@ -68,9 +76,10 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	return &App{
-		cfg:    cfg,
-		dbPool: dbPool,
-		logger: logger,
+		cfg:         cfg,
+		logger:      logger,
+		dbPool:      dbPool,
+		redisClient: redisClient,
 		server: &http.Server{
 			Handler:      handlers.Init(container, validate),
 			ReadTimeout:  15 * time.Second,
@@ -95,6 +104,24 @@ func initPG(cfg config.PostgresConfig) (*pgxpool.Pool, error) {
 	}
 
 	return pool, nil
+}
+
+func initRedis(cfg config.RedisConfig) (*redis.Client, error) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Username: cfg.Username,
+		Password: cfg.Password,
+		DB:       0, // use default database
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		return nil, err
+	}
+
+	return rdb, nil
 }
 
 func (app *App) Run() error {
