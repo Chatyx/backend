@@ -7,7 +7,6 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/services"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -18,8 +17,8 @@ const (
 
 const refreshCookieName = "refresh_token"
 
-type AuthHandler struct {
-	*Handler
+type authHandler struct {
+	*baseHandler
 	service services.AuthService
 	logger  logging.Logger
 
@@ -27,36 +26,20 @@ type AuthHandler struct {
 	refreshTokenTTL time.Duration
 }
 
-func NewAuthHandler(service services.AuthService, validate *validator.Validate, domain string,
-	refreshTokenTTL time.Duration) *AuthHandler {
-	logger := logging.GetLogger()
-
-	return &AuthHandler{
-		Handler: &Handler{
-			logger:   logger,
-			validate: validate,
-		},
-		service:         service,
-		domain:          domain,
-		refreshTokenTTL: refreshTokenTTL,
-		logger:          logger,
-	}
+func (h *authHandler) register(router *httprouter.Router) {
+	router.POST(signInURI, h.signIn)
+	router.POST(refreshURI, h.refresh)
 }
 
-func (h *AuthHandler) Register(router *httprouter.Router) {
-	router.POST(signInURI, h.SignIn)
-	router.POST(refreshURI, h.Refresh)
-}
-
-func (h *AuthHandler) SignIn(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var dto domain.SignInDTO
-	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
-		RespondError(w, err)
+	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+		respondError(w, err)
 		return
 	}
 
-	if err := h.Validate(dto); err != nil {
-		RespondError(w, err)
+	if err := h.validateStruct(dto); err != nil {
+		respondError(w, err)
 		return
 	}
 
@@ -64,9 +47,9 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, req *http.Request, _ httprou
 	if err != nil {
 		switch err {
 		case domain.ErrInvalidCredentials:
-			RespondError(w, ResponseError{StatusCode: http.StatusUnauthorized, Message: err.Error()})
+			respondError(w, ResponseError{StatusCode: http.StatusUnauthorized, Message: err.Error()})
 		default:
-			RespondError(w, err)
+			respondError(w, errInternalServer)
 		}
 
 		return
@@ -81,20 +64,20 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, req *http.Request, _ httprou
 		HttpOnly: true,
 	})
 
-	RespondSuccess(http.StatusOK, w, pair)
+	respondSuccess(http.StatusOK, w, pair)
 }
 
-func (h *AuthHandler) Refresh(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var dto domain.RT
 	if cookie, err := req.Cookie(refreshCookieName); err == nil {
 		dto.RefreshToken = cookie.Value
-	} else if err = h.DecodeJSONFromBody(req.Body, &dto); err != nil {
-		RespondError(w, err)
+	} else if err = h.decodeJSONFromBody(req.Body, &dto); err != nil {
+		respondError(w, err)
 		return
 	}
 
-	if err := h.Validate(dto); err != nil {
-		RespondError(w, err)
+	if err := h.validateStruct(dto); err != nil {
+		respondError(w, err)
 		return
 	}
 
@@ -102,13 +85,13 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, req *http.Request, _ httpro
 	if err != nil {
 		switch err {
 		case domain.ErrSessionNotFound, domain.ErrUserNotFound:
-			RespondError(w, ErrInvalidRefreshToken)
+			respondError(w, errInvalidRefreshToken)
 		default:
-			RespondError(w, err)
+			respondError(w, errInternalServer)
 		}
 
 		return
 	}
 
-	RespondSuccess(http.StatusOK, w, pair)
+	respondSuccess(http.StatusOK, w, pair)
 }

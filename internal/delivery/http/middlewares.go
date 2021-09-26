@@ -4,16 +4,15 @@ import (
 	"net/http"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-
 	"github.com/Mort4lis/scht-backend/internal/services"
 	"github.com/julienschmidt/httprouter"
 )
 
-func AuthorizationMiddleware(handler httprouter.Handle, as services.AuthService) httprouter.Handle {
+func authorizationMiddleware(handler httprouter.Handle, as services.AuthService) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		accessToken, err := ExtractTokenFromHeader(req.Header.Get("Authorization"))
+		accessToken, err := extractTokenFromHeader(req.Header.Get("Authorization"))
 		if err != nil {
-			RespondError(w, err)
+			respondError(w, errInternalServer)
 			return
 		}
 
@@ -21,9 +20,9 @@ func AuthorizationMiddleware(handler httprouter.Handle, as services.AuthService)
 		if err != nil {
 			switch err {
 			case domain.ErrInvalidAccessToken:
-				RespondError(w, ErrInvalidAuthorizationToken)
+				respondError(w, errInvalidAuthorizationToken)
 			default:
-				RespondError(w, err)
+				respondError(w, errInternalServer)
 			}
 
 			return

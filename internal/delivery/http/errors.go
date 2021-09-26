@@ -15,19 +15,19 @@ func (e ResponseError) Error() string {
 }
 
 var (
-	ErrInternalServer = ResponseError{
+	errInternalServer = ResponseError{
 		StatusCode: http.StatusInternalServerError,
 		Message:    "internal server error",
 	}
-	ErrInvalidJSON = ResponseError{
+	errInvalidJSON = ResponseError{
 		StatusCode: http.StatusBadRequest,
 		Message:    "invalid json body",
 	}
-	ErrInvalidAuthorizationToken = ResponseError{
+	errInvalidAuthorizationToken = ResponseError{
 		StatusCode: http.StatusUnauthorized,
 		Message:    "invalid authorization token",
 	}
-	ErrInvalidRefreshToken = ResponseError{
+	errInvalidRefreshToken = ResponseError{
 		StatusCode: http.StatusBadRequest,
 		Message:    "invalid refresh token",
 	}

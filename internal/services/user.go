@@ -26,15 +26,15 @@ func NewUserService(repo repositories.UserRepository, hasher hasher.PasswordHash
 	}
 }
 
-func (s *userService) List(ctx context.Context) ([]*domain.User, error) {
+func (s *userService) List(ctx context.Context) ([]domain.User, error) {
 	return s.repo.List(ctx)
 }
 
-func (s *userService) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
+func (s *userService) Create(ctx context.Context, dto domain.CreateUserDTO) (domain.User, error) {
 	hash, err := s.hasher.Hash(dto.Password)
 	if err != nil {
 		s.logger.WithError(err).Error("Error occurred while hashing password")
-		return nil, err
+		return domain.User{}, err
 	}
 
 	dto.Password = hash
@@ -42,20 +42,20 @@ func (s *userService) Create(ctx context.Context, dto domain.CreateUserDTO) (*do
 	return s.repo.Create(ctx, dto)
 }
 
-func (s *userService) GetByID(ctx context.Context, id string) (*domain.User, error) {
+func (s *userService) GetByID(ctx context.Context, id string) (domain.User, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *userService) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+func (s *userService) GetByUsername(ctx context.Context, username string) (domain.User, error) {
 	return s.repo.GetByUsername(ctx, username)
 }
 
-func (s *userService) Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error) {
+func (s *userService) Update(ctx context.Context, dto domain.UpdateUserDTO) (domain.User, error) {
 	if dto.Password != "" {
 		hash, err := s.hasher.Hash(dto.Password)
 		if err != nil {
 			s.logger.WithError(err).Error("Error occurred while hashing password")
-			return nil, err
+			return domain.User{}, err
 		}
 
 		dto.Password = hash
@@ -67,7 +67,7 @@ func (s *userService) Update(ctx context.Context, dto domain.UpdateUserDTO) (*do
 			return s.GetByID(ctx, dto.ID)
 		}
 
-		return nil, err
+		return domain.User{}, err
 	}
 
 	return user, nil

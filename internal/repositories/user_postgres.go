@@ -29,7 +29,7 @@ func NewUserPostgresRepository(dbPool *pgxpool.Pool) UserRepository {
 	}
 }
 
-func (r *userPostgresRepository) List(ctx context.Context) ([]*domain.User, error) {
+func (r *userPostgresRepository) List(ctx context.Context) ([]domain.User, error) {
 	query := `
 		SELECT 
 			id, username, password, 
@@ -47,7 +47,7 @@ func (r *userPostgresRepository) List(ctx context.Context) ([]*domain.User, erro
 	}
 	defer rows.Close()
 
-	users := make([]*domain.User, 0)
+	users := make([]domain.User, 0)
 
 	for rows.Next() {
 		var user domain.User
@@ -62,7 +62,7 @@ func (r *userPostgresRepository) List(ctx context.Context) ([]*domain.User, erro
 			return nil, err
 		}
 
-		users = append(users, &user)
+		users = append(users, user)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -73,7 +73,7 @@ func (r *userPostgresRepository) List(ctx context.Context) ([]*domain.User, erro
 	return users, nil
 }
 
-func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
+func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (domain.User, error) {
 	var (
 		id        string
 		createdAt pgtype.Timestamptz
@@ -93,15 +93,15 @@ func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUs
 	).Scan(&id, &createdAt); err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			r.logger.WithError(err).Debug("user with such fields is already exist")
-			return nil, domain.ErrUserUniqueViolation
+			return domain.User{}, domain.ErrUserUniqueViolation
 		}
 
 		r.logger.WithError(err).Error("Error occurred while creating user into the database")
 
-		return nil, err
+		return domain.User{}, err
 	}
 
-	user := &domain.User{
+	user := domain.User{
 		ID:         id,
 		Username:   dto.Username,
 		Password:   dto.Password,
@@ -119,21 +119,21 @@ func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUs
 	return user, nil
 }
 
-func (r *userPostgresRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
+func (r *userPostgresRepository) GetByID(ctx context.Context, id string) (domain.User, error) {
 	if !utils.IsValidUUID(id) {
 		r.logger.Debugf("user is not found with id = %s", id)
 
-		return nil, domain.ErrUserNotFound
+		return domain.User{}, domain.ErrUserNotFound
 	}
 
 	return r.getBy(ctx, "id", id)
 }
 
-func (r *userPostgresRepository) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+func (r *userPostgresRepository) GetByUsername(ctx context.Context, username string) (domain.User, error) {
 	return r.getBy(ctx, "username", username)
 }
 
-func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fieldValue interface{}) (*domain.User, error) {
+func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fieldValue interface{}) (domain.User, error) {
 	var user domain.User
 
 	query := fmt.Sprintf(`
@@ -156,29 +156,27 @@ func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fi
 		if errors.Is(err, pgx.ErrNoRows) {
 			r.logger.Debugf("user is not found with %s = %s", fieldName, fieldValue)
 
-			return nil, domain.ErrUserNotFound
+			return domain.User{}, domain.ErrUserNotFound
 		}
 
 		r.logger.WithError(err).Errorf("Error occurred while getting user by %s", fieldName)
 
-		return nil, err
+		return domain.User{}, err
 	}
 
-	return &user, nil
+	return user, nil
 }
 
-func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error) {
+func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (domain.User, error) {
 	if !utils.IsValidUUID(dto.ID) {
 		r.logger.Debugf("user is not found with id = %s", dto.ID)
-
-		return nil, domain.ErrUserNotFound
+		return domain.User{}, domain.ErrUserNotFound
 	}
 
 	query, args := r.buildUpdateQuery(dto)
 	if len(args) == 1 {
 		r.logger.Debugf("no need to update user with id = %s", dto.ID)
-
-		return nil, domain.ErrUserNoNeedUpdate
+		return domain.User{}, domain.ErrUserNoNeedUpdate
 	}
 
 	var user domain.User
@@ -194,21 +192,21 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 		if errors.Is(err, pgx.ErrNoRows) {
 			r.logger.Debugf("user is not found with id = %s", dto.ID)
 
-			return nil, domain.ErrUserNotFound
+			return domain.User{}, domain.ErrUserNotFound
 		}
 
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			r.logger.WithError(err).Debug("user with such fields is already exist")
 
-			return nil, domain.ErrUserUniqueViolation
+			return domain.User{}, domain.ErrUserUniqueViolation
 		}
 
 		r.logger.WithError(err).Error("Error occurred while updating user into the database")
 
-		return nil, err
+		return domain.User{}, err
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 func (r *userPostgresRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (query string, args []interface{}) {

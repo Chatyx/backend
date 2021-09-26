@@ -7,7 +7,6 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/services"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -17,140 +16,124 @@ const (
 )
 
 type UserListResponse struct {
-	List []*domain.User `json:"list"`
+	List []domain.User `json:"list"`
 }
 
 func (r UserListResponse) Encode() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-type UserHandler struct {
-	*Handler
-	us     services.UserService
-	as     services.AuthService
-	logger logging.Logger
+type userHandler struct {
+	*baseHandler
+	userService services.UserService
+	authService services.AuthService
+	logger      logging.Logger
 }
 
-func NewUserHandler(us services.UserService, as services.AuthService, validate *validator.Validate) *UserHandler {
-	logger := logging.GetLogger()
-
-	return &UserHandler{
-		Handler: &Handler{
-			logger:   logger,
-			validate: validate,
-		},
-		us:     us,
-		as:     as,
-		logger: logger,
-	}
+func (h *userHandler) register(router *httprouter.Router) {
+	router.GET(listUserURL, authorizationMiddleware(h.list, h.authService))
+	router.POST(listUserURL, h.create)
+	router.GET(detailUserURI, authorizationMiddleware(h.detail, h.authService))
+	router.PATCH(detailUserURI, authorizationMiddleware(h.update, h.authService))
+	router.DELETE(detailUserURI, authorizationMiddleware(h.delete, h.authService))
 }
 
-func (h *UserHandler) Register(router *httprouter.Router) {
-	router.GET(listUserURL, AuthorizationMiddleware(h.List, h.as))
-	router.POST(listUserURL, h.Create)
-	router.GET(detailUserURI, AuthorizationMiddleware(h.Detail, h.as))
-	router.PATCH(detailUserURI, AuthorizationMiddleware(h.Update, h.as))
-	router.DELETE(detailUserURI, AuthorizationMiddleware(h.Delete, h.as))
-}
-
-func (h *UserHandler) List(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	users, err := h.us.List(req.Context())
+func (h *userHandler) list(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	users, err := h.userService.List(req.Context())
 	if err != nil {
-		RespondError(w, err)
+		respondError(w, errInternalServer)
 		return
 	}
 
-	RespondSuccess(http.StatusOK, w, UserListResponse{List: users})
+	respondSuccess(http.StatusOK, w, UserListResponse{List: users})
 }
 
-func (h *UserHandler) Detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	user, err := h.us.GetByID(req.Context(), params.ByName("id"))
+func (h *userHandler) detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	user, err := h.userService.GetByID(req.Context(), params.ByName("id"))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:
-			RespondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
 		default:
-			RespondError(w, err)
+			respondError(w, errInternalServer)
 		}
 
 		return
 	}
 
-	RespondSuccess(http.StatusOK, w, user)
+	respondSuccess(http.StatusOK, w, &user)
 }
 
-func (h *UserHandler) Create(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *userHandler) create(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	dto := domain.CreateUserDTO{}
-	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
-		RespondError(w, err)
+	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+		respondError(w, err)
 		return
 	}
 
-	if err := h.Validate(dto); err != nil {
-		RespondError(w, err)
+	if err := h.validateStruct(dto); err != nil {
+		respondError(w, err)
 		return
 	}
 
-	user, err := h.us.Create(req.Context(), dto)
+	user, err := h.userService.Create(req.Context(), dto)
 	if err != nil {
 		switch err {
 		case domain.ErrUserUniqueViolation:
-			RespondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
 		default:
-			RespondError(w, err)
+			respondError(w, errInternalServer)
 		}
 
 		return
 	}
 
-	RespondSuccess(http.StatusCreated, w, user)
+	respondSuccess(http.StatusCreated, w, &user)
 }
 
-func (h *UserHandler) Update(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (h *userHandler) update(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	dto := domain.UpdateUserDTO{}
-	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
-		RespondError(w, err)
-
+	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+		respondError(w, err)
 		return
 	}
 
 	dto.ID = params.ByName("id")
 
-	if err := h.Validate(dto); err != nil {
-		RespondError(w, err)
-
+	if err := h.validateStruct(dto); err != nil {
+		respondError(w, err)
 		return
 	}
 
-	user, err := h.us.Update(req.Context(), dto)
+	user, err := h.userService.Update(req.Context(), dto)
 	if err != nil {
 		switch err {
 		case domain.ErrUserUniqueViolation:
-			RespondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
 		case domain.ErrUserNotFound:
-			RespondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
 		default:
-			RespondError(w, err)
+			respondError(w, errInternalServer)
 		}
 
 		return
 	}
 
-	RespondSuccess(http.StatusOK, w, user)
+	respondSuccess(http.StatusOK, w, &user)
 }
 
-func (h *UserHandler) Delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	err := h.us.Delete(req.Context(), params.ByName("id"))
+func (h *userHandler) delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	err := h.userService.Delete(req.Context(), params.ByName("id"))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:
-			RespondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
 		default:
-			RespondError(w, err)
+			respondError(w, errInternalServer)
 		}
 
 		return
 	}
 
-	RespondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(http.StatusNoContent, w, nil)
 }
