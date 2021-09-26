@@ -1,4 +1,5 @@
 is_debug: true
+domain: localhost
 listen:
   type: port
   bind_id: 127.0.0.1

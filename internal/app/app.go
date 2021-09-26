@@ -70,8 +70,8 @@ func NewApp(cfg *config.Config) *App {
 		SessionRepo:     sessionRepo,
 		Hasher:          hasher,
 		TokenManager:    tokenManager,
-		AccessTokenTTL:  time.Duration(cfg.Auth.AccessTokenTTL) * time.Minute,
-		RefreshTokenTTL: time.Duration(cfg.Auth.RefreshTokenTTL) * time.Minute,
+		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
+		RefreshTokenTTL: cfg.Auth.RefreshTokenTTL,
 	})
 	container := services.ServiceContainer{
 		User: userService,
@@ -84,7 +84,7 @@ func NewApp(cfg *config.Config) *App {
 		dbPool:      dbPool,
 		redisClient: redisClient,
 		server: &http.Server{
-			Handler:      handlers.Init(container, validate),
+			Handler:      handlers.Init(container, cfg, validate),
 			ReadTimeout:  15 * time.Second,
 			WriteTimeout: 15 * time.Second,
 		},

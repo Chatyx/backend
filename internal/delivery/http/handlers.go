@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Mort4lis/scht-backend/internal/config"
+
 	"github.com/Mort4lis/scht-backend/internal/services"
 	"github.com/Mort4lis/scht-backend/internal/utils"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -124,11 +126,11 @@ func RespondError(w http.ResponseWriter, err error) {
 	}
 }
 
-func Init(container services.ServiceContainer, validate *validator.Validate) http.Handler {
+func Init(container services.ServiceContainer, cfg *config.Config, validate *validator.Validate) http.Handler {
 	router := httprouter.New()
 
 	NewUserHandler(container.User, container.Auth, validate).Register(router)
-	NewAuthHandler(container.Auth, validate).Register(router)
+	NewAuthHandler(container.Auth, validate, cfg.Domain, cfg.Auth.RefreshTokenTTL).Register(router)
 
 	return router
 }

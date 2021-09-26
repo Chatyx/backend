@@ -52,7 +52,7 @@ func (r *sessionRedisRepository) Set(ctx context.Context, key string, session do
 		return err
 	}
 
-	ttl := session.ExpiresAt.Sub(time.Now())
+	ttl := time.Until(session.ExpiresAt)
 
 	if err = r.redisClient.Set(ctx, key, payload, ttl).Err(); err != nil {
 		r.logger.WithError(err).Error("Error occurred while setting session to redis")
