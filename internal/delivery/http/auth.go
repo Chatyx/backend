@@ -43,10 +43,18 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request, _ httprou
 		return
 	}
 
+	dto.Fingerprint = req.Header.Get("X-Fingerprint")
+	if dto.Fingerprint == "" {
+		h.logger.Debug("X-Fingerprint header is empty")
+		respondError(w, errEmptyFingerprintHeader)
+
+		return
+	}
+
 	pair, err := h.service.SignIn(req.Context(), dto)
 	if err != nil {
 		switch err {
-		case domain.ErrInvalidCredentials:
+		case domain.ErrWrongCredentials:
 			respondError(w, ResponseError{StatusCode: http.StatusUnauthorized, Message: err.Error()})
 		default:
 			respondError(w, errInternalServer)
@@ -68,7 +76,7 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request, _ httprou
 }
 
 func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	var dto domain.RT
+	var dto domain.RefreshSessionDTO
 	if cookie, err := req.Cookie(refreshCookieName); err == nil {
 		dto.RefreshToken = cookie.Value
 	} else if err = h.decodeJSONFromBody(req.Body, &dto); err != nil {
@@ -81,10 +89,18 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request, _ httpro
 		return
 	}
 
-	pair, err := h.service.Refresh(req.Context(), dto.RefreshToken)
+	dto.Fingerprint = req.Header.Get("X-Fingerprint")
+	if dto.Fingerprint == "" {
+		h.logger.Debug("X-Fingerprint header is empty")
+		respondError(w, errEmptyFingerprintHeader)
+
+		return
+	}
+
+	pair, err := h.service.Refresh(req.Context(), dto)
 	if err != nil {
 		switch err {
-		case domain.ErrSessionNotFound, domain.ErrUserNotFound:
+		case domain.ErrSessionNotFound, domain.ErrUserNotFound, domain.ErrInvalidRefreshToken:
 			respondError(w, errInvalidRefreshToken)
 		default:
 			respondError(w, errInternalServer)

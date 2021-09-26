@@ -31,4 +31,8 @@ var (
 		StatusCode: http.StatusBadRequest,
 		Message:    "invalid refresh token",
 	}
+	errEmptyFingerprintHeader = ResponseError{
+		StatusCode: http.StatusBadRequest,
+		Message:    "X-Fingerprint header is required",
+	}
 )

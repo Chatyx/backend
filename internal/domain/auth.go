@@ -21,8 +21,9 @@ type Claims struct {
 }
 
 type SignInDTO struct {
-	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required"`
+	Username    string `json:"username" validate:"required"`
+	Password    string `json:"password" validate:"required"`
+	Fingerprint string `json:"-"`
 }
 
 func (s *SignInDTO) Decode(payload []byte) error {
@@ -42,14 +43,15 @@ func (t JWTPair) Encode() ([]byte, error) {
 	return json.Marshal(t)
 }
 
-type RT struct {
+type RefreshSessionDTO struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
+	Fingerprint  string `json:"-"`
 }
 
-func (rt *RT) Decode(payload []byte) error {
+func (rt *RefreshSessionDTO) Decode(payload []byte) error {
 	return json.Unmarshal(payload, rt)
 }
 
-func (rt *RT) DecodeFrom(r io.Reader) error {
+func (rt *RefreshSessionDTO) DecodeFrom(r io.Reader) error {
 	return json.NewDecoder(r).Decode(rt)
 }

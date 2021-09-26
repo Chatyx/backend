@@ -55,7 +55,7 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			s.logger.Debugf("failed to login user %q: user doesn't exists", dto.Username)
-			return domain.JWTPair{}, domain.ErrInvalidCredentials
+			return domain.JWTPair{}, domain.ErrWrongCredentials
 		}
 
 		return domain.JWTPair{}, err
@@ -63,7 +63,7 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 
 	if !s.hasher.CompareHashAndPassword(user.Password, dto.Password) {
 		s.logger.Debugf("failed to login user %q: password mismatch", dto.Username)
-		return domain.JWTPair{}, domain.ErrInvalidCredentials
+		return domain.JWTPair{}, domain.ErrWrongCredentials
 	}
 
 	claims := &domain.Claims{
@@ -91,7 +91,7 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 	session := domain.Session{
 		UserID:       user.ID,
 		RefreshToken: refreshToken,
-		Fingerprint:  "",
+		Fingerprint:  dto.Fingerprint,
 		CreatedAt:    time.Now(),
 		ExpiresAt:    time.Now().Add(s.refreshTokenTTL),
 	}
@@ -105,15 +105,20 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 	}, nil
 }
 
-func (s *authService) Refresh(ctx context.Context, refreshToken string) (domain.JWTPair, error) {
-	session, err := s.sessionRepo.Get(ctx, refreshToken)
+func (s *authService) Refresh(ctx context.Context, dto domain.RefreshSessionDTO) (domain.JWTPair, error) {
+	session, err := s.sessionRepo.Get(ctx, dto.RefreshToken)
 	if err != nil {
 		return domain.JWTPair{}, err
 	}
 
 	defer func() {
-		_ = s.sessionRepo.Delete(ctx, refreshToken)
+		_ = s.sessionRepo.Delete(ctx, dto.RefreshToken)
 	}()
+
+	if dto.Fingerprint != session.Fingerprint {
+		s.logger.Warningf("Refresh token %s is compromised (fingerprints don't match)", dto.RefreshToken)
+		return domain.JWTPair{}, domain.ErrInvalidRefreshToken
+	}
 
 	user, err := s.userService.GetByID(ctx, session.UserID)
 	if err != nil {
@@ -145,7 +150,7 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (domain.
 	newSession := domain.Session{
 		UserID:       user.ID,
 		RefreshToken: newRefreshToken,
-		Fingerprint:  "",
+		Fingerprint:  dto.Fingerprint,
 		CreatedAt:    time.Now(),
 		ExpiresAt:    time.Now().Add(s.refreshTokenTTL),
 	}

@@ -45,6 +45,8 @@ func (h *baseHandler) validateStruct(s interface{}) error {
 			)
 		}
 
+		h.logger.Debugf("fields validation failed: %v", fields)
+
 		return ResponseError{
 			StatusCode: http.StatusBadRequest,
 			Message:    "validation error",
