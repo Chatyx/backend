@@ -18,7 +18,7 @@ postgres:
 
 redis:
 	docker stop scht-redis || true
-	docker run --detach --name=scht-redis \
+	docker run --rm --detach --name=scht-redis \
 		--publish ${SCHT_REDIS_PORT}:6379 redis:6.2.5
 
 create-migration:

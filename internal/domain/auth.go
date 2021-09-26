@@ -3,9 +3,18 @@ package domain
 import (
 	"encoding/json"
 	"io"
+	"time"
 
 	"github.com/dgrijalva/jwt-go/v4"
 )
+
+type Session struct {
+	UserID       string
+	RefreshToken string
+	Fingerprint  string
+	ExpiresAt    time.Time
+	CreatedAt    time.Time
+}
 
 type Claims struct {
 	jwt.StandardClaims
@@ -35,4 +44,12 @@ func (t JWTPair) Encode() ([]byte, error) {
 
 type RT struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
+func (rt *RT) Decode(payload []byte) error {
+	return json.Unmarshal(payload, rt)
+}
+
+func (rt *RT) DecodeFrom(r io.Reader) error {
+	return json.NewDecoder(r).Decode(rt)
 }

@@ -5,18 +5,19 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/Mort4lis/scht-backend/internal/repositories"
 	"github.com/Mort4lis/scht-backend/pkg/auth"
+	"github.com/Mort4lis/scht-backend/pkg/hasher"
+	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/google/uuid"
-
-	"github.com/Mort4lis/scht-backend/pkg/hasher"
-
-	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 type authService struct {
-	userService  UserService
+	userService UserService
+	sessionRepo repositories.SessionRepository
+
 	hasher       hasher.PasswordHasher
 	tokenManager *auth.TokenManager
 
@@ -27,7 +28,9 @@ type authService struct {
 }
 
 type AuthServiceConfig struct {
-	UserService  UserService
+	UserService UserService
+	SessionRepo repositories.SessionRepository
+
 	Hasher       hasher.PasswordHasher
 	TokenManager *auth.TokenManager
 
@@ -38,6 +41,7 @@ type AuthServiceConfig struct {
 func NewAuthService(cfg AuthServiceConfig) AuthService {
 	return &authService{
 		userService:     cfg.UserService,
+		sessionRepo:     cfg.SessionRepo,
 		hasher:          cfg.Hasher,
 		tokenManager:    cfg.TokenManager,
 		accessTokenTTL:  cfg.AccessTokenTTL,
@@ -81,9 +85,19 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 	refreshToken, err := s.tokenManager.NewRefreshToken()
 	if err != nil {
 		s.logger.WithError(err).Error("Error occurred while creating a new refresh token")
+		return domain.JWTPair{}, err
 	}
 
-	// TODO: save refresh token to storage
+	session := domain.Session{
+		UserID:       user.ID,
+		RefreshToken: refreshToken,
+		Fingerprint:  "",
+		CreatedAt:    time.Now(),
+		ExpiresAt:    time.Now().Add(s.refreshTokenTTL),
+	}
+	if err = s.sessionRepo.Set(ctx, refreshToken, session); err != nil {
+		return domain.JWTPair{}, err
+	}
 
 	return domain.JWTPair{
 		AccessToken:  accessToken,
@@ -92,7 +106,57 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 }
 
 func (s *authService) Refresh(ctx context.Context, refreshToken string) (domain.JWTPair, error) {
-	panic("implement me")
+	session, err := s.sessionRepo.Get(ctx, refreshToken)
+	if err != nil {
+		return domain.JWTPair{}, err
+	}
+
+	defer func() {
+		_ = s.sessionRepo.Delete(ctx, refreshToken)
+	}()
+
+	user, err := s.userService.GetByID(ctx, session.UserID)
+	if err != nil {
+		return domain.JWTPair{}, err
+	}
+
+	claims := &domain.Claims{
+		StandardClaims: jwt.StandardClaims{
+			ID:        uuid.New().String(),
+			Subject:   user.ID,
+			Issuer:    "SCHT",
+			IssuedAt:  jwt.At(time.Now()),
+			ExpiresAt: jwt.At(time.Now().Add(s.accessTokenTTL)),
+		},
+	}
+
+	newAccessToken, err := s.tokenManager.NewAccessToken(claims)
+	if err != nil {
+		s.logger.WithError(err).Error("Error occurred while creating a new access token")
+		return domain.JWTPair{}, err
+	}
+
+	newRefreshToken, err := s.tokenManager.NewRefreshToken()
+	if err != nil {
+		s.logger.WithError(err).Error("Error occurred while creating a new refresh token")
+		return domain.JWTPair{}, err
+	}
+
+	newSession := domain.Session{
+		UserID:       user.ID,
+		RefreshToken: newRefreshToken,
+		Fingerprint:  "",
+		CreatedAt:    time.Now(),
+		ExpiresAt:    time.Now().Add(s.refreshTokenTTL),
+	}
+	if err = s.sessionRepo.Set(ctx, newRefreshToken, newSession); err != nil {
+		return domain.JWTPair{}, err
+	}
+
+	return domain.JWTPair{
+		AccessToken:  newAccessToken,
+		RefreshToken: newRefreshToken,
+	}, nil
 }
 
 func (s *authService) Authorize(accessToken string) (domain.Claims, error) {
@@ -100,7 +164,7 @@ func (s *authService) Authorize(accessToken string) (domain.Claims, error) {
 
 	if err := s.tokenManager.Parse(accessToken, &claims); err != nil {
 		s.logger.WithError(err).Debug("invalid access token")
-		return claims, domain.ErrInvalidToken
+		return claims, domain.ErrInvalidAccessToken
 	}
 
 	return claims, nil

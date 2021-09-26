@@ -20,7 +20,7 @@ func AuthorizationMiddleware(handler httprouter.Handle, as services.AuthService)
 		claims, err := as.Authorize(accessToken)
 		if err != nil {
 			switch err {
-			case domain.ErrInvalidToken:
+			case domain.ErrInvalidAccessToken:
 				RespondError(w, ErrInvalidAuthorizationToken)
 			default:
 				RespondError(w, err)

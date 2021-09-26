@@ -13,13 +13,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Mort4lis/scht-backend/internal/repositories"
+
 	"github.com/go-redis/redis/v8"
 
 	"github.com/Mort4lis/scht-backend/pkg/auth"
 
 	"github.com/Mort4lis/scht-backend/internal/config"
 	handlers "github.com/Mort4lis/scht-backend/internal/delivery/http"
-	pg "github.com/Mort4lis/scht-backend/internal/repositories/postgres"
 	"github.com/Mort4lis/scht-backend/internal/services"
 	password "github.com/Mort4lis/scht-backend/pkg/hasher"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -61,10 +62,12 @@ func NewApp(cfg *config.Config) *App {
 		logger.WithError(err).Fatal("Failed to init validator")
 	}
 
-	userRepo := pg.NewUserRepository(dbPool)
+	userRepo := repositories.NewUserPostgresRepository(dbPool)
+	sessionRepo := repositories.NewSessionRedisRepository(redisClient)
 	userService := services.NewUserService(userRepo, hasher)
 	authService := services.NewAuthService(services.AuthServiceConfig{
 		UserService:     userService,
+		SessionRepo:     sessionRepo,
 		Hasher:          hasher,
 		TokenManager:    tokenManager,
 		AccessTokenTTL:  time.Duration(cfg.Auth.AccessTokenTTL) * time.Minute,

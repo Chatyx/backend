@@ -14,3 +14,9 @@ type UserRepository interface {
 	Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error)
 	Delete(ctx context.Context, id string) error
 }
+
+type SessionRepository interface {
+	Get(ctx context.Context, key string) (domain.Session, error)
+	Set(ctx context.Context, key string, session domain.Session) error
+	Delete(ctx context.Context, key string) error
+}

@@ -27,4 +27,8 @@ var (
 		StatusCode: http.StatusUnauthorized,
 		Message:    "invalid authorization token",
 	}
+	ErrInvalidRefreshToken = ResponseError{
+		StatusCode: http.StatusBadRequest,
+		Message:    "invalid refresh token",
+	}
 )

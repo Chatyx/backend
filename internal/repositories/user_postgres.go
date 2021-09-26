@@ -1,4 +1,4 @@
-package postgres
+package repositories
 
 import (
 	"context"
@@ -17,20 +17,19 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-type UserRepository struct {
+type userPostgresRepository struct {
 	dbPool *pgxpool.Pool
-
 	logger logging.Logger
 }
 
-func NewUserRepository(dbPool *pgxpool.Pool) *UserRepository {
-	return &UserRepository{
+func NewUserPostgresRepository(dbPool *pgxpool.Pool) UserRepository {
+	return &userPostgresRepository{
 		dbPool: dbPool,
 		logger: logging.GetLogger(),
 	}
 }
 
-func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
+func (r *userPostgresRepository) List(ctx context.Context) ([]*domain.User, error) {
 	query := `
 		SELECT 
 			id, username, password, 
@@ -74,7 +73,7 @@ func (r *UserRepository) List(ctx context.Context) ([]*domain.User, error) {
 	return users, nil
 }
 
-func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
+func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (*domain.User, error) {
 	var (
 		id        string
 		createdAt pgtype.Timestamptz
@@ -120,7 +119,7 @@ func (r *UserRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (
 	return user, nil
 }
 
-func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
+func (r *userPostgresRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	if !utils.IsValidUUID(id) {
 		r.logger.Debugf("user is not found with id = %s", id)
 
@@ -130,11 +129,11 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, 
 	return r.getBy(ctx, "id", id)
 }
 
-func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+func (r *userPostgresRepository) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
 	return r.getBy(ctx, "username", username)
 }
 
-func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue interface{}) (*domain.User, error) {
+func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fieldValue interface{}) (*domain.User, error) {
 	var user domain.User
 
 	query := fmt.Sprintf(`
@@ -168,7 +167,7 @@ func (r *UserRepository) getBy(ctx context.Context, fieldName string, fieldValue
 	return &user, nil
 }
 
-func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error) {
+func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (*domain.User, error) {
 	if !utils.IsValidUUID(dto.ID) {
 		r.logger.Debugf("user is not found with id = %s", dto.ID)
 
@@ -212,7 +211,7 @@ func (r *UserRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (
 	return &user, nil
 }
 
-func (r *UserRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (query string, args []interface{}) {
+func (r *userPostgresRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (query string, args []interface{}) {
 	num := 2
 	setConditions := make([]string, 0)
 
@@ -272,7 +271,7 @@ func (r *UserRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (query strin
 	return query, args
 }
 
-func (r *UserRepository) Delete(ctx context.Context, id string) error {
+func (r *userPostgresRepository) Delete(ctx context.Context, id string) error {
 	if !utils.IsValidUUID(id) {
 		r.logger.Debugf("user is not found with id = %s", id)
 

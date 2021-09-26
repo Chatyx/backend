@@ -33,8 +33,8 @@ func NewAuthHandler(service services.AuthService, validate *validator.Validate) 
 }
 
 func (h *AuthHandler) Register(router *httprouter.Router) {
-	router.POST("/api/sign-in", h.SignIn)
-	router.POST("/api/refresh", h.Refresh)
+	router.POST("/api/auth/sign-in", h.SignIn)
+	router.POST("/api/auth/refresh", h.Refresh)
 }
 
 func (h *AuthHandler) SignIn(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
@@ -64,4 +64,29 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, req *http.Request, _ httprou
 	RespondSuccess(http.StatusOK, w, pair)
 }
 
-func (h *AuthHandler) Refresh(w http.ResponseWriter, req *http.Request, params httprouter.Params) {}
+func (h *AuthHandler) Refresh(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var dto domain.RT
+	if err := h.DecodeJSONFromBody(req.Body, &dto); err != nil {
+		RespondError(w, err)
+		return
+	}
+
+	if err := h.Validate(dto); err != nil {
+		RespondError(w, err)
+		return
+	}
+
+	pair, err := h.service.Refresh(req.Context(), dto.RefreshToken)
+	if err != nil {
+		switch err {
+		case domain.ErrSessionNotFound, domain.ErrUserNotFound:
+			RespondError(w, ErrInvalidRefreshToken)
+		default:
+			RespondError(w, err)
+		}
+
+		return
+	}
+
+	RespondSuccess(http.StatusOK, w, pair)
+}
