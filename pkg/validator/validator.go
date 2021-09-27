@@ -31,7 +31,7 @@ func New() (*validator.Validate, error) {
 			return true
 		}
 
-		_, err := time.Parse("2006-04-02", fl.Field().String())
+		_, err := time.Parse("2006-01-02", fl.Field().String())
 		return err == nil
 	})
 	if err != nil {

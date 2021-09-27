@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +35,7 @@ func TestUserHandler_create(t *testing.T) {
 		expectedResponseBody string
 	}{
 		{
-			name:        "OK with required fields",
+			name:        "Success with required fields",
 			requestBody: `{"username":"test_user","password":"qwerty12345","email":"test_user@gmail.com"}`,
 			mockInUserDTO: domain.CreateUserDTO{
 				Username: "test_user",
@@ -55,7 +56,7 @@ func TestUserHandler_create(t *testing.T) {
 			expectedResponseBody: `{"id":"1","username":"test_user","email":"test_user@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
 		},
 		{
-			name: "OK with full fields",
+			name: "Success with full fields",
 			requestBody: `
 				{
 					"username":"test_user",
@@ -92,6 +93,64 @@ func TestUserHandler_create(t *testing.T) {
 			expectedStatusCode:   http.StatusCreated,
 			expectedResponseBody: `{"id":"1","username":"test_user","email":"test_user@gmail.com","first_name":"Test first name","last_name":"Test last name","birth_date":"1983-10-27","department":"Test department","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
 		},
+		{
+			name:                 "Invalid JSON body",
+			requestBody:          `{"username":"test_user","password":"qwerty12345","email":"test_user@gmail.com"`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"invalid json body"}`,
+		},
+		{
+			name:                 "Empty body",
+			requestBody:          `{}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"validation error","fields":{"email":"field validation for 'email' failed on the 'required' tag","password":"field validation for 'password' failed on the 'required' tag","username":"field validation for 'username' failed on the 'required' tag"}}`,
+		},
+		{
+			name:                 "Short password",
+			requestBody:          `{"username":"test_user","password":"test123","email":"test_user@gmail.com"}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"validation error","fields":{"password":"field validation for 'password' failed on the 'min' tag"}}`,
+		},
+		{
+			name:                 "Invalid email address",
+			requestBody:          `{"username":"test_user","password":"qwerty12345","email":"12345"}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"validation error","fields":{"email":"field validation for 'email' failed on the 'email' tag"}}`,
+		},
+		{
+			name:                 "Invalid birth date",
+			requestBody:          `{"username":"test_user","password":"qwerty12345","email":"test_user@gmail.com","birth_date":"1999-02-30"}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"validation error","fields":{"birth_date":"field validation for 'birth_date' failed on the 'sql-date' tag"}}`,
+		},
+		{
+			name:        "User with such username or email already exists",
+			requestBody: `{"username":"test_user","password":"qwerty12345","email":"test_user@gmail.com"}`,
+			mockInUserDTO: domain.CreateUserDTO{
+				Username: "test_user",
+				Password: "qwerty12345",
+				Email:    "test_user@gmail.com",
+			},
+			mockBehavior: func(us *mock_service.MockUserService, ctx context.Context, dto domain.CreateUserDTO, user domain.User) {
+				us.EXPECT().Create(ctx, dto).Return(domain.User{}, domain.ErrUserUniqueViolation)
+			},
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"user with such username or email already exists"}`,
+		},
+		{
+			name:        "Unexpected error",
+			requestBody: `{"username":"test_user","password":"qwerty12345","email":"test_user@gmail.com"}`,
+			mockInUserDTO: domain.CreateUserDTO{
+				Username: "test_user",
+				Password: "qwerty12345",
+				Email:    "test_user@gmail.com",
+			},
+			mockBehavior: func(us *mock_service.MockUserService, ctx context.Context, dto domain.CreateUserDTO, user domain.User) {
+				us.EXPECT().Create(ctx, dto).Return(domain.User{}, errors.New("unexpected error"))
+			},
+			expectedStatusCode:   http.StatusInternalServerError,
+			expectedResponseBody: `{"message":"internal server error"}`,
+		},
 	}
 
 	validate, err := validator.New()
@@ -121,7 +180,10 @@ func TestUserHandler_create(t *testing.T) {
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, listUserURL, strings.NewReader(testCase.requestBody))
 
-			testCase.mockBehavior(us, req.Context(), testCase.mockInUserDTO, testCase.mockOutUser)
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(us, req.Context(), testCase.mockInUserDTO, testCase.mockOutUser)
+			}
+
 			uh.create(rec, req, httprouter.Params{})
 
 			resp := rec.Result()
