@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/internal/services"
+	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/julienschmidt/httprouter"
 )
@@ -19,7 +19,7 @@ const refreshCookieName = "refresh_token"
 
 type authHandler struct {
 	*baseHandler
-	service services.AuthService
+	service service.AuthService
 	logger  logging.Logger
 
 	domain          string

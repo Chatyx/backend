@@ -1,4 +1,4 @@
-package services
+package service
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/internal/repositories"
+	"github.com/Mort4lis/scht-backend/internal/repository"
 	"github.com/Mort4lis/scht-backend/pkg/auth"
 	"github.com/Mort4lis/scht-backend/pkg/hasher"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -16,7 +16,7 @@ import (
 
 type authService struct {
 	userService UserService
-	sessionRepo repositories.SessionRepository
+	sessionRepo repository.SessionRepository
 
 	hasher       hasher.PasswordHasher
 	tokenManager *auth.TokenManager
@@ -29,7 +29,7 @@ type authService struct {
 
 type AuthServiceConfig struct {
 	UserService UserService
-	SessionRepo repositories.SessionRepository
+	SessionRepo repository.SessionRepository
 
 	Hasher       hasher.PasswordHasher
 	TokenManager *auth.TokenManager

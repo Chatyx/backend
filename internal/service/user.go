@@ -1,4 +1,4 @@
-package services
+package service
 
 import (
 	"context"
@@ -7,18 +7,18 @@ import (
 	"github.com/Mort4lis/scht-backend/pkg/hasher"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/internal/repositories"
+	"github.com/Mort4lis/scht-backend/internal/repository"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 type userService struct {
-	repo   repositories.UserRepository
+	repo   repository.UserRepository
 	hasher hasher.PasswordHasher
 
 	logger logging.Logger
 }
 
-func NewUserService(repo repositories.UserRepository, hasher hasher.PasswordHasher) UserService {
+func NewUserService(repo repository.UserRepository, hasher hasher.PasswordHasher) UserService {
 	return &userService{
 		repo:   repo,
 		hasher: hasher,

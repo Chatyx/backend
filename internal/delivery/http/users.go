@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/internal/services"
+	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/julienschmidt/httprouter"
 )
@@ -25,8 +25,8 @@ func (r UserListResponse) Encode() ([]byte, error) {
 
 type userHandler struct {
 	*baseHandler
-	userService services.UserService
-	authService services.AuthService
+	userService service.UserService
+	authService service.AuthService
 	logger      logging.Logger
 }
 
