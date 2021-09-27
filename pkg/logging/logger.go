@@ -67,6 +67,7 @@ type LogConfig struct {
 
 const (
 	logrusKind = "logrus"
+	mockKind   = "mock"
 )
 
 var (
@@ -89,6 +90,8 @@ func InitLogger(cfg LogConfig) {
 			if err != nil {
 				panic(err)
 			}
+		case mockKind:
+			logger = LoggerMock{}
 		default:
 			panic(fmt.Sprintf("unsupported logger kind %q", cfg.LoggerKind))
 		}

@@ -158,7 +158,9 @@ func TestUserHandler_create(t *testing.T) {
 		t.Errorf("Unexpected error while creating validator: %v", err)
 	}
 
-	logging.InitLogger(logging.LogConfig{})
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
 	logger := logging.GetLogger()
 	bashHandler := &baseHandler{
 		logger:   logger,
