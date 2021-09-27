@@ -441,6 +441,201 @@ func TestUserHandler_create(t *testing.T) {
 	}
 }
 
+func TestUserHandler_update(t *testing.T) {
+	type mockBehaviour func(us *mock_service.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User)
+
+	testTable := []struct {
+		name                 string
+		params               httprouter.Params
+		requestBody          string
+		updateUserDTO        domain.UpdateUserDTO
+		updatedUser          domain.User
+		mockBehavior         mockBehaviour
+		expectedStatusCode   int
+		expectedResponseBody string
+	}{
+		{
+			name:        "Success",
+			params:      []httprouter.Param{{Key: "id", Value: "1"}},
+			requestBody: `{"username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR"}`,
+			updateUserDTO: domain.UpdateUserDTO{
+				ID:         "1",
+				Username:   "john1967",
+				Email:      "john1967@gmail.com",
+				FirstName:  "John",
+				LastName:   "Lennon",
+				BirthDate:  "1967-10-09",
+				Department: "HR",
+			},
+			updatedUser: domain.User{
+				ID:         "1",
+				Username:   "john1967",
+				Password:   uuid.New().String(),
+				Email:      "john1967@gmail.com",
+				FirstName:  "John",
+				LastName:   "Lennon",
+				BirthDate:  "1967-10-09",
+				Department: "HR",
+				CreatedAt:  &userCreatedAt,
+				UpdatedAt:  &userUpdatedAt,
+			},
+			mockBehavior: func(us *mock_service.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User) {
+				us.EXPECT().Update(ctx, dto).Return(updatedUser, nil)
+			},
+			expectedStatusCode:   http.StatusOK,
+			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"}`,
+		},
+		{
+			name:          "Success with empty body",
+			params:        []httprouter.Param{{Key: "id", Value: "1"}},
+			requestBody:   `{}`,
+			updateUserDTO: domain.UpdateUserDTO{ID: "1"},
+			updatedUser: domain.User{
+				ID:         "1",
+				Username:   "john1967",
+				Password:   uuid.New().String(),
+				Email:      "john1967@gmail.com",
+				FirstName:  "John",
+				LastName:   "Lennon",
+				BirthDate:  "1967-10-09",
+				Department: "HR",
+				CreatedAt:  &userCreatedAt,
+			},
+			mockBehavior: func(us *mock_service.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User) {
+				us.EXPECT().Update(ctx, dto).Return(updatedUser, nil)
+			},
+			expectedStatusCode:   http.StatusOK,
+			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
+		},
+		{
+			name:                 "Invalid JSON body",
+			params:               []httprouter.Param{{Key: "id", Value: "1"}},
+			requestBody:          `{"birth_date""1970-01-01"}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"invalid json body"}`,
+		},
+		{
+			name:                 "Short password",
+			params:               []httprouter.Param{{Key: "id", Value: "1"}},
+			requestBody:          `{"username":"john1967","password":"test123","email":"john1967@gmail.com"}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"validation error","fields":{"password":"field validation for 'password' failed on the 'min' tag"}}`,
+		},
+		{
+			name:                 "Invalid email address",
+			params:               []httprouter.Param{{Key: "id", Value: "1"}},
+			requestBody:          `{"username":"john1967","password":"qwerty12345","email":"12345"}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"validation error","fields":{"email":"field validation for 'email' failed on the 'email' tag"}}`,
+		},
+		{
+			name:                 "Invalid birth date",
+			params:               []httprouter.Param{{Key: "id", Value: "1"}},
+			requestBody:          `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com","birth_date":"20.12.1994"}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"validation error","fields":{"birth_date":"field validation for 'birth_date' failed on the 'sql-date' tag"}}`,
+		},
+		{
+			name:          "User is not found",
+			params:        []httprouter.Param{{Key: "id", Value: "2"}},
+			requestBody:   `{"department":"IoT"}`,
+			updateUserDTO: domain.UpdateUserDTO{ID: "2", Department: "IoT"},
+			mockBehavior: func(us *mock_service.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User) {
+				us.EXPECT().Update(ctx, dto).Return(domain.User{}, domain.ErrUserNotFound)
+			},
+			expectedStatusCode:   http.StatusNotFound,
+			expectedResponseBody: `{"message":"user is not found"}`,
+		},
+		{
+			name:        "User with such username or email already exists",
+			params:      []httprouter.Param{{Key: "id", Value: "2"}},
+			requestBody: `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com"}`,
+			updateUserDTO: domain.UpdateUserDTO{
+				ID:       "2",
+				Username: "john1967",
+				Password: "qwerty12345",
+				Email:    "john1967@gmail.com",
+			},
+			mockBehavior: func(us *mock_service.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User) {
+				us.EXPECT().Update(ctx, dto).Return(domain.User{}, domain.ErrUserUniqueViolation)
+			},
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"user with such username or email already exists"}`,
+		},
+		{
+			name:        "Unexpected error",
+			params:      []httprouter.Param{{Key: "id", Value: "1"}},
+			requestBody: `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com","birth_date":"1998-01-01"}`,
+			updateUserDTO: domain.UpdateUserDTO{
+				ID:        "1",
+				Username:  "john1967",
+				Password:  "qwerty12345",
+				Email:     "john1967@gmail.com",
+				BirthDate: "1998-01-01",
+			},
+			mockBehavior: func(us *mock_service.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User) {
+				us.EXPECT().Update(ctx, dto).Return(domain.User{}, errors.New("unexpected error"))
+			},
+			expectedStatusCode:   http.StatusInternalServerError,
+			expectedResponseBody: `{"message":"internal server error"}`,
+		},
+	}
+
+	validate, err := validator.New()
+	if err != nil {
+		t.Errorf("Unexpected error while creating validator: %v", err)
+	}
+
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
+
+	logger := logging.GetLogger()
+	bashHandler := &baseHandler{
+		logger:   logger,
+		validate: validate,
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			us := mock_service.NewMockUserService(c)
+			uh := &userHandler{
+				baseHandler: bashHandler,
+				userService: us,
+				logger:      logger,
+			}
+
+			id := testCase.params.ByName("id")
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPatch, "/api/users/"+id, strings.NewReader(testCase.requestBody))
+
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(us, req.Context(), testCase.updateUserDTO, testCase.updatedUser)
+			}
+
+			uh.update(rec, req, testCase.params)
+
+			resp := rec.Result()
+			if resp.StatusCode != testCase.expectedStatusCode {
+				t.Errorf("Wrong response status code. Expected %d, got %d", testCase.expectedStatusCode, resp.StatusCode)
+			}
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Errorf("Unexpected error while reading response body: %v", err)
+				return
+			}
+
+			if string(respBodyPayload) != testCase.expectedResponseBody {
+				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, respBodyPayload)
+			}
+		})
+	}
+}
+
 func TestUserHandler_delete(t *testing.T) {
 	type mockBehaviour func(us *mock_service.MockUserService, ctx context.Context, id string)
 
