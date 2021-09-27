@@ -19,6 +19,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+var userCreatedAt = time.Date(2021, time.September, 27, 11, 10, 12, 411, time.Local)
+
 func TestUserHandler_create(t *testing.T) {
 	type mockBehavior func(us *mock_service.MockUserService, ctx context.Context, dto domain.CreateUserDTO, user domain.User)
 
@@ -40,18 +42,55 @@ func TestUserHandler_create(t *testing.T) {
 				Email:    "test_user@gmail.com",
 			},
 			mockOutUser: domain.User{
-				ID:       "b2ccb96d-14b2-43d9-aafb-3dacaca8a200",
-				Username: "test_user",
-				Password: uuid.New().String(),
-				Email:    "test_user@gmail.com",
+				ID:        "1",
+				Username:  "test_user",
+				Password:  uuid.New().String(),
+				Email:     "test_user@gmail.com",
+				CreatedAt: &userCreatedAt,
 			},
 			mockBehavior: func(us *mock_service.MockUserService, ctx context.Context, dto domain.CreateUserDTO, user domain.User) {
-				createdAt := time.Date(2021, time.September, 27, 11, 10, 12, 411, time.UTC).Local()
-				user.CreatedAt = &createdAt
 				us.EXPECT().Create(ctx, dto).Return(user, nil)
 			},
 			expectedStatusCode:   http.StatusCreated,
-			expectedResponseBody: `{"id":"b2ccb96d-14b2-43d9-aafb-3dacaca8a200","username":"test_user","email":"test_user@gmail.com","created_at":"2021-09-27T14:10:12.000000411+03:00"}`,
+			expectedResponseBody: `{"id":"1","username":"test_user","email":"test_user@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
+		},
+		{
+			name: "OK with full fields",
+			requestBody: `
+				{
+					"username":"test_user",
+					"password":"qwerty12345",
+					"email":"test_user@gmail.com", 
+					"first_name":"Test first name",
+					"last_name":"Test last name",
+					"birth_date":"1983-10-27",
+					"department":"Test department"
+				}`,
+			mockInUserDTO: domain.CreateUserDTO{
+				Username:   "test_user",
+				Password:   "qwerty12345",
+				Email:      "test_user@gmail.com",
+				FirstName:  "Test first name",
+				LastName:   "Test last name",
+				BirthDate:  "1983-10-27",
+				Department: "Test department",
+			},
+			mockOutUser: domain.User{
+				ID:         "1",
+				Username:   "test_user",
+				Password:   uuid.New().String(),
+				Email:      "test_user@gmail.com",
+				FirstName:  "Test first name",
+				LastName:   "Test last name",
+				BirthDate:  "1983-10-27",
+				Department: "Test department",
+				CreatedAt:  &userCreatedAt,
+			},
+			mockBehavior: func(us *mock_service.MockUserService, ctx context.Context, dto domain.CreateUserDTO, user domain.User) {
+				us.EXPECT().Create(ctx, dto).Return(user, nil)
+			},
+			expectedStatusCode:   http.StatusCreated,
+			expectedResponseBody: `{"id":"1","username":"test_user","email":"test_user@gmail.com","first_name":"Test first name","last_name":"Test last name","birth_date":"1983-10-27","department":"Test department","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
 		},
 	}
 
