@@ -50,18 +50,22 @@ func (r *userPostgresRepository) List(ctx context.Context) ([]domain.User, error
 	users := make([]domain.User, 0)
 
 	for rows.Next() {
-		var user domain.User
+		var (
+			user      domain.User
+			birthDate pgtype.Date
+		)
 
 		if err = rows.Scan(
 			&user.ID, &user.Username, &user.Password,
 			&user.FirstName, &user.LastName, &user.Email,
-			&user.BirthDate, &user.Department, &user.IsDeleted,
+			&birthDate, &user.Department, &user.IsDeleted,
 			&user.CreatedAt, &user.UpdatedAt,
 		); err != nil {
 			r.logger.WithError(err).Error("Unable to scan user")
 			return nil, err
 		}
 
+		user.BirthDate = birthDate.Time.Format("2006-01-02")
 		users = append(users, user)
 	}
 
@@ -146,11 +150,13 @@ func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fi
 		fieldName,
 	)
 
+	var birthDate pgtype.Date
+
 	row := r.dbPool.QueryRow(ctx, query, fieldValue)
 	if err := row.Scan(
 		&user.ID, &user.Username, &user.Password,
 		&user.FirstName, &user.LastName, &user.Email,
-		&user.BirthDate, &user.Department, &user.IsDeleted,
+		&birthDate, &user.Department, &user.IsDeleted,
 		&user.CreatedAt, &user.UpdatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -163,6 +169,8 @@ func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fi
 
 		return domain.User{}, err
 	}
+
+	user.BirthDate = birthDate.Time.Format("2006-01-02")
 
 	return user, nil
 }
@@ -179,14 +187,17 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 		return domain.User{}, domain.ErrUserNoNeedUpdate
 	}
 
-	var user domain.User
+	var (
+		user      domain.User
+		birthDate pgtype.Date
+	)
 
 	if err := r.dbPool.QueryRow(
 		ctx, query, args...,
 	).Scan(
 		&user.ID, &user.Username, &user.Password,
 		&user.FirstName, &user.LastName, &user.Email,
-		&user.BirthDate, &user.Department, &user.IsDeleted,
+		&birthDate, &user.Department, &user.IsDeleted,
 		&user.CreatedAt, &user.UpdatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -205,6 +216,8 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 
 		return domain.User{}, err
 	}
+
+	user.BirthDate = birthDate.Time.Format("2006-01-02")
 
 	return user, nil
 }
@@ -245,7 +258,7 @@ func (r *userPostgresRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (que
 		num++
 	}
 
-	if dto.BirthDate != nil {
+	if dto.BirthDate != "" {
 		setConditions = append(setConditions, fmt.Sprintf("birth_date = $%d", num))
 		args = append(args, dto.BirthDate)
 		num++

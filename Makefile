@@ -16,7 +16,6 @@ postgres:
 		--env POSTGRES_USER=${SCHT_PG_USERNAME} \
 		--env POSTGRES_PASSWORD=${SCHT_PG_PASSWORD} \
 		--env POSTGRES_DB=${SCHT_PG_DATABASE} \
-		--env TZ=Europe/Moscow \
 		--publish ${SCHT_PG_PORT}:5432 postgres:12.1
 
 redis:
