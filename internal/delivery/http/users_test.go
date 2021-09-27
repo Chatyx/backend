@@ -229,7 +229,7 @@ func TestUserHandler_detail(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/api/users/1", nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/users/"+testCase.params.ByName("id"), nil)
 
 			if testCase.mockBehaviour != nil {
 				testCase.mockBehaviour(us, req.Context(), testCase.params, testCase.mockOutUser)
@@ -435,6 +435,99 @@ func TestUserHandler_create(t *testing.T) {
 
 			if string(respBodyPayload) != testCase.expectedResponseBody {
 				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, string(respBodyPayload))
+			}
+		})
+	}
+}
+
+func TestUserHandler_delete(t *testing.T) {
+	type mockBehaviour func(us *mock_service.MockUserService, ctx context.Context, id string)
+
+	testTable := []struct {
+		name                 string
+		params               httprouter.Params
+		mockBehaviour        mockBehaviour
+		expectedStatusCode   int
+		expectedResponseBody string
+	}{
+		{
+			name:   "Success",
+			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, id string) {
+				us.EXPECT().Delete(ctx, id).Return(nil)
+			},
+			expectedStatusCode: http.StatusNoContent,
+		},
+		{
+			name:   "Not found",
+			params: []httprouter.Param{{Key: "id", Value: uuid.New().String()}},
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, id string) {
+				us.EXPECT().Delete(ctx, id).Return(domain.ErrUserNotFound)
+			},
+			expectedStatusCode:   http.StatusNotFound,
+			expectedResponseBody: `{"message":"user is not found"}`,
+		},
+		{
+			name:   "Unexpected error",
+			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, id string) {
+				us.EXPECT().Delete(ctx, id).Return(errors.New("unexpected error"))
+			},
+			expectedStatusCode:   http.StatusInternalServerError,
+			expectedResponseBody: `{"message":"internal server error"}`,
+		},
+	}
+
+	validate, err := validator.New()
+	if err != nil {
+		t.Errorf("Unexpected error while creating validator: %v", err)
+	}
+
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
+
+	logger := logging.GetLogger()
+	bashHandler := &baseHandler{
+		logger:   logger,
+		validate: validate,
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			us := mock_service.NewMockUserService(c)
+			uh := &userHandler{
+				baseHandler: bashHandler,
+				userService: us,
+				logger:      logger,
+			}
+
+			id := testCase.params.ByName("id")
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodDelete, "/api/users/"+id, nil)
+
+			if testCase.mockBehaviour != nil {
+				testCase.mockBehaviour(us, req.Context(), id)
+			}
+
+			uh.delete(rec, req, testCase.params)
+
+			resp := rec.Result()
+			if resp.StatusCode != testCase.expectedStatusCode {
+				t.Errorf("Wrong response status code. Expected %d, got %d", testCase.expectedStatusCode, resp.StatusCode)
+			}
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Errorf("Unexpected error while reading response body: %v", err)
+				return
+			}
+
+			if string(respBodyPayload) != testCase.expectedResponseBody {
+				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, respBodyPayload)
 			}
 		})
 	}
