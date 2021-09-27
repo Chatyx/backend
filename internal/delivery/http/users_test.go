@@ -129,14 +129,14 @@ func TestUserHandler_list(t *testing.T) {
 			}
 
 			if string(respBodyPayload) != testCase.expectedResponseBody {
-				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, string(respBodyPayload))
+				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, respBodyPayload)
 			}
 		})
 	}
 }
 
 func TestUserHandler_detail(t *testing.T) {
-	type mockBehaviour func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User)
+	type mockBehaviour func(us *mock_service.MockUserService, ctx context.Context, id string, returnedUser domain.User)
 
 	testTable := []struct {
 		name                 string
@@ -155,8 +155,8 @@ func TestUserHandler_detail(t *testing.T) {
 				Email:     "john1967@gmail.com",
 				CreatedAt: &userCreatedAt,
 			},
-			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User) {
-				us.EXPECT().GetByID(ctx, params.ByName("id")).Return(returnedUser, nil)
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(ctx, id).Return(returnedUser, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
@@ -175,8 +175,8 @@ func TestUserHandler_detail(t *testing.T) {
 				CreatedAt:  &userCreatedAt,
 				UpdatedAt:  &userUpdatedAt,
 			},
-			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User) {
-				us.EXPECT().GetByID(ctx, params.ByName("id")).Return(returnedUser, nil)
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(ctx, id).Return(returnedUser, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1940-10-09","department":"IoT","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"}`,
@@ -184,8 +184,8 @@ func TestUserHandler_detail(t *testing.T) {
 		{
 			name:   "Not found",
 			params: []httprouter.Param{{Key: "id", Value: uuid.New().String()}},
-			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User) {
-				us.EXPECT().GetByID(ctx, params.ByName("id")).Return(domain.User{}, domain.ErrUserNotFound)
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(ctx, id).Return(domain.User{}, domain.ErrUserNotFound)
 			},
 			expectedStatusCode:   http.StatusNotFound,
 			expectedResponseBody: `{"message":"user is not found"}`,
@@ -193,8 +193,8 @@ func TestUserHandler_detail(t *testing.T) {
 		{
 			name:   "Unexpected error",
 			params: []httprouter.Param{{Key: "id", Value: "1"}},
-			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User) {
-				us.EXPECT().GetByID(ctx, params.ByName("id")).Return(domain.User{}, errors.New("unexpected error"))
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(ctx, id).Return(domain.User{}, errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -228,11 +228,12 @@ func TestUserHandler_detail(t *testing.T) {
 				logger:      logger,
 			}
 
+			id := testCase.params.ByName("id")
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/api/users/"+testCase.params.ByName("id"), nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/users/"+id, nil)
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(us, req.Context(), testCase.params, testCase.mockOutUser)
+				testCase.mockBehaviour(us, req.Context(), id, testCase.mockOutUser)
 			}
 
 			uh.detail(rec, req, testCase.params)
@@ -249,7 +250,7 @@ func TestUserHandler_detail(t *testing.T) {
 			}
 
 			if string(respBodyPayload) != testCase.expectedResponseBody {
-				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, string(respBodyPayload))
+				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, respBodyPayload)
 			}
 		})
 	}
@@ -434,7 +435,7 @@ func TestUserHandler_create(t *testing.T) {
 			}
 
 			if string(respBodyPayload) != testCase.expectedResponseBody {
-				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, string(respBodyPayload))
+				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, respBodyPayload)
 			}
 		})
 	}
