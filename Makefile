@@ -7,6 +7,9 @@ lint:
 build:
 	go build -o ./build/scht-backend ./cmd/app/main.go
 
+generate:
+	go generate ./...
+
 postgres:
 	docker stop scht-postgres || true
 	docker run --rm --detach --name=scht-postgres \
