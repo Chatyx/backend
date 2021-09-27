@@ -20,8 +20,10 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-var userCreatedAt = time.Date(2021, time.September, 27, 11, 10, 12, 411, time.Local)
-var userUpdatedAt = time.Date(2021, time.November, 14, 22, 00, 53, 512, time.Local)
+var (
+	userCreatedAt = time.Date(2021, time.September, 27, 11, 10, 12, 411, time.Local)
+	userUpdatedAt = time.Date(2021, time.November, 14, 22, 0, 53, 512, time.Local)
+)
 
 func TestUserHandler_list(t *testing.T) {
 	type mockBehaviour func(us *mock_service.MockUserService, ctx context.Context, users []domain.User)
@@ -87,6 +89,7 @@ func TestUserHandler_list(t *testing.T) {
 	logging.InitLogger(logging.LogConfig{
 		LoggerKind: "mock",
 	})
+
 	logger := logging.GetLogger()
 	bashHandler := &baseHandler{
 		logger:   logger,
@@ -113,6 +116,126 @@ func TestUserHandler_list(t *testing.T) {
 			}
 
 			uh.list(rec, req, httprouter.Params{})
+
+			resp := rec.Result()
+			if resp.StatusCode != testCase.expectedStatusCode {
+				t.Errorf("Wrong response status code. Expected %d, got %d", testCase.expectedStatusCode, resp.StatusCode)
+			}
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Errorf("Unexpected error while reading response body: %v", err)
+				return
+			}
+
+			if string(respBodyPayload) != testCase.expectedResponseBody {
+				t.Errorf("Wrong response body. Expected %s, got %s", testCase.expectedResponseBody, string(respBodyPayload))
+			}
+		})
+	}
+}
+
+func TestUserHandler_detail(t *testing.T) {
+	type mockBehaviour func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User)
+
+	testTable := []struct {
+		name                 string
+		params               httprouter.Params
+		mockOutUser          domain.User
+		mockBehaviour        mockBehaviour
+		expectedStatusCode   int
+		expectedResponseBody string
+	}{
+		{
+			name:   "Success with required fields",
+			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			mockOutUser: domain.User{
+				ID:        "1",
+				Username:  "john1967",
+				Email:     "john1967@gmail.com",
+				CreatedAt: &userCreatedAt,
+			},
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User) {
+				us.EXPECT().GetByID(ctx, params.ByName("id")).Return(returnedUser, nil)
+			},
+			expectedStatusCode:   http.StatusOK,
+			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
+		},
+		{
+			name:   "Success with full fields",
+			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			mockOutUser: domain.User{
+				ID:         "1",
+				Username:   "john1967",
+				Email:      "john1967@gmail.com",
+				FirstName:  "John",
+				LastName:   "Lennon",
+				BirthDate:  "1940-10-09",
+				Department: "IoT",
+				CreatedAt:  &userCreatedAt,
+				UpdatedAt:  &userUpdatedAt,
+			},
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User) {
+				us.EXPECT().GetByID(ctx, params.ByName("id")).Return(returnedUser, nil)
+			},
+			expectedStatusCode:   http.StatusOK,
+			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1940-10-09","department":"IoT","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"}`,
+		},
+		{
+			name:   "Not found",
+			params: []httprouter.Param{{Key: "id", Value: uuid.New().String()}},
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User) {
+				us.EXPECT().GetByID(ctx, params.ByName("id")).Return(domain.User{}, domain.ErrUserNotFound)
+			},
+			expectedStatusCode:   http.StatusNotFound,
+			expectedResponseBody: `{"message":"user is not found"}`,
+		},
+		{
+			name:   "Unexpected error",
+			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			mockBehaviour: func(us *mock_service.MockUserService, ctx context.Context, params httprouter.Params, returnedUser domain.User) {
+				us.EXPECT().GetByID(ctx, params.ByName("id")).Return(domain.User{}, errors.New("unexpected error"))
+			},
+			expectedStatusCode:   http.StatusInternalServerError,
+			expectedResponseBody: `{"message":"internal server error"}`,
+		},
+	}
+
+	validate, err := validator.New()
+	if err != nil {
+		t.Errorf("Unexpected error while creating validator: %v", err)
+	}
+
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
+
+	logger := logging.GetLogger()
+	bashHandler := &baseHandler{
+		logger:   logger,
+		validate: validate,
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			us := mock_service.NewMockUserService(c)
+			uh := &userHandler{
+				baseHandler: bashHandler,
+				userService: us,
+				logger:      logger,
+			}
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/users/1", nil)
+
+			if testCase.mockBehaviour != nil {
+				testCase.mockBehaviour(us, req.Context(), testCase.params, testCase.mockOutUser)
+			}
+
+			uh.detail(rec, req, testCase.params)
 
 			resp := rec.Result()
 			if resp.StatusCode != testCase.expectedStatusCode {
@@ -271,6 +394,7 @@ func TestUserHandler_create(t *testing.T) {
 	logging.InitLogger(logging.LogConfig{
 		LoggerKind: "mock",
 	})
+
 	logger := logging.GetLogger()
 	bashHandler := &baseHandler{
 		logger:   logger,
