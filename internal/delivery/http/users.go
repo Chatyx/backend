@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
+
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -28,6 +30,20 @@ type userHandler struct {
 	userService service.UserService
 	authService service.AuthService
 	logger      logging.Logger
+}
+
+func newUserHandler(us service.UserService, as service.AuthService, validate *validator.Validate) *userHandler {
+	logger := logging.GetLogger()
+
+	return &userHandler{
+		baseHandler: &baseHandler{
+			logger:   logger,
+			validate: validate,
+		},
+		userService: us,
+		authService: as,
+		logger:      logger,
+	}
 }
 
 func (h *userHandler) register(router *httprouter.Router) {
