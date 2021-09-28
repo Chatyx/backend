@@ -116,7 +116,7 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request, _ httpro
 	pair, err := h.service.Refresh(req.Context(), dto)
 	if err != nil {
 		switch err {
-		case domain.ErrSessionNotFound, domain.ErrUserNotFound, domain.ErrInvalidRefreshToken:
+		case domain.ErrInvalidRefreshToken:
 			respondError(w, errInvalidRefreshToken)
 		default:
 			respondError(w, errInternalServer)
@@ -124,6 +124,15 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request, _ httpro
 
 		return
 	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    pair.RefreshToken,
+		Path:     refreshURI,
+		Domain:   h.domain,
+		Expires:  time.Now().Add(h.refreshTokenTTL),
+		HttpOnly: true,
+	})
 
 	respondSuccess(http.StatusOK, w, pair)
 }

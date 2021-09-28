@@ -108,6 +108,10 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 func (s *authService) Refresh(ctx context.Context, dto domain.RefreshSessionDTO) (domain.JWTPair, error) {
 	session, err := s.sessionRepo.Get(ctx, dto.RefreshToken)
 	if err != nil {
+		if errors.Is(err, domain.ErrSessionNotFound) {
+			return domain.JWTPair{}, domain.ErrInvalidRefreshToken
+		}
+
 		return domain.JWTPair{}, err
 	}
 
@@ -122,6 +126,10 @@ func (s *authService) Refresh(ctx context.Context, dto domain.RefreshSessionDTO)
 
 	user, err := s.userService.GetByID(ctx, session.UserID)
 	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return domain.JWTPair{}, domain.ErrInvalidRefreshToken
+		}
+
 		return domain.JWTPair{}, err
 	}
 
