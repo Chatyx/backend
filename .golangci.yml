@@ -79,3 +79,4 @@ issues:
       linters:
         - bodyclose
         - funlen
+        - gocognit
