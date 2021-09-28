@@ -124,27 +124,8 @@ func respondError(w http.ResponseWriter, err error) {
 func Init(container service.ServiceContainer, cfg *config.Config, validate *validator.Validate) http.Handler {
 	router := httprouter.New()
 
-	logger := logging.GetLogger()
-	bh := &baseHandler{
-		logger:   logger,
-		validate: validate,
-	}
-	uh := &userHandler{
-		baseHandler: bh,
-		userService: container.User,
-		authService: container.Auth,
-		logger:      logger,
-	}
-	ah := &authHandler{
-		baseHandler:     bh,
-		service:         container.Auth,
-		logger:          logger,
-		domain:          cfg.Domain,
-		refreshTokenTTL: cfg.Auth.RefreshTokenTTL,
-	}
-
-	uh.register(router)
-	ah.register(router)
+	newUserHandler(container.User, container.Auth, validate).register(router)
+	newAuthHandler(container.Auth, validate, cfg.Domain, cfg.Auth.RefreshTokenTTL).register(router)
 
 	return router
 }

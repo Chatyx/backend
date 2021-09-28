@@ -7,6 +7,7 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -24,6 +25,21 @@ type authHandler struct {
 
 	domain          string
 	refreshTokenTTL time.Duration
+}
+
+func newAuthHandler(as service.AuthService, validate *validator.Validate, domain string, refreshTokenTTL time.Duration) *authHandler {
+	logger := logging.GetLogger()
+
+	return &authHandler{
+		baseHandler: &baseHandler{
+			logger:   logger,
+			validate: validate,
+		},
+		service:         as,
+		logger:          logger,
+		domain:          domain,
+		refreshTokenTTL: refreshTokenTTL,
+	}
 }
 
 func (h *authHandler) register(router *httprouter.Router) {
