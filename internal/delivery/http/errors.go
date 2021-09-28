@@ -23,9 +23,13 @@ var (
 		StatusCode: http.StatusBadRequest,
 		Message:    "invalid json body",
 	}
-	errInvalidAuthorizationToken = ResponseError{
+	errInvalidAuthorizationHeader = ResponseError{
+		StatusCode: http.StatusBadRequest,
+		Message:    "invalid Authorization header",
+	}
+	errInvalidAccessToken = ResponseError{
 		StatusCode: http.StatusUnauthorized,
-		Message:    "invalid authorization token",
+		Message:    "invalid access token",
 	}
 	errInvalidRefreshToken = ResponseError{
 		StatusCode: http.StatusBadRequest,

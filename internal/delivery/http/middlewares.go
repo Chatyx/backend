@@ -12,7 +12,7 @@ func authorizationMiddleware(handler httprouter.Handle, as service.AuthService) 
 	return func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		accessToken, err := extractTokenFromHeader(req.Header.Get("Authorization"))
 		if err != nil {
-			respondError(w, errInternalServer)
+			respondError(w, err)
 			return
 		}
 
@@ -20,7 +20,7 @@ func authorizationMiddleware(handler httprouter.Handle, as service.AuthService) 
 		if err != nil {
 			switch err {
 			case domain.ErrInvalidAccessToken:
-				respondError(w, errInvalidAuthorizationToken)
+				respondError(w, errInvalidAccessToken)
 			default:
 				respondError(w, errInternalServer)
 			}

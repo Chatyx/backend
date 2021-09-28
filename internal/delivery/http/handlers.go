@@ -60,18 +60,23 @@ func (h *baseHandler) validateStruct(s interface{}) error {
 func extractTokenFromHeader(header string) (string, error) {
 	if header == "" {
 		logging.GetLogger().Debug("authorization header is empty")
-		return "", errInvalidAuthorizationToken
+		return "", errInvalidAuthorizationHeader
 	}
 
 	headerParts := strings.Split(header, " ")
 	if len(headerParts) != 2 {
 		logging.GetLogger().Debug("authorization header must contains with two parts")
-		return "", errInvalidAuthorizationToken
+		return "", errInvalidAuthorizationHeader
 	}
 
 	if headerParts[0] != "Bearer" {
 		logging.GetLogger().Debug("authorization header doesn't begin with Bearer")
-		return "", errInvalidAuthorizationToken
+		return "", errInvalidAuthorizationHeader
+	}
+
+	if headerParts[1] == "" {
+		logging.GetLogger().Debug("authorization header value is empty")
+		return "", errInvalidAuthorizationHeader
 	}
 
 	return headerParts[1], nil
