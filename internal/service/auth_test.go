@@ -60,8 +60,11 @@ var (
 
 func TestAuthService_SignIn(t *testing.T) {
 	type userServiceMockBehaviour func(us *mockservice.MockUserService, username string, returnedUser domain.User)
+
 	type sessionRepoMockBehaviour func(r *mockrepository.MockSessionRepository, refreshToken string)
+
 	type hasherMockBehaviour func(h *mockhasher.MockPasswordHasher, hash, password string)
+
 	type tokenManagerMockBehaviour func(tm *mockauth.MockTokenManager, pair domain.JWTPair)
 
 	testTable := []struct {
@@ -234,7 +237,9 @@ func TestAuthService_SignIn(t *testing.T) {
 func TestAuthService_Refresh(t *testing.T) {
 	type sessionRepoMockBehaviour func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 		returnedSession domain.Session)
+
 	type userServiceMockBehaviour func(us *mockservice.MockUserService, id string, returnedUser domain.User)
+
 	type tokenManagerMockBehaviour func(tm *mockauth.MockTokenManager, pair domain.JWTPair)
 
 	testTable := []struct {

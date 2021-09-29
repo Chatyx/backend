@@ -28,6 +28,7 @@ var (
 
 func TestUserService_Create(t *testing.T) {
 	type hasherMockBehaviour func(h *mockhasher.MockPasswordHasher, password, hash string)
+
 	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, dto domain.CreateUserDTO, createdUser domain.User)
 
 	testTable := []struct {
