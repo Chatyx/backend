@@ -26,23 +26,34 @@ const (
 var (
 	errUnexpected = errors.New("unexpected error")
 
-	userCreatedAt = time.Date(2021, time.September, 27, 11, 10, 12, 411, time.Local)
+	currentTime = time.Date(2021, time.September, 27, 11, 10, 12, 411, time.Local)
 
 	defaultSignInDTO = domain.SignInDTO{
 		Username:    "john1967",
 		Password:    "qwerty12345",
 		Fingerprint: "5dc49b7a-6153-4eae-9c0f-297655c45f08",
 	}
+	defaultRefreshSessionDTO = domain.RefreshSessionDTO{
+		RefreshToken: "qGVFLRQw37TnSmG0LKFN",
+		Fingerprint:  "5dc49b7a-6153-4eae-9c0f-297655c45f08",
+	}
 	defaultServiceUser = domain.User{
 		ID:        "1",
 		Username:  "john1967",
 		Password:  "8743b52063cd84097a65d1633f5c74f5",
 		Email:     "john1967@gmail.com",
-		CreatedAt: &userCreatedAt,
+		CreatedAt: &currentTime,
+	}
+	defaultRefreshSession = domain.Session{
+		UserID:       "1",
+		RefreshToken: "qGVFLRQw37TnSmG0LKFN",
+		Fingerprint:  "5dc49b7a-6153-4eae-9c0f-297655c45f08",
+		ExpiresAt:    currentTime.Add(refreshTokenTTL),
+		CreatedAt:    currentTime,
 	}
 	defaultExpectedPair = domain.JWTPair{
 		AccessToken:  "header.payload.sign",
-		RefreshToken: "qGVFLRQw37TnSmG0LKFN",
+		RefreshToken: "7TnSmG0LKFNqGVFLRQw3",
 	}
 )
 
@@ -203,6 +214,221 @@ func TestAuthService_SignIn(t *testing.T) {
 			}
 
 			pair, err := as.SignIn(context.Background(), testCase.signInDTO)
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error %v", err)
+			}
+
+			if !reflect.DeepEqual(testCase.expectedPair, pair) {
+				t.Errorf("Wrong token pair result. Expected %#v, got %#v", testCase.expectedPair, pair)
+			}
+		})
+	}
+}
+
+func TestAuthService_Refresh(t *testing.T) {
+	type sessionRepoMockBehaviour func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+		returnedSession domain.Session)
+	type userServiceMockBehaviour func(us *mockservice.MockUserService, id string, returnedUser domain.User)
+	type tokenManagerMockBehaviour func(tm *mockauth.MockTokenManager, pair domain.JWTPair)
+
+	testTable := []struct {
+		name                      string
+		refreshSessionDTO         domain.RefreshSessionDTO
+		oldRefreshSession         domain.Session
+		serviceUser               domain.User
+		sessionRepoMockBehaviour  sessionRepoMockBehaviour
+		userServiceMockBehaviour  userServiceMockBehaviour
+		tokenManagerMockBehaviour tokenManagerMockBehaviour
+		expectedPair              domain.JWTPair
+		expectedErr               error
+	}{
+		{
+			name:              "Success",
+			refreshSessionDTO: defaultRefreshSessionDTO,
+			oldRefreshSession: defaultRefreshSession,
+			serviceUser:       defaultServiceUser,
+			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+				returnedSession domain.Session) {
+				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
+				r.EXPECT().Set(context.Background(), newRefreshToken, gomock.Any()).Return(nil)
+				r.EXPECT().Delete(context.Background(), oldRefreshToken).Return(nil)
+			},
+			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(context.Background(), id).Return(returnedUser, nil)
+			},
+			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, pair domain.JWTPair) {
+				tm.EXPECT().NewAccessToken(gomock.Any()).Return(pair.AccessToken, nil)
+				tm.EXPECT().NewRefreshToken().Return(pair.RefreshToken, nil)
+			},
+			expectedPair: defaultExpectedPair,
+			expectedErr:  nil,
+		},
+		{
+			name:              "Refresh session is not found",
+			refreshSessionDTO: defaultRefreshSessionDTO,
+			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+				returnedSession domain.Session) {
+				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(domain.Session{}, domain.ErrSessionNotFound)
+			},
+			expectedErr: domain.ErrInvalidRefreshToken,
+		},
+		{
+			name: "Wrong fingerprint passed",
+			refreshSessionDTO: domain.RefreshSessionDTO{
+				RefreshToken: "qGVFLRQw37TnSmG0LKFN",
+				Fingerprint:  "a8347bd7-a308-498e-a6f3-a50517c18057",
+			},
+			oldRefreshSession: defaultRefreshSession,
+			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+				returnedSession domain.Session) {
+				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
+				r.EXPECT().Delete(context.Background(), oldRefreshToken).Return(nil)
+			},
+			expectedErr: domain.ErrInvalidRefreshToken,
+		},
+		{
+			name:              "Session user is not found",
+			refreshSessionDTO: defaultRefreshSessionDTO,
+			oldRefreshSession: defaultRefreshSession,
+			serviceUser:       defaultServiceUser,
+			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+				returnedSession domain.Session) {
+				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
+				r.EXPECT().Delete(context.Background(), oldRefreshToken).Return(nil)
+			},
+			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(context.Background(), id).Return(domain.User{}, domain.ErrUserNotFound)
+			},
+			expectedErr: domain.ErrInvalidRefreshToken,
+		},
+		{
+			name:              "Unexpected get old session",
+			refreshSessionDTO: defaultRefreshSessionDTO,
+			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+				returnedSession domain.Session) {
+				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(domain.Session{}, errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+		{
+			name:              "Unexpected get session user",
+			refreshSessionDTO: defaultRefreshSessionDTO,
+			oldRefreshSession: defaultRefreshSession,
+			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+				returnedSession domain.Session) {
+				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
+				r.EXPECT().Delete(context.Background(), oldRefreshToken).Return(nil)
+			},
+			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(context.Background(), id).Return(domain.User{}, errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+		{
+			name:              "Unexpected error while creating access token",
+			refreshSessionDTO: defaultRefreshSessionDTO,
+			oldRefreshSession: defaultRefreshSession,
+			serviceUser:       defaultServiceUser,
+			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+				returnedSession domain.Session) {
+				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
+				r.EXPECT().Delete(context.Background(), oldRefreshToken).Return(nil)
+			},
+			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(context.Background(), id).Return(returnedUser, nil)
+			},
+			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, pair domain.JWTPair) {
+				tm.EXPECT().NewAccessToken(gomock.Any()).Return("", errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+		{
+			name:              "Unexpected error while creating refresh token",
+			refreshSessionDTO: defaultRefreshSessionDTO,
+			oldRefreshSession: defaultRefreshSession,
+			serviceUser:       defaultServiceUser,
+			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+				returnedSession domain.Session) {
+				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
+				r.EXPECT().Delete(context.Background(), oldRefreshToken).Return(nil)
+			},
+			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(context.Background(), id).Return(returnedUser, nil)
+			},
+			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, pair domain.JWTPair) {
+				tm.EXPECT().NewAccessToken(gomock.Any()).Return(pair.AccessToken, nil)
+				tm.EXPECT().NewRefreshToken().Return("", errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+		{
+			name:              "Unexpected error while setting new refresh session",
+			refreshSessionDTO: defaultRefreshSessionDTO,
+			oldRefreshSession: defaultRefreshSession,
+			serviceUser:       defaultServiceUser,
+			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
+				returnedSession domain.Session) {
+				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
+				r.EXPECT().Delete(context.Background(), oldRefreshToken).Return(nil)
+				r.EXPECT().Set(context.Background(), newRefreshToken, gomock.Any()).Return(errUnexpected)
+			},
+			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
+				us.EXPECT().GetByID(context.Background(), id).Return(returnedUser, nil)
+			},
+			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, pair domain.JWTPair) {
+				tm.EXPECT().NewAccessToken(gomock.Any()).Return(pair.AccessToken, nil)
+				tm.EXPECT().NewRefreshToken().Return(pair.RefreshToken, nil)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			us := mockservice.NewMockUserService(c)
+			sessionRepo := mockrepository.NewMockSessionRepository(c)
+			hasher := mockhasher.NewMockPasswordHasher(c)
+			tokenManager := mockauth.NewMockTokenManager(c)
+
+			as := NewAuthService(AuthServiceConfig{
+				UserService:     us,
+				SessionRepo:     sessionRepo,
+				Hasher:          hasher,
+				TokenManager:    tokenManager,
+				AccessTokenTTL:  accessTokenTTL,
+				RefreshTokenTTL: refreshTokenTTL,
+			})
+
+			if testCase.sessionRepoMockBehaviour != nil {
+				testCase.sessionRepoMockBehaviour(
+					sessionRepo,
+					testCase.refreshSessionDTO.RefreshToken,
+					testCase.expectedPair.RefreshToken,
+					testCase.oldRefreshSession,
+				)
+			}
+
+			if testCase.userServiceMockBehaviour != nil {
+				testCase.userServiceMockBehaviour(us, testCase.oldRefreshSession.UserID, testCase.serviceUser)
+			}
+
+			if testCase.tokenManagerMockBehaviour != nil {
+				testCase.tokenManagerMockBehaviour(tokenManager, testCase.expectedPair)
+			}
+
+			pair, err := as.Refresh(context.Background(), testCase.refreshSessionDTO)
 
 			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
 				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
