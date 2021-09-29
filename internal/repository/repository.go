@@ -6,6 +6,8 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/domain"
 )
 
+//go:generate mockgen -source=repository.go -destination=mocks/mock.go
+
 type UserRepository interface {
 	List(ctx context.Context) ([]domain.User, error)
 	Create(ctx context.Context, dto domain.CreateUserDTO) (domain.User, error)
