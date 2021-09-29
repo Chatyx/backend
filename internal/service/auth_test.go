@@ -7,15 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Mort4lis/scht-backend/pkg/logging"
-
-	"github.com/golang/mock/gomock"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	mockrepository "github.com/Mort4lis/scht-backend/internal/repository/mocks"
 	mockservice "github.com/Mort4lis/scht-backend/internal/service/mocks"
 	mockauth "github.com/Mort4lis/scht-backend/pkg/auth/mocks"
 	mockhasher "github.com/Mort4lis/scht-backend/pkg/hasher/mocks"
+	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/golang/mock/gomock"
 )
 
 const (
@@ -54,6 +53,15 @@ var (
 	defaultExpectedPair = domain.JWTPair{
 		AccessToken:  "header.payload.sign",
 		RefreshToken: "7TnSmG0LKFNqGVFLRQw3",
+	}
+	defaultExpectedClaims = domain.Claims{
+		StandardClaims: jwt.StandardClaims{
+			ID:        "cdc82f62-f4eb-4d54-90dd-55185e60bb3f",
+			Subject:   "1",
+			Issuer:    "SCHT",
+			ExpiresAt: jwt.At(currentTime.Add(accessTokenTTL)),
+			IssuedAt:  jwt.At(currentTime),
+		},
 	}
 )
 
@@ -440,6 +448,79 @@ func TestAuthService_Refresh(t *testing.T) {
 
 			if !reflect.DeepEqual(testCase.expectedPair, pair) {
 				t.Errorf("Wrong token pair result. Expected %#v, got %#v", testCase.expectedPair, pair)
+			}
+		})
+	}
+}
+
+func TestAuthService_Authorize(t *testing.T) {
+	type tokenManagerMockBehaviour func(tm *mockauth.MockTokenManager, accessToken string, returnedClaims domain.Claims)
+
+	testTable := []struct {
+		name                      string
+		accessToken               string
+		tokenManagerMockBehaviour tokenManagerMockBehaviour
+		expectedClaims            domain.Claims
+		expectedErr               error
+	}{
+		{
+			name:        "Success",
+			accessToken: "header.payload.sign",
+			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, accessToken string, returnedClaims domain.Claims) {
+				tm.EXPECT().Parse(accessToken, &domain.Claims{}).SetArg(1, returnedClaims).Return(nil)
+			},
+			expectedClaims: defaultExpectedClaims,
+			expectedErr:    nil,
+		},
+		{
+			name:        "Access token parse error",
+			accessToken: "header.payload.sign",
+			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, accessToken string, returnedClaims domain.Claims) {
+				tm.EXPECT().Parse(accessToken, &domain.Claims{}).Return(errors.New("access token parse error"))
+			},
+			expectedErr: domain.ErrInvalidAccessToken,
+		},
+	}
+
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			us := mockservice.NewMockUserService(c)
+			sessionRepo := mockrepository.NewMockSessionRepository(c)
+			hasher := mockhasher.NewMockPasswordHasher(c)
+			tokenManager := mockauth.NewMockTokenManager(c)
+
+			as := NewAuthService(AuthServiceConfig{
+				UserService:     us,
+				SessionRepo:     sessionRepo,
+				Hasher:          hasher,
+				TokenManager:    tokenManager,
+				AccessTokenTTL:  accessTokenTTL,
+				RefreshTokenTTL: refreshTokenTTL,
+			})
+
+			if testCase.tokenManagerMockBehaviour != nil {
+				testCase.tokenManagerMockBehaviour(tokenManager, testCase.accessToken, testCase.expectedClaims)
+			}
+
+			claims, err := as.Authorize(testCase.accessToken)
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error %v", err)
+			}
+
+			if !reflect.DeepEqual(testCase.expectedClaims, claims) {
+				t.Errorf("Wrong claims result. Expected %#v, got %#v", testCase.expectedClaims, claims)
 			}
 		})
 	}
