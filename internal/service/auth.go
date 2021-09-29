@@ -19,7 +19,7 @@ type authService struct {
 	sessionRepo repository.SessionRepository
 
 	hasher       hasher.PasswordHasher
-	tokenManager *auth.TokenManager
+	tokenManager auth.TokenManager
 
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
@@ -32,7 +32,7 @@ type AuthServiceConfig struct {
 	SessionRepo repository.SessionRepository
 
 	Hasher       hasher.PasswordHasher
-	TokenManager *auth.TokenManager
+	TokenManager auth.TokenManager
 
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration

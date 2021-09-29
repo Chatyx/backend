@@ -49,7 +49,7 @@ func NewApp(cfg *config.Config) *App {
 
 	hasher := password.BCryptPasswordHasher{}
 
-	tokenManager, err := auth.NewTokenManager(cfg.Auth.SignKey)
+	tokenManager, err := auth.NewJWTTokenManager(cfg.Auth.SignKey)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create new token manager")
 	}

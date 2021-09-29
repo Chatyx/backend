@@ -8,23 +8,21 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 )
 
-var ErrInvalidTokenParse = fmt.Errorf("invalid token parse")
-
-type TokenManager struct {
+type JWTTokenManager struct {
 	signingKey []byte
 }
 
-func NewTokenManager(signingKey string) (*TokenManager, error) {
+func NewJWTTokenManager(signingKey string) (*JWTTokenManager, error) {
 	if signingKey == "" {
 		return nil, fmt.Errorf("empty signing key")
 	}
 
-	return &TokenManager{
+	return &JWTTokenManager{
 		signingKey: []byte(signingKey),
 	}, nil
 }
 
-func (m *TokenManager) NewAccessToken(claims jwt.Claims) (string, error) {
+func (m *JWTTokenManager) NewAccessToken(claims jwt.Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	sigToken, err := token.SignedString(m.signingKey)
@@ -35,7 +33,7 @@ func (m *TokenManager) NewAccessToken(claims jwt.Claims) (string, error) {
 	return sigToken, nil
 }
 
-func (m *TokenManager) NewRefreshToken() (string, error) {
+func (m *JWTTokenManager) NewRefreshToken() (string, error) {
 	src := rand.NewSource(time.Now().Unix())
 	rnd := rand.New(src)
 
@@ -47,7 +45,7 @@ func (m *TokenManager) NewRefreshToken() (string, error) {
 	return fmt.Sprintf("%x", buf), nil
 }
 
-func (m *TokenManager) Parse(accessToken string, claims jwt.Claims) error {
+func (m *JWTTokenManager) Parse(accessToken string, claims jwt.Claims) error {
 	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
 		return m.signingKey, nil
 	})
