@@ -36,13 +36,6 @@ var (
 		RefreshToken: "qGVFLRQw37TnSmG0LKFN",
 		Fingerprint:  "5dc49b7a-6153-4eae-9c0f-297655c45f08",
 	}
-	defaultServiceUser = domain.User{
-		ID:        "1",
-		Username:  "john1967",
-		Password:  "8743b52063cd84097a65d1633f5c74f5",
-		Email:     "john1967@gmail.com",
-		CreatedAt: &currentTime,
-	}
 	defaultRefreshSession = domain.Session{
 		UserID:       "1",
 		RefreshToken: "qGVFLRQw37TnSmG0LKFN",
@@ -85,7 +78,7 @@ func TestAuthService_SignIn(t *testing.T) {
 		{
 			name:        "Success",
 			signInDTO:   defaultSignInDTO,
-			serviceUser: defaultServiceUser,
+			serviceUser: defaultUser,
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, username string, returnedUser domain.User) {
 				us.EXPECT().GetByUsername(context.Background(), username).Return(returnedUser, nil)
 			},
@@ -113,7 +106,7 @@ func TestAuthService_SignIn(t *testing.T) {
 		{
 			name:        "Wrong password",
 			signInDTO:   defaultSignInDTO,
-			serviceUser: defaultServiceUser,
+			serviceUser: defaultUser,
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, username string, returnedUser domain.User) {
 				us.EXPECT().GetByUsername(context.Background(), username).Return(returnedUser, nil)
 			},
@@ -133,7 +126,7 @@ func TestAuthService_SignIn(t *testing.T) {
 		{
 			name:        "Unexpected error while creating access token",
 			signInDTO:   defaultSignInDTO,
-			serviceUser: defaultServiceUser,
+			serviceUser: defaultUser,
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, username string, returnedUser domain.User) {
 				us.EXPECT().GetByUsername(context.Background(), username).Return(returnedUser, nil)
 			},
@@ -148,7 +141,7 @@ func TestAuthService_SignIn(t *testing.T) {
 		{
 			name:        "Unexpected error while creating refresh token",
 			signInDTO:   defaultSignInDTO,
-			serviceUser: defaultServiceUser,
+			serviceUser: defaultUser,
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, username string, returnedUser domain.User) {
 				us.EXPECT().GetByUsername(context.Background(), username).Return(returnedUser, nil)
 			},
@@ -164,7 +157,7 @@ func TestAuthService_SignIn(t *testing.T) {
 		{
 			name:        "Unexpected error while setting session to repository",
 			signInDTO:   defaultSignInDTO,
-			serviceUser: defaultServiceUser,
+			serviceUser: defaultUser,
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, username string, returnedUser domain.User) {
 				us.EXPECT().GetByUsername(context.Background(), username).Return(returnedUser, nil)
 			},
@@ -259,7 +252,7 @@ func TestAuthService_Refresh(t *testing.T) {
 			name:              "Success",
 			refreshSessionDTO: defaultRefreshSessionDTO,
 			oldRefreshSession: defaultRefreshSession,
-			serviceUser:       defaultServiceUser,
+			serviceUser:       defaultUser,
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
@@ -303,7 +296,7 @@ func TestAuthService_Refresh(t *testing.T) {
 			name:              "Session user is not found",
 			refreshSessionDTO: defaultRefreshSessionDTO,
 			oldRefreshSession: defaultRefreshSession,
-			serviceUser:       defaultServiceUser,
+			serviceUser:       defaultUser,
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
@@ -341,7 +334,7 @@ func TestAuthService_Refresh(t *testing.T) {
 			name:              "Unexpected error while creating access token",
 			refreshSessionDTO: defaultRefreshSessionDTO,
 			oldRefreshSession: defaultRefreshSession,
-			serviceUser:       defaultServiceUser,
+			serviceUser:       defaultUser,
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
@@ -359,7 +352,7 @@ func TestAuthService_Refresh(t *testing.T) {
 			name:              "Unexpected error while creating refresh token",
 			refreshSessionDTO: defaultRefreshSessionDTO,
 			oldRefreshSession: defaultRefreshSession,
-			serviceUser:       defaultServiceUser,
+			serviceUser:       defaultUser,
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
@@ -378,7 +371,7 @@ func TestAuthService_Refresh(t *testing.T) {
 			name:              "Unexpected error while setting new refresh session",
 			refreshSessionDTO: defaultRefreshSessionDTO,
 			oldRefreshSession: defaultRefreshSession,
-			serviceUser:       defaultServiceUser,
+			serviceUser:       defaultUser,
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
