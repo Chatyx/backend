@@ -41,7 +41,7 @@ var (
 		UpdatedAt:  &userUpdatedAt,
 	}
 
-	defaultBeginCreateUserDTO = domain.CreateUserDTO{
+	defaultCreateUserDTO = domain.CreateUserDTO{
 		Username: "john1967",
 		Password: "qwerty12345",
 		Email:    "john1967@gmail.com",
@@ -69,17 +69,17 @@ func TestUserService_Create(t *testing.T) {
 
 	testTable := []struct {
 		name                  string
-		beginUserDTO          domain.CreateUserDTO
-		modifiedUserDTO       domain.CreateUserDTO
+		createUserDTO         domain.CreateUserDTO
+		modifiedCreateUserDTO domain.CreateUserDTO
 		hasherMockBehaviour   hasherMockBehaviour
 		userRepoMockBehaviour userRepoMockBehaviour
 		expectedUser          domain.User
 		expectedErr           error
 	}{
 		{
-			name:            "Success",
-			beginUserDTO:    defaultBeginCreateUserDTO,
-			modifiedUserDTO: defaultModifiedCreateUserDTO,
+			name:                  "Success",
+			createUserDTO:         defaultCreateUserDTO,
+			modifiedCreateUserDTO: defaultModifiedCreateUserDTO,
 			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, password, hash string) {
 				h.EXPECT().Hash(password).Return(hash, nil)
 			},
@@ -90,9 +90,9 @@ func TestUserService_Create(t *testing.T) {
 			expectedErr:  nil,
 		},
 		{
-			name:            "Fail to create user with the same username or email",
-			beginUserDTO:    defaultBeginCreateUserDTO,
-			modifiedUserDTO: defaultModifiedCreateUserDTO,
+			name:                  "Fail to create user with the same username or email",
+			createUserDTO:         defaultCreateUserDTO,
+			modifiedCreateUserDTO: defaultModifiedCreateUserDTO,
 			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, password, hash string) {
 				h.EXPECT().Hash(password).Return(hash, nil)
 			},
@@ -102,17 +102,17 @@ func TestUserService_Create(t *testing.T) {
 			expectedErr: domain.ErrUserUniqueViolation,
 		},
 		{
-			name:         "Unexpected error while hashing password",
-			beginUserDTO: defaultBeginCreateUserDTO,
+			name:          "Unexpected error while hashing password",
+			createUserDTO: defaultCreateUserDTO,
 			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, password, hash string) {
 				h.EXPECT().Hash(password).Return("", errUnexpected)
 			},
 			expectedErr: errUnexpected,
 		},
 		{
-			name:            "Unexpected error while creating user",
-			beginUserDTO:    defaultBeginCreateUserDTO,
-			modifiedUserDTO: defaultModifiedCreateUserDTO,
+			name:                  "Unexpected error while creating user",
+			createUserDTO:         defaultCreateUserDTO,
+			modifiedCreateUserDTO: defaultModifiedCreateUserDTO,
 			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, password, hash string) {
 				h.EXPECT().Hash(password).Return(hash, nil)
 			},
@@ -138,14 +138,14 @@ func TestUserService_Create(t *testing.T) {
 			us := NewUserService(userRepo, hasher)
 
 			if testCase.hasherMockBehaviour != nil {
-				testCase.hasherMockBehaviour(hasher, testCase.beginUserDTO.Password, testCase.modifiedUserDTO.Password)
+				testCase.hasherMockBehaviour(hasher, testCase.createUserDTO.Password, testCase.modifiedCreateUserDTO.Password)
 			}
 
 			if testCase.userRepoMockBehaviour != nil {
-				testCase.userRepoMockBehaviour(userRepo, testCase.modifiedUserDTO, testCase.expectedUser)
+				testCase.userRepoMockBehaviour(userRepo, testCase.modifiedCreateUserDTO, testCase.expectedUser)
 			}
 
-			user, err := us.Create(context.Background(), testCase.beginUserDTO)
+			user, err := us.Create(context.Background(), testCase.createUserDTO)
 
 			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
 				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
