@@ -62,6 +62,211 @@ var (
 	}
 )
 
+func TestUserService_List(t *testing.T) {
+	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, listUsers []domain.User)
+
+	testTable := []struct {
+		name                  string
+		userRepoMockBehaviour userRepoMockBehaviour
+		expectedUsers         []domain.User
+		expectedErr           error
+	}{
+		{
+			name: "Success",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, listUsers []domain.User) {
+				ur.EXPECT().List(context.Background()).Return(listUsers, nil)
+			},
+			expectedUsers: []domain.User{defaultFullUser, defaultShortUser},
+			expectedErr:   nil,
+		},
+		{
+			name: "Unexpected error",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, listUsers []domain.User) {
+				ur.EXPECT().List(context.Background()).Return(nil, errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			hasher := mockhasher.NewMockPasswordHasher(c)
+			userRepo := mockrepository.NewMockUserRepository(c)
+
+			us := NewUserService(userRepo, hasher)
+
+			if testCase.userRepoMockBehaviour != nil {
+				testCase.userRepoMockBehaviour(userRepo, testCase.expectedUsers)
+			}
+
+			users, err := us.List(context.Background())
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error %v", err)
+			}
+
+			if !reflect.DeepEqual(testCase.expectedUsers, users) {
+				t.Errorf("Wrong list user. Expected %#v, got %#v", testCase.expectedUsers, users)
+			}
+		})
+	}
+}
+
+func TestUserService_GetByID(t *testing.T) {
+	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, id string, returnedUser domain.User)
+
+	testTable := []struct {
+		name                  string
+		id                    string
+		userRepoMockBehaviour userRepoMockBehaviour
+		expectedUser          domain.User
+		expectedErr           error
+	}{
+		{
+			name: "Success",
+			id:   "1",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, id string, returnedUser domain.User) {
+				ur.EXPECT().GetByID(context.Background(), id).Return(returnedUser, nil)
+			},
+			expectedUser: defaultFullUser,
+			expectedErr:  nil,
+		},
+		{
+			name: "User is not found",
+			id:   "1",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, id string, returnedUser domain.User) {
+				ur.EXPECT().GetByID(context.Background(), id).Return(domain.User{}, domain.ErrUserNotFound)
+			},
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name: "Unexpected error",
+			id:   "1",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, id string, returnedUser domain.User) {
+				ur.EXPECT().GetByID(context.Background(), id).Return(domain.User{}, errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			hasher := mockhasher.NewMockPasswordHasher(c)
+			userRepo := mockrepository.NewMockUserRepository(c)
+
+			us := NewUserService(userRepo, hasher)
+
+			if testCase.userRepoMockBehaviour != nil {
+				testCase.userRepoMockBehaviour(userRepo, testCase.id, testCase.expectedUser)
+			}
+
+			user, err := us.GetByID(context.Background(), testCase.id)
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error %v", err)
+			}
+
+			if !reflect.DeepEqual(testCase.expectedUser, user) {
+				t.Errorf("Wrong found user. Expected %#v, got %#v", testCase.expectedUser, user)
+			}
+		})
+	}
+}
+
+func TestUserService_Username(t *testing.T) {
+	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, username string, returnedUser domain.User)
+
+	testTable := []struct {
+		name                  string
+		username              string
+		userRepoMockBehaviour userRepoMockBehaviour
+		expectedUser          domain.User
+		expectedErr           error
+	}{
+		{
+			name:     "Success",
+			username: "john1967",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, username string, returnedUser domain.User) {
+				ur.EXPECT().GetByUsername(context.Background(), username).Return(returnedUser, nil)
+			},
+			expectedUser: defaultFullUser,
+			expectedErr:  nil,
+		},
+		{
+			name:     "User is not found",
+			username: "john1967",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, username string, returnedUser domain.User) {
+				ur.EXPECT().GetByUsername(context.Background(), username).Return(domain.User{}, domain.ErrUserNotFound)
+			},
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name:     "Unexpected error",
+			username: "john1967",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, username string, returnedUser domain.User) {
+				ur.EXPECT().GetByUsername(context.Background(), username).Return(domain.User{}, errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			hasher := mockhasher.NewMockPasswordHasher(c)
+			userRepo := mockrepository.NewMockUserRepository(c)
+
+			us := NewUserService(userRepo, hasher)
+
+			if testCase.userRepoMockBehaviour != nil {
+				testCase.userRepoMockBehaviour(userRepo, testCase.username, testCase.expectedUser)
+			}
+
+			user, err := us.GetByUsername(context.Background(), testCase.username)
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error %v", err)
+			}
+
+			if !reflect.DeepEqual(testCase.expectedUser, user) {
+				t.Errorf("Wrong found user. Expected %#v, got %#v", testCase.expectedUser, user)
+			}
+		})
+	}
+}
+
 func TestUserService_Create(t *testing.T) {
 	type hasherMockBehaviour func(h *mockhasher.MockPasswordHasher, password, hash string)
 
@@ -281,6 +486,72 @@ func TestUserService_Update(t *testing.T) {
 
 			if !reflect.DeepEqual(testCase.expectedUser, user) {
 				t.Errorf("Wrong updated user. Expected %#v, got %#v", testCase.expectedUser, user)
+			}
+		})
+	}
+}
+
+func TestUserService_Delete(t *testing.T) {
+	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, id string)
+
+	testTable := []struct {
+		name                  string
+		id                    string
+		userRepoMockBehaviour userRepoMockBehaviour
+		expectedErr           error
+	}{
+		{
+			name: "Success",
+			id:   "1",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, id string) {
+				ur.EXPECT().Delete(context.Background(), id).Return(nil)
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "User is not found",
+			id:   "1",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, id string) {
+				ur.EXPECT().Delete(context.Background(), id).Return(domain.ErrUserNotFound)
+			},
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name: "Unexpected error",
+			id:   "1",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, id string) {
+				ur.EXPECT().Delete(context.Background(), id).Return(errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	logging.InitLogger(logging.LogConfig{
+		LoggerKind: "mock",
+	})
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			hasher := mockhasher.NewMockPasswordHasher(c)
+			userRepo := mockrepository.NewMockUserRepository(c)
+
+			us := NewUserService(userRepo, hasher)
+
+			if testCase.userRepoMockBehaviour != nil {
+				testCase.userRepoMockBehaviour(userRepo, testCase.id)
+			}
+
+			err := us.Delete(context.Background(), testCase.id)
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error %v", err)
 			}
 		})
 	}
