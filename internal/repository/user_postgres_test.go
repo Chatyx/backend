@@ -9,17 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
-
-	"github.com/jackc/pgx/v4"
-
 	"github.com/jackc/pgtype"
-
-	"github.com/Mort4lis/scht-backend/pkg/logging"
-
-	"github.com/Mort4lis/scht-backend/internal/domain"
-
+	"github.com/jackc/pgx/v4"
 	"github.com/pashagolub/pgxmock"
 )
 
