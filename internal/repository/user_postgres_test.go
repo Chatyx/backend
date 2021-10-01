@@ -459,6 +459,158 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 	}
 }
 
+func TestUserPostgresRepository_Update(t *testing.T) {
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, dto domain.UpdateUserDTO)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
+	testTable := []struct {
+		name          string
+		updateUserDTO domain.UpdateUserDTO
+		mockBehavior  mockBehavior
+		expectedUser  domain.User
+		expectedErr   error
+	}{
+		{
+			name: "Success",
+			updateUserDTO: domain.UpdateUserDTO{
+				ID:         "02185cd4-05b5-4688-836d-3154e9c8a340",
+				Username:   "mick47",
+				Password:   "8743b52063cd84097a65d1633f5c74f5",
+				Email:      "mick47@gmail.com",
+				FirstName:  "Mick",
+				LastName:   "Tyson",
+				BirthDate:  "1949-10-25",
+				Department: "IoT",
+			},
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, dto domain.UpdateUserDTO) {
+				query := fmt.Sprintf(`UPDATE users SET 
+					username = $2, password = $3, email = $4, 
+					first_name = $5, last_name = $6, birth_date = $7, 
+					department = $8 WHERE id = $1 AND is_deleted IS FALSE RETURNING %s`,
+					strings.Join(userTableColumns, ", "),
+				)
+				birthDate := pgtype.Date{
+					Status: pgtype.Present,
+					Time:   time.Date(1949, time.October, 25, 0, 0, 0, 0, time.UTC),
+				}
+
+				mockPool.ExpectQuery(query).
+					WithArgs(
+						dto.ID, dto.Username, dto.Password,
+						dto.Email, dto.FirstName, dto.LastName,
+						birthDate, dto.Department,
+					).WillReturnRows(pgxmock.NewRows(userTableColumns).AddRow(defaultFullUserRowValues...))
+			},
+			expectedUser: defaultFullUser,
+			expectedErr:  nil,
+		},
+		{
+			name:          "No need to update user",
+			updateUserDTO: domain.UpdateUserDTO{ID: "02185cd4-05b5-4688-836d-3154e9c8a340"},
+			expectedErr:   domain.ErrUserNoNeedUpdate,
+		},
+		{
+			name: "User is not found",
+			updateUserDTO: domain.UpdateUserDTO{
+				ID:        "02185cd4-05b5-4688-836d-3154e9c8a340",
+				FirstName: "Mick",
+			},
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, dto domain.UpdateUserDTO) {
+				query := fmt.Sprintf(`UPDATE users SET 
+				first_name = $2 WHERE id = $1 AND is_deleted IS FALSE RETURNING %s`,
+					strings.Join(userTableColumns, ", "))
+
+				mockPool.ExpectQuery(query).
+					WithArgs(dto.ID, dto.FirstName).
+					WillReturnError(pgx.ErrNoRows)
+			},
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name: "Update user with invalid id",
+			updateUserDTO: domain.UpdateUserDTO{
+				ID:        "1",
+				FirstName: "Mick",
+			},
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name: "Update user with such username or email",
+			updateUserDTO: domain.UpdateUserDTO{
+				ID:       "02185cd4-05b5-4688-836d-3154e9c8a340",
+				Username: "mick47",
+				Email:    "mick47@gmail.com",
+			},
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, dto domain.UpdateUserDTO) {
+				query := fmt.Sprintf(`UPDATE users SET
+				username = $2, email = $3 WHERE id = $1 AND is_deleted IS FALSE RETURNING %s`,
+					strings.Join(userTableColumns, ", "),
+				)
+
+				mockPool.ExpectQuery(query).
+					WithArgs(dto.ID, dto.Username, dto.Email).
+					WillReturnError(&pgconn.PgError{Code: pgerrcode.UniqueViolation})
+			},
+			expectedErr: domain.ErrUserUniqueViolation,
+		},
+		{
+			name: "Unexpected error while updating user",
+			updateUserDTO: domain.UpdateUserDTO{
+				ID:        "02185cd4-05b5-4688-836d-3154e9c8a340",
+				FirstName: "Mick",
+			},
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, dto domain.UpdateUserDTO) {
+				query := fmt.Sprintf(`UPDATE users SET 
+				first_name = $2 WHERE id = $1 AND is_deleted IS FALSE RETURNING %s`,
+					strings.Join(userTableColumns, ", "))
+
+				mockPool.ExpectQuery(query).
+					WithArgs(dto.ID, dto.FirstName).
+					WillReturnError(errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
+			if err != nil {
+				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
+			}
+			defer mockPool.Close()
+
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(mockPool, testCase.updateUserDTO)
+			}
+
+			userRepo := NewUserPostgresRepository(mockPool)
+			user, err := userRepo.Update(context.Background(), testCase.updateUserDTO)
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(testCase.expectedUser, user) {
+				t.Errorf("Wrong updated user. Expected %#v, got %#v", testCase.expectedUser, user)
+			}
+
+			if err = mockPool.ExpectationsWereMet(); err != nil {
+				t.Errorf("There were unfulfilled expectations: %v", err)
+			}
+		})
+	}
+}
+
 func TestInvalidDateBirthdayParse(t *testing.T) {
 	logging.InitLogger(
 		logging.LogConfig{

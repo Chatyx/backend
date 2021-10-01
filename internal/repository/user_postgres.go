@@ -185,7 +185,12 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 		return domain.User{}, domain.ErrUserNotFound
 	}
 
-	query, args := r.buildUpdateQuery(dto)
+	query, args, err := r.buildUpdateQuery(dto)
+	if err != nil {
+		r.logger.WithError(err).Error("Failed to build update sql query")
+		return domain.User{}, err
+	}
+
 	if len(args) == 1 {
 		r.logger.Debugf("no need to update user with id = %s", dto.ID)
 		return domain.User{}, domain.ErrUserNoNeedUpdate
@@ -206,13 +211,11 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			r.logger.Debugf("user is not found with id = %s", dto.ID)
-
 			return domain.User{}, domain.ErrUserNotFound
 		}
 
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			r.logger.WithError(err).Debug("user with such fields is already exist")
-
 			return domain.User{}, domain.ErrUserUniqueViolation
 		}
 
@@ -228,7 +231,7 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 	return user, nil
 }
 
-func (r *userPostgresRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (query string, args []interface{}) {
+func (r *userPostgresRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (query string, args []interface{}, err error) {
 	num := 2
 	setConditions := make([]string, 0)
 
@@ -265,8 +268,16 @@ func (r *userPostgresRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (que
 	}
 
 	if dto.BirthDate != "" {
+		tm, err := time.Parse("2006-01-02", dto.BirthDate)
+		if err != nil {
+			return "", nil, err
+		}
+
 		setConditions = append(setConditions, fmt.Sprintf("birth_date = $%d", num))
-		args = append(args, dto.BirthDate)
+		args = append(args, pgtype.Date{
+			Time:   tm,
+			Status: pgtype.Present,
+		})
 		num++
 	}
 
@@ -285,7 +296,7 @@ func (r *userPostgresRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (que
 			created_at, updated_at
 	`, strings.Join(setConditions, ", "))
 
-	return query, args
+	return query, args, nil
 }
 
 func (r *userPostgresRepository) Delete(ctx context.Context, id string) error {
