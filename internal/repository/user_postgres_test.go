@@ -90,7 +90,7 @@ var (
 var errUnexpected = errors.New("unexpected error")
 
 func TestUserPostgresRepository_GetByID(t *testing.T) {
-	type mockBehavior func(mockPool pgxmock.PgxPoolIface, id string)
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, id string, rowValues []interface{}, rowErr error)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -102,44 +102,52 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 		"SELECT %s FROM users WHERE id = $1 AND is_deleted IS FALSE",
 		strings.Join(userTableColumns, ", "),
 	)
+
+	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, id string, rowValues []interface{}, rowErr error) {
+		expected := mockPool.ExpectQuery(query).WithArgs(id)
+
+		if len(rowValues) != 0 {
+			expected.WillReturnRows(
+				pgxmock.NewRows(userTableColumns).AddRow(rowValues...),
+			)
+		}
+
+		if rowErr != nil {
+			expected.WillReturnError(rowErr)
+		}
+	}
+
 	testTable := []struct {
 		name         string
 		id           string
+		rowValues    []interface{}
+		rowErr       error
 		mockBehavior mockBehavior
 		expectedUser domain.User
 		expectedErr  error
 	}{
 		{
-			name: "Success get short user",
-			id:   "6be043ca-3005-4b1c-b847-eb677897c618",
-			mockBehavior: func(mockPool pgxmock.PgxPoolIface, id string) {
-				mockPool.ExpectQuery(query).
-					WithArgs(id).
-					WillReturnRows(pgxmock.NewRows(userTableColumns).AddRow(defaultShortUserRowValues...))
-			},
+			name:         "Success get short user",
+			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
+			rowValues:    defaultShortUserRowValues,
+			mockBehavior: defaultMockBehaviour,
 			expectedUser: defaultShortUser,
 			expectedErr:  nil,
 		},
 		{
-			name: "Success get full user",
-			id:   "02185cd4-05b5-4688-836d-3154e9c8a340",
-			mockBehavior: func(mockPool pgxmock.PgxPoolIface, id string) {
-				mockPool.ExpectQuery(query).
-					WithArgs(id).
-					WillReturnRows(pgxmock.NewRows(userTableColumns).AddRow(defaultFullUserRowValues...))
-			},
+			name:         "Success get full user",
+			id:           "02185cd4-05b5-4688-836d-3154e9c8a340",
+			rowValues:    defaultFullUserRowValues,
+			mockBehavior: defaultMockBehaviour,
 			expectedUser: defaultFullUser,
 			expectedErr:  nil,
 		},
 		{
-			name: "User is not found",
-			id:   "6be043ca-3005-4b1c-b847-eb677897c618",
-			mockBehavior: func(mockPool pgxmock.PgxPoolIface, id string) {
-				mockPool.ExpectQuery(query).
-					WithArgs(id).
-					WillReturnError(pgx.ErrNoRows)
-			},
-			expectedErr: domain.ErrUserNotFound,
+			name:         "User is not found",
+			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
+			rowErr:       pgx.ErrNoRows,
+			mockBehavior: defaultMockBehaviour,
+			expectedErr:  domain.ErrUserNotFound,
 		},
 		{
 			name:        "Get user with invalid id (not uuid4)",
@@ -147,14 +155,11 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 			expectedErr: domain.ErrUserNotFound,
 		},
 		{
-			name: "Unexpected error while getting user",
-			id:   "6be043ca-3005-4b1c-b847-eb677897c618",
-			mockBehavior: func(mockPool pgxmock.PgxPoolIface, id string) {
-				mockPool.ExpectQuery(query).
-					WithArgs(id).
-					WillReturnError(errUnexpected)
-			},
-			expectedErr: errUnexpected,
+			name:         "Unexpected error while getting user",
+			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
+			rowErr:       errUnexpected,
+			mockBehavior: defaultMockBehaviour,
+			expectedErr:  errUnexpected,
 		},
 	}
 
@@ -167,7 +172,7 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(mockPool, testCase.id)
+				testCase.mockBehavior(mockPool, testCase.id, testCase.rowValues, testCase.rowErr)
 			}
 
 			userRepo := NewUserPostgresRepository(mockPool)
@@ -234,7 +239,7 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 				dto.LastName, dto.Email, birthDate, dto.Department,
 			)
 
-		if rowValues != nil {
+		if len(rowValues) != 0 {
 			expected.WillReturnRows(pgxmock.NewRows(returnedColumns).AddRow(rowValues...))
 		}
 
