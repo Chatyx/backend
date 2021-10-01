@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgtype"
 
@@ -14,15 +15,14 @@ import (
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type userPostgresRepository struct {
-	dbPool *pgxpool.Pool
+	dbPool PgxPool
 	logger logging.Logger
 }
 
-func NewUserPostgresRepository(dbPool *pgxpool.Pool) UserRepository {
+func NewUserPostgresRepository(dbPool PgxPool) UserRepository {
 	return &userPostgresRepository{
 		dbPool: dbPool,
 		logger: logging.GetLogger(),
@@ -65,7 +65,10 @@ func (r *userPostgresRepository) List(ctx context.Context) ([]domain.User, error
 			return nil, err
 		}
 
-		user.BirthDate = birthDate.Time.Format("2006-01-02")
+		if birthDate.Status == pgtype.Present {
+			user.BirthDate = birthDate.Time.Format("2006-01-02")
+		}
+
 		users = append(users, user)
 	}
 
@@ -78,35 +81,7 @@ func (r *userPostgresRepository) List(ctx context.Context) ([]domain.User, error
 }
 
 func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUserDTO) (domain.User, error) {
-	var (
-		id        string
-		createdAt pgtype.Timestamptz
-	)
-
-	query := `
-		INSERT INTO users(
-			username, password, first_name, 
-			last_name, email, birth_date, department
-		) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at
-	`
-
-	if err := r.dbPool.QueryRow(
-		ctx, query,
-		dto.Username, dto.Password, dto.FirstName,
-		dto.LastName, dto.Email, dto.BirthDate, dto.Department,
-	).Scan(&id, &createdAt); err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
-			r.logger.WithError(err).Debug("user with such fields is already exist")
-			return domain.User{}, domain.ErrUserUniqueViolation
-		}
-
-		r.logger.WithError(err).Error("Error occurred while creating user into the database")
-
-		return domain.User{}, err
-	}
-
 	user := domain.User{
-		ID:         id,
 		Username:   dto.Username,
 		Password:   dto.Password,
 		Email:      dto.Email,
@@ -115,9 +90,39 @@ func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUs
 		BirthDate:  dto.BirthDate,
 		Department: dto.Department,
 	}
+	query := `
+		INSERT INTO users(
+			username, password, first_name, 
+			last_name, email, birth_date, department
+		) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at
+	`
 
-	if createdAt.Status == pgtype.Present {
-		user.CreatedAt = &createdAt.Time
+	var birthDate pgtype.Date
+	if dto.BirthDate == "" {
+		birthDate = pgtype.Date{Status: pgtype.Null}
+	} else {
+		t, err := time.Parse("2006-01-02", dto.BirthDate)
+		if err != nil {
+			r.logger.WithError(err).Error("failed to parse birth date %s", dto.BirthDate)
+			return domain.User{}, err
+		}
+
+		birthDate = pgtype.Date{Time: t, Status: pgtype.Present}
+	}
+
+	if err := r.dbPool.QueryRow(
+		ctx, query,
+		dto.Username, dto.Password, dto.FirstName,
+		dto.LastName, dto.Email, birthDate, dto.Department,
+	).Scan(&user.ID, &user.CreatedAt); err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			r.logger.WithError(err).Debug("user with such fields is already exist")
+			return domain.User{}, domain.ErrUserUniqueViolation
+		}
+
+		r.logger.WithError(err).Error("Error occurred while creating user into the database")
+
+		return domain.User{}, err
 	}
 
 	return user, nil
@@ -161,7 +166,6 @@ func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fi
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			r.logger.Debugf("user is not found with %s = %s", fieldName, fieldValue)
-
 			return domain.User{}, domain.ErrUserNotFound
 		}
 
@@ -170,7 +174,9 @@ func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fi
 		return domain.User{}, err
 	}
 
-	user.BirthDate = birthDate.Time.Format("2006-01-02")
+	if birthDate.Status == pgtype.Present {
+		user.BirthDate = birthDate.Time.Format("2006-01-02")
+	}
 
 	return user, nil
 }
@@ -217,7 +223,9 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 		return domain.User{}, err
 	}
 
-	user.BirthDate = birthDate.Time.Format("2006-01-02")
+	if birthDate.Status == pgtype.Present {
+		user.BirthDate = birthDate.Time.Format("2006-01-02")
+	}
 
 	return user, nil
 }
