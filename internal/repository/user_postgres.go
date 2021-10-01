@@ -91,10 +91,8 @@ func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUs
 		Department: dto.Department,
 	}
 	query := `
-		INSERT INTO users(
-			username, password, first_name, 
-			last_name, email, birth_date, department
-		) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at
+		INSERT INTO users (username, password, first_name, last_name, email, birth_date, department) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at
 	`
 
 	var birthDate pgtype.Date
