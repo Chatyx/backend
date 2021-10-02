@@ -84,114 +84,6 @@ var (
 
 var errUnexpected = errors.New("unexpected error")
 
-func TestUserPostgresRepository_GetByID(t *testing.T) {
-	type mockBehavior func(mockPool pgxmock.PgxPoolIface, id string, rowValues []interface{}, rowErr error)
-
-	logging.InitLogger(
-		logging.LogConfig{
-			LoggerKind: "mock",
-		},
-	)
-
-	query := fmt.Sprintf(
-		"SELECT %s FROM users WHERE id = $1 AND is_deleted IS FALSE",
-		strings.Join(userTableColumns, ", "),
-	)
-
-	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, id string, rowValues []interface{}, rowErr error) {
-		expected := mockPool.ExpectQuery(query).WithArgs(id)
-
-		if len(rowValues) != 0 {
-			expected.WillReturnRows(
-				pgxmock.NewRows(userTableColumns).AddRow(rowValues...),
-			)
-		}
-
-		if rowErr != nil {
-			expected.WillReturnError(rowErr)
-		}
-	}
-
-	testTable := []struct {
-		name         string
-		id           string
-		rowValues    []interface{}
-		rowErr       error
-		mockBehavior mockBehavior
-		expectedUser domain.User
-		expectedErr  error
-	}{
-		{
-			name:         "Success get short user",
-			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
-			rowValues:    defaultShortUserRowValues,
-			mockBehavior: defaultMockBehaviour,
-			expectedUser: defaultShortUser,
-			expectedErr:  nil,
-		},
-		{
-			name:         "Success get full user",
-			id:           "02185cd4-05b5-4688-836d-3154e9c8a340",
-			rowValues:    defaultFullUserRowValues,
-			mockBehavior: defaultMockBehaviour,
-			expectedUser: defaultFullUser,
-			expectedErr:  nil,
-		},
-		{
-			name:         "User is not found",
-			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
-			rowErr:       pgx.ErrNoRows,
-			mockBehavior: defaultMockBehaviour,
-			expectedErr:  domain.ErrUserNotFound,
-		},
-		{
-			name:        "Get user with invalid id (not uuid4)",
-			id:          "1",
-			expectedErr: domain.ErrUserNotFound,
-		},
-		{
-			name:         "Unexpected error while getting user",
-			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
-			rowErr:       errUnexpected,
-			mockBehavior: defaultMockBehaviour,
-			expectedErr:  errUnexpected,
-		},
-	}
-
-	for _, testCase := range testTable {
-		t.Run(testCase.name, func(t *testing.T) {
-			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
-			if err != nil {
-				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
-			}
-			defer mockPool.Close()
-
-			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(mockPool, testCase.id, testCase.rowValues, testCase.rowErr)
-			}
-
-			userRepo := NewUserPostgresRepository(mockPool)
-			user, err := userRepo.GetByID(context.Background(), testCase.id)
-
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
-			}
-
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
-			}
-
-			if !reflect.DeepEqual(testCase.expectedUser, user) {
-				t.Errorf("Wrong found user. Expected %#v, got %#v", testCase.expectedUser, user)
-			}
-
-			if err = mockPool.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
-		})
-	}
-}
-
 func TestUserPostgresRepository_List(t *testing.T) {
 	type ResultRow struct {
 		Err    error
@@ -445,6 +337,217 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 
 			if !reflect.DeepEqual(testCase.expectedUser, user) {
 				t.Errorf("Wrong created user. Expected %#v, got %#v", testCase.expectedUser, user)
+			}
+
+			if err = mockPool.ExpectationsWereMet(); err != nil {
+				t.Errorf("There were unfulfilled expectations: %v", err)
+			}
+		})
+	}
+}
+
+func TestUserPostgresRepository_GetByID(t *testing.T) {
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, id string, rowValues []interface{}, rowErr error)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
+	query := fmt.Sprintf(
+		"SELECT %s FROM users WHERE id = $1 AND is_deleted IS FALSE",
+		strings.Join(userTableColumns, ", "),
+	)
+
+	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, id string, rowValues []interface{}, rowErr error) {
+		expected := mockPool.ExpectQuery(query).WithArgs(id)
+
+		if len(rowValues) != 0 {
+			expected.WillReturnRows(
+				pgxmock.NewRows(userTableColumns).AddRow(rowValues...),
+			)
+		}
+
+		if rowErr != nil {
+			expected.WillReturnError(rowErr)
+		}
+	}
+
+	testTable := []struct {
+		name         string
+		id           string
+		rowValues    []interface{}
+		rowErr       error
+		mockBehavior mockBehavior
+		expectedUser domain.User
+		expectedErr  error
+	}{
+		{
+			name:         "Success get short user",
+			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
+			rowValues:    defaultShortUserRowValues,
+			mockBehavior: defaultMockBehaviour,
+			expectedUser: defaultShortUser,
+			expectedErr:  nil,
+		},
+		{
+			name:         "Success get full user",
+			id:           "02185cd4-05b5-4688-836d-3154e9c8a340",
+			rowValues:    defaultFullUserRowValues,
+			mockBehavior: defaultMockBehaviour,
+			expectedUser: defaultFullUser,
+			expectedErr:  nil,
+		},
+		{
+			name:         "User is not found",
+			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
+			rowErr:       pgx.ErrNoRows,
+			mockBehavior: defaultMockBehaviour,
+			expectedErr:  domain.ErrUserNotFound,
+		},
+		{
+			name:        "Get user with invalid id (not uuid4)",
+			id:          "1",
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name:         "Unexpected error while getting user",
+			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
+			rowErr:       errUnexpected,
+			mockBehavior: defaultMockBehaviour,
+			expectedErr:  errUnexpected,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
+			if err != nil {
+				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
+			}
+			defer mockPool.Close()
+
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(mockPool, testCase.id, testCase.rowValues, testCase.rowErr)
+			}
+
+			userRepo := NewUserPostgresRepository(mockPool)
+			user, err := userRepo.GetByID(context.Background(), testCase.id)
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(testCase.expectedUser, user) {
+				t.Errorf("Wrong found user. Expected %#v, got %#v", testCase.expectedUser, user)
+			}
+
+			if err = mockPool.ExpectationsWereMet(); err != nil {
+				t.Errorf("There were unfulfilled expectations: %v", err)
+			}
+		})
+	}
+}
+
+func TestUserPostgresRepository_GetByUsername(t *testing.T) {
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, username string, rowValues []interface{}, rowErr error)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
+	query := fmt.Sprintf(
+		"SELECT %s FROM users WHERE username = $1 AND is_deleted IS FALSE",
+		strings.Join(userTableColumns, ", "),
+	)
+
+	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, username string, rowValues []interface{}, rowErr error) {
+		expected := mockPool.ExpectQuery(query).WithArgs(username)
+
+		if len(rowValues) != 0 {
+			expected.WillReturnRows(
+				pgxmock.NewRows(userTableColumns).AddRow(rowValues...),
+			)
+		}
+
+		if rowErr != nil {
+			expected.WillReturnError(rowErr)
+		}
+	}
+
+	testTable := []struct {
+		name         string
+		username     string
+		rowValues    []interface{}
+		rowErr       error
+		mockBehavior mockBehavior
+		expectedUser domain.User
+		expectedErr  error
+	}{
+		{
+			name:         "Success get short user",
+			username:     "john1967",
+			rowValues:    defaultShortUserRowValues,
+			mockBehavior: defaultMockBehaviour,
+			expectedUser: defaultShortUser,
+			expectedErr:  nil,
+		},
+		{
+			name:         "Success get full user",
+			username:     "mick47",
+			rowValues:    defaultFullUserRowValues,
+			mockBehavior: defaultMockBehaviour,
+			expectedUser: defaultFullUser,
+			expectedErr:  nil,
+		},
+		{
+			name:         "User is not found",
+			username:     "john1967",
+			rowErr:       pgx.ErrNoRows,
+			mockBehavior: defaultMockBehaviour,
+			expectedErr:  domain.ErrUserNotFound,
+		},
+		{
+			name:         "Unexpected error while getting user",
+			username:     "john1967",
+			rowErr:       errUnexpected,
+			mockBehavior: defaultMockBehaviour,
+			expectedErr:  errUnexpected,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
+			if err != nil {
+				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
+			}
+			defer mockPool.Close()
+
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(mockPool, testCase.username, testCase.rowValues, testCase.rowErr)
+			}
+
+			userRepo := NewUserPostgresRepository(mockPool)
+			user, err := userRepo.GetByUsername(context.Background(), testCase.username)
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(testCase.expectedUser, user) {
+				t.Errorf("Wrong found user. Expected %#v, got %#v", testCase.expectedUser, user)
 			}
 
 			if err = mockPool.ExpectationsWereMet(); err != nil {
