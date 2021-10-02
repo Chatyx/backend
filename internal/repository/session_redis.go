@@ -45,14 +45,12 @@ func (r *sessionRedisRepository) Get(ctx context.Context, key string) (domain.Se
 	return session, nil
 }
 
-func (r *sessionRedisRepository) Set(ctx context.Context, key string, session domain.Session) error {
+func (r *sessionRedisRepository) Set(ctx context.Context, key string, session domain.Session, ttl time.Duration) error {
 	payload, err := json.Marshal(session)
 	if err != nil {
 		r.logger.WithError(err).Error("Error occurred while marshaling refresh session")
 		return err
 	}
-
-	ttl := time.Until(session.ExpiresAt)
 
 	if err = r.redisClient.Set(ctx, key, payload, ttl).Err(); err != nil {
 		r.logger.WithError(err).Error("Error occurred while setting session to redis")

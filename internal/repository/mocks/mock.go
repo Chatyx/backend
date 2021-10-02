@@ -7,6 +7,7 @@ package mock_repository
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	domain "github.com/Mort4lis/scht-backend/internal/domain"
 	gomock "github.com/golang/mock/gomock"
@@ -177,15 +178,15 @@ func (mr *MockSessionRepositoryMockRecorder) Get(ctx, key interface{}) *gomock.C
 }
 
 // Set mocks base method.
-func (m *MockSessionRepository) Set(ctx context.Context, key string, session domain.Session) error {
+func (m *MockSessionRepository) Set(ctx context.Context, key string, session domain.Session, ttl time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Set", ctx, key, session)
+	ret := m.ctrl.Call(m, "Set", ctx, key, session, ttl)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Set indicates an expected call of Set.
-func (mr *MockSessionRepositoryMockRecorder) Set(ctx, key, session interface{}) *gomock.Call {
+func (mr *MockSessionRepositoryMockRecorder) Set(ctx, key, session, ttl interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockSessionRepository)(nil).Set), ctx, key, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockSessionRepository)(nil).Set), ctx, key, session, ttl)
 }

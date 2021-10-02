@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
@@ -12,7 +13,9 @@ import (
 	"github.com/go-redis/redismock/v8"
 )
 
-var defaultSession = domain.Session{
+const refreshTokenTTL = 15 * 24 * time.Hour // 15 days
+
+var exampleSession = domain.Session{
 	UserID:       "1",
 	RefreshToken: "qGVFLRQw37TnSmG0LKFN",
 	Fingerprint:  "5dc49b7a-6153-4eae-9c0f-297655c45f08",
@@ -45,7 +48,7 @@ func TestSessionRedisRepository_Get(t *testing.T) {
 			mockBehavior: func(mock redismock.ClientMock, key, value string) {
 				mock.ExpectGet(key).SetVal(value)
 			},
-			expectedSession: defaultSession,
+			expectedSession: exampleSession,
 			expectedErr:     nil,
 		},
 		{
@@ -108,6 +111,71 @@ func TestSessionRedisRepository_Get(t *testing.T) {
 			if err = mock.ExpectationsWereMet(); err != nil {
 				t.Errorf("There were unfulfilled expectations: %v", err)
 			}
+		})
+	}
+}
+
+func TestSessionRedisRepository_Set(t *testing.T) {
+	type mockBehavior func(mock redismock.ClientMock, key string, session domain.Session, ttl time.Duration)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
+	testTable := []struct {
+		name         string
+		key          string
+		session      domain.Session
+		mockBehavior mockBehavior
+		expectedErr  error
+	}{
+		{
+			name:    "Success",
+			key:     "qGVFLRQw37TnSmG0LKFN",
+			session: exampleSession,
+			mockBehavior: func(mock redismock.ClientMock, key string, session domain.Session, ttl time.Duration) {
+				payload, _ := json.Marshal(session)
+				mock.ExpectSet(key, payload, ttl).SetVal("OK")
+			},
+			expectedErr: nil,
+		},
+		{
+			name:    "Unexpected error while setting session",
+			key:     "qGVFLRQw37TnSmG0LKFN",
+			session: exampleSession,
+			mockBehavior: func(mock redismock.ClientMock, key string, session domain.Session, ttl time.Duration) {
+				payload, _ := json.Marshal(session)
+				mock.ExpectSet(key, payload, ttl).SetErr(errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			client, mock := redismock.NewClientMock()
+			sessionRepo := NewSessionRedisRepository(client)
+
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(mock, testCase.key, testCase.session, refreshTokenTTL)
+			}
+
+			err := sessionRepo.Set(context.Background(), testCase.key, testCase.session, refreshTokenTTL)
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			if testCase.expectedErr != nil && testCase.expectedErr != err {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if err = mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("There were unfulfilled expectations: %v", err)
+			}
+
 		})
 	}
 }

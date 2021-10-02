@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 )
@@ -19,6 +20,6 @@ type UserRepository interface {
 
 type SessionRepository interface {
 	Get(ctx context.Context, key string) (domain.Session, error)
-	Set(ctx context.Context, key string, session domain.Session) error
+	Set(ctx context.Context, key string, session domain.Session, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
 }
