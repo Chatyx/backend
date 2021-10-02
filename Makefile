@@ -7,6 +7,9 @@ lint:
 build:
 	go build -o ./build/scht-backend ./cmd/app/main.go
 
+swagger:
+	swag init -g ./internal/app/app.go
+
 generate:
 	go generate ./...
 

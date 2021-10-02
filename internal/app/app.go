@@ -34,6 +34,21 @@ type App struct {
 	logger logging.Logger
 }
 
+// @title Scht REST API
+// @version 1.0
+// @description REST API for Scht Backend application
+
+// @host 127.0.0.1
+// @BasePath /api
+
+// @contact.name Pavel Korchagin
+// @contact.email mortalis94@gmail.com
+
+// @securityDefinitions.apikey JWTTokenAuth
+// @in header
+// @name Authorization
+
+// NewApp creates new application
 func NewApp(cfg *config.Config) *App {
 	logger := logging.GetLogger()
 

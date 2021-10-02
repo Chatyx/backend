@@ -47,6 +47,18 @@ func (h *authHandler) register(router *httprouter.Router) {
 	router.POST(refreshURI, h.refresh)
 }
 
+// @Summary user authentication
+// @Tags Auth
+// @Description Authentication user by username and password. Successful
+// response includes http-only cookie with refresh token.
+// @Accept json
+// @Produce json
+// @Param fingerprint header string true "Fingerprint header"
+// @Param input body domain.SignInDTO true "Credentials body"
+// @Success 200 {object} domain.JWTPair
+// @Failure 400,401 {object} ResponseError
+// @Failure 500 {object} ResponseError
+// @Router /auth/sign-in [post]
 func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var dto domain.SignInDTO
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
@@ -91,6 +103,17 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request, _ httprou
 	respondSuccess(http.StatusOK, w, pair)
 }
 
+// @Summary refresh authorization token
+// @Tags Auth
+// @Description Successful response includes http-only cookie with refresh token.
+// @Accept json
+// @Produce json
+// @Param fingerprint header string true "Fingerprint header"
+// @Param input body domain.RefreshSessionDTO true "Refresh token body"
+// @Success 200 {object} domain.JWTPair
+// @Failure 400 {object} ResponseError
+// @Failure 500 {object} ResponseError
+// @Router /auth/refresh [post]
 func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var dto domain.RefreshSessionDTO
 	if cookie, err := req.Cookie(refreshCookieName); err == nil {

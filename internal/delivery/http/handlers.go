@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	httpSwagger "github.com/swaggo/http-swagger"
+
+	_ "github.com/Mort4lis/scht-backend/docs"
 	"github.com/Mort4lis/scht-backend/internal/config"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/internal/utils"
@@ -131,6 +134,8 @@ func Init(container service.ServiceContainer, cfg *config.Config, validate *vali
 
 	newUserHandler(container.User, container.Auth, validate).register(router)
 	newAuthHandler(container.Auth, validate, cfg.Domain, cfg.Auth.RefreshTokenTTL).register(router)
+
+	router.HandlerFunc(http.MethodGet, "/docs/:any", httpSwagger.WrapHandler)
 
 	return router
 }

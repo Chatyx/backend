@@ -1,0 +1,340 @@
+basePath: /api
+definitions:
+  domain.CreateUserDTO:
+    properties:
+      birth_date:
+        type: string
+      department:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  domain.JWTPair:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  domain.RefreshSessionDTO:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  domain.SignInDTO:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  domain.UpdateUserDTO:
+    properties:
+      birth_date:
+        type: string
+      department:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - id
+    type: object
+  domain.User:
+    properties:
+      birth_date:
+        type: string
+      created_at:
+        type: string
+      department:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  http.ErrorFields:
+    additionalProperties:
+      type: string
+    type: object
+  http.ResponseError:
+    properties:
+      fields:
+        $ref: '#/definitions/http.ErrorFields'
+      message:
+        type: string
+    type: object
+  http.UserListResponse:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/domain.User'
+        type: array
+    type: object
+host: 127.0.0.1
+info:
+  contact:
+    email: mortalis94@gmail.com
+    name: Pavel Korchagin
+  description: REST API for Scht Backend application
+  title: Scht REST API
+  version: "1.0"
+paths:
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Successful response includes http-only cookie with refresh token.
+      parameters:
+      - description: Fingerprint header
+        in: header
+        name: fingerprint
+        required: true
+        type: string
+      - description: Refresh token body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.RefreshSessionDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.JWTPair'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      summary: refresh authorization token
+      tags:
+      - Auth
+  /auth/sign-in:
+    post:
+      consumes:
+      - application/json
+      description: Authentication user by username and password. Successful
+      parameters:
+      - description: Fingerprint header
+        in: header
+        name: fingerprint
+        required: true
+        type: string
+      - description: Credentials body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SignInDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.JWTPair'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      summary: user authentication
+      tags:
+      - Auth
+  /users:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.UserListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Get list of users
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateUserDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      summary: Create user
+      tags:
+      - Users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: User id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Delete user
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: User id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Get user by id
+      tags:
+      - Users
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: User id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateUserDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Update user
+      tags:
+      - Users
+securityDefinitions:
+  JWTTokenAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
