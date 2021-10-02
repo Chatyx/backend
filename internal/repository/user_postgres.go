@@ -302,7 +302,6 @@ func (r *userPostgresRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (que
 func (r *userPostgresRepository) Delete(ctx context.Context, id string) error {
 	if !utils.IsValidUUID(id) {
 		r.logger.Debugf("user is not found with id = %s", id)
-
 		return domain.ErrUserNotFound
 	}
 
@@ -315,13 +314,11 @@ func (r *userPostgresRepository) Delete(ctx context.Context, id string) error {
 	cmgTag, err := r.dbPool.Exec(ctx, query, id)
 	if err != nil {
 		r.logger.WithError(err).Error("Error occurred while updating user into the database")
-
 		return err
 	}
 
 	if cmgTag.RowsAffected() == 0 {
 		r.logger.Debugf("user is not found with id = %s", id)
-
 		return domain.ErrUserNotFound
 	}
 

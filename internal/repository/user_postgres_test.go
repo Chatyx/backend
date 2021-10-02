@@ -606,6 +606,90 @@ func TestUserPostgresRepository_Update(t *testing.T) {
 	}
 }
 
+func TestUserPostgresRepository_Delete(t *testing.T) {
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, id string)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
+	query := "UPDATE users SET is_deleted = TRUE WHERE id = $1 AND is_deleted IS FALSE"
+
+	testTable := []struct {
+		name         string
+		id           string
+		mockBehavior mockBehavior
+		expectedErr  error
+	}{
+		{
+			name: "Success",
+			id:   "6be043ca-3005-4b1c-b847-eb677897c618",
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, id string) {
+				mockPool.ExpectExec(query).WithArgs(id).
+					WillReturnResult(
+						pgxmock.NewResult("updated", 1),
+					)
+			},
+			expectedErr: nil,
+		},
+		{
+			name:        "Deleting user with invalid id",
+			id:          "1",
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name: "User is not found",
+			id:   "6be043ca-3005-4b1c-b847-eb677897c618",
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, id string) {
+				mockPool.ExpectExec(query).WithArgs(id).
+					WillReturnResult(
+						pgxmock.NewResult("updated", 0),
+					)
+			},
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name: "Unexpected error while deleting the user",
+			id:   "6be043ca-3005-4b1c-b847-eb677897c618",
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, id string) {
+				mockPool.ExpectExec(query).WithArgs(id).WillReturnError(errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
+			if err != nil {
+				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
+			}
+			defer mockPool.Close()
+
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(mockPool, testCase.id)
+			}
+
+			userRepo := NewUserPostgresRepository(mockPool)
+			err = userRepo.Delete(context.Background(), testCase.id)
+
+			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
+				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			}
+
+			if testCase.expectedErr == nil && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			if err = mockPool.ExpectationsWereMet(); err != nil {
+				t.Errorf("There were unfulfilled expectations: %v", err)
+			}
+		})
+	}
+}
+
 func TestInvalidDateBirthdayParse(t *testing.T) {
 	logging.InitLogger(
 		logging.LogConfig{
