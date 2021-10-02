@@ -61,15 +61,15 @@ func (r *sessionRedisRepository) Set(ctx context.Context, key string, session do
 }
 
 func (r *sessionRedisRepository) Delete(ctx context.Context, key string) error {
-	if err := r.redisClient.Del(ctx, key).Err(); err != nil {
-		if err == redis.Nil {
-			r.logger.WithError(err).Debugf("refresh session is not found with key %s", key)
-			return nil
-		}
-
+	val, err := r.redisClient.Del(ctx, key).Result()
+	if err != nil {
 		r.logger.WithError(err).Error("Error occurred while deleting refresh session")
-
 		return err
+	}
+
+	if val == 0 {
+		r.logger.WithError(err).Debugf("refresh session is not found with key %s", key)
+		return domain.ErrSessionNotFound
 	}
 
 	return nil
