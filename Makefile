@@ -27,17 +27,17 @@ redis:
 		--publish ${SCHT_REDIS_PORT}:6379 redis:6.2.5
 
 create-migration:
-	docker run --rm -v ${PWD}/db/migrations:/migrations \
+	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \
 		migrate/migrate create -ext sql -dir /migrations -seq $(NAME)
 
 migrate:
-	docker run --rm -v ${PWD}/db/migrations:/migrations \
+	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \
 		--network host migrate/migrate \
         -path=/migrations/ \
         -database postgres://${SCHT_PG_USERNAME}:${SCHT_PG_PASSWORD}@${SCHT_PG_HOST}:${SCHT_PG_PORT}/${SCHT_PG_DATABASE}?sslmode=disable up
 
 downgrade:
-	docker run --rm -v ${PWD}/db/migrations:/migrations \
+	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \
     	--network host migrate/migrate \
         -path=/migrations/ \
         -database postgres://${SCHT_PG_USERNAME}:${SCHT_PG_PASSWORD}@${SCHT_PG_HOST}:${SCHT_PG_PORT}/${SCHT_PG_DATABASE}?sslmode=disable down 1
