@@ -10,12 +10,22 @@ swagger:
 generate:
 	go generate ./...
 
-test.unit:
-	go test -v -coverprofile=cover.out ./... && go tool cover -func=cover.out
-
 infrastructure.dev:
 	docker-compose -f docker-compose.dev.yml down
 	docker-compose -f docker-compose.dev.yml up -d
+
+infrastructure.test:
+	docker-compose -f docker-compose.test.yml down
+	docker-compose -f docker-compose.test.yml up -d
+
+test.unit:
+	go test -v -coverprofile=cover.out ./...
+	go tool cover -func=cover.out
+
+test.integration: infrastructure.test
+	bash ./scripts/wait-for-postgres.sh
+	go test -v ./test/... || true
+	docker-compose -f docker-compose.test.yml down
 
 migrations:
 	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \

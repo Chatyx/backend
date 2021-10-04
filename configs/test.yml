@@ -1,0 +1,27 @@
+is_debug: true
+domain: localhost
+listen:
+  type: port
+  bind_id: 127.0.0.1
+  bind_port: 8001
+auth:
+  sign_key: qwerty
+  access_token_ttl: 30      # 30 minutes
+  refresh_token_ttl: 43200  # 30 days
+postgres:
+  host: 127.0.0.1
+  port: 5433
+  database: scht_db
+  username: scht_user
+  password: scht_password
+redis:
+  host: 127.0.0.1
+  port: 6380
+  username: default
+  password: ""
+logging:
+  level: debug
+  filepath: ./logs/all.log
+  rotate: true
+  max_size: 100   # MB
+  max_backups: 5  # max files
