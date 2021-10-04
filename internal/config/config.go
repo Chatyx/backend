@@ -1,11 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
 )
@@ -29,14 +29,22 @@ type PostgresConfig struct {
 	Port     int    `yaml:"port"     env:"SCHT_PG_PORT"     env-required:"true"`
 	Database string `yaml:"database" env:"SCHT_PG_DATABASE" env-required:"true"`
 	Username string `yaml:"username" env:"SCHT_PG_USERNAME" env-required:"true"`
-	Password string `yaml:"password" env:"SCHT_PG_PASSWORD" env-required:"true"`
+	Password string `yaml:"password" env:"SCHT_PG_PASSWORD"`
 }
 
 type RedisConfig struct {
 	Host     string `yaml:"host"     env:"SCHT_REDIS_HOST"     env-required:"true"`
 	Port     int    `yaml:"port"     env:"SCHT_REDIS_PORT"     env-required:"true"`
 	Username string `yaml:"username" env:"SCHT_REDIS_USERNAME" env-required:"true"`
-	Password string `yaml:"password" env:"SCHT_REDIS_PASSWORD" env-required:"true"`
+	Password string `yaml:"password" env:"SCHT_REDIS_PASSWORD"`
+}
+
+type Logging struct {
+	Level      string `yaml:"level"       env-default:"debug"`
+	FilePath   string `yaml:"filepath"`
+	Rotate     bool   `yaml:"rotate"`
+	MaxSize    int    `yaml:"max_size"`
+	MaxBackups int    `yaml:"max_backups"`
 }
 
 type Config struct {
@@ -46,6 +54,7 @@ type Config struct {
 	Auth     AuthConfig     `yaml:"auth"`
 	Postgres PostgresConfig `yaml:"postgres"`
 	Redis    RedisConfig    `yaml:"redis"`
+	Logging  Logging        `yaml:"logging"`
 }
 
 var (
@@ -56,16 +65,15 @@ var (
 func GetConfig(path string) *Config {
 	once.Do(func() {
 		cfg = &Config{}
-		logger := logging.GetLogger()
 
 		if _, err := os.Stat(envFilePath); err == nil {
 			if err = godotenv.Load(envFilePath); err != nil {
-				logger.WithError(err).Fatal("Failed to loading env variable from %s file", envFilePath)
+				panic(fmt.Sprintf("Failed to loading env variable from %s file: %v", envFilePath, err))
 			}
 		}
 
 		if err := cleanenv.ReadConfig(path, cfg); err != nil {
-			logger.WithError(err).Fatal("Failed to reading config file %s", path)
+			panic(fmt.Sprintf("Failed to reading config file %s: %v", path, err))
 		}
 
 		cfg.Auth.AccessTokenTTL *= time.Minute

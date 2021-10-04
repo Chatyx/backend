@@ -1,0 +1,29 @@
+version: "3.3"
+
+services:
+  postgres:
+    image: postgres:12.1
+    container_name: scht-postgres_dev
+    environment:
+      - POSTGRES_DB=scht_db
+      - POSTGRES_USER=scht_user
+      - POSTGRES_PASSWORD=scht_password
+    volumes:
+      - ./.volumes/postgres/data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - scht-backend-network_dev
+
+  redis:
+    image: redis:6.2.5
+    container_name: scht-redis_dev
+    volumes:
+      - ./.volumes/redis/data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - scht-backend-network_dev
+
+networks:
+  scht-backend-network_dev:

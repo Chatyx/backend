@@ -11,21 +11,22 @@ import (
 var cfgPath string
 
 func init() {
-	flag.StringVar(&cfgPath, "config", "./configs/main.yml", "config file path")
+	flag.StringVar(&cfgPath, "config", "./configs/dev.yml", "config file path")
 }
 
 func main() {
 	flag.Parse()
 
+	cfg := config.GetConfig(cfgPath)
+
 	logging.InitLogger(logging.LogConfig{
-		LogLevel:    "debug",
-		LogFilePath: "./logs/all.log",
-		NeedRotate:  true,
-		MaxSize:     100,
-		MaxBackups:  5,
+		LogLevel:    cfg.Logging.Level,
+		LogFilePath: cfg.Logging.FilePath,
+		NeedRotate:  cfg.Logging.Rotate,
+		MaxSize:     cfg.Logging.MaxSize,
+		MaxBackups:  cfg.Logging.MaxBackups,
 	})
 
-	cfg := config.GetConfig(cfgPath)
 	application := app.NewApp(cfg)
 	logger := logging.GetLogger()
 

@@ -6,8 +6,8 @@ listen:
   bind_port: 8000
 auth:
   sign_key: qwerty
-  access_token_ttl: 15     # 15 minutes
-  refresh_token_ttl: 43200 # 30 days
+  access_token_ttl: 15      # 15 minutes
+  refresh_token_ttl: 43200  # 30 days
 postgres:
   host: 127.0.0.1
   port: 5432
@@ -17,5 +17,11 @@ postgres:
 redis:
   host: 127.0.0.1
   port: 6379
-  username: scht_user
-  password: scht_password
+  username: default
+  password: ""
+logging:
+  level: debug
+  filepath: ./logs/all.log
+  rotate: true
+  max_size: 100   # MB
+  max_backups: 5  # max files
