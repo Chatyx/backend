@@ -11,7 +11,7 @@ auth:
 postgres:
   host: 127.0.0.1
   port: 5433
-  database: scht_db
+  database: scht_db_test
   username: scht_user
   password: scht_password
 redis:

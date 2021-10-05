@@ -1,0 +1,16 @@
+- id: ba566522-3305-48df-936a-73f47611934b
+  username: john1967
+  password: $2a$04$vsffa39xFydpLfUR6k7zeOuYpWjdxTKAE05GKJ7v1uOU.ArsETGpe # qwerty12345
+  first_name: John
+  last_name: Lennon
+  email: john1967@gmail.com
+  birth_date: 1967-07-16
+  department: IoT
+  is_deleted: false
+  created_at: 2021-10-05T17:09:30.441
+
+- id: 7e7b1825-ef9a-42ec-b4db-6f09dffe3850
+  username: mick47
+  password: $2a$04$WCZXaFve04nZ.HENiF5FkeyXpT7iEhBUVZ19jsxTyRKb1fFPNsvmS # helloworld12345
+  email: mick47@gmail.com
+  created_at: 2021-10-05T17:12:25.224

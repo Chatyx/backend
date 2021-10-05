@@ -5,7 +5,7 @@ services:
     image: postgres:12.1
     container_name: scht-postgres_test
     environment:
-      - POSTGRES_DB=scht_db
+      - POSTGRES_DB=scht_db_test
       - POSTGRES_USER=scht_user
       - POSTGRES_PASSWORD=scht_password
     ports:
