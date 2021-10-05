@@ -34,7 +34,7 @@ func (m *JWTTokenManager) NewAccessToken(claims jwt.Claims) (string, error) {
 }
 
 func (m *JWTTokenManager) NewRefreshToken() (string, error) {
-	src := rand.NewSource(time.Now().Unix())
+	src := rand.NewSource(time.Now().UnixNano())
 	rnd := rand.New(src)
 
 	buf := make([]byte, 32)
