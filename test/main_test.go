@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"os"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 
@@ -35,6 +37,7 @@ type AppTestSuite struct {
 	dbConn      *sql.DB
 	fixtures    *testfixtures.Loader
 	redisClient *redis.Client
+	httpClient  *http.Client
 	urlPrefix   string
 }
 
@@ -89,6 +92,7 @@ func (s *AppTestSuite) SetupSuite() {
 	s.dbConn = dbConn
 	s.fixtures = fixtures
 	s.redisClient = redisClient
+	s.httpClient = &http.Client{Timeout: 5 * time.Second}
 	s.urlPrefix = fmt.Sprintf("http://localhost:%d/api", cfg.Listen.BindPort)
 
 	go func() {
@@ -115,6 +119,6 @@ func (s *AppTestSuite) TearDownTest() {
 	)
 }
 
-func (s *AppTestSuite) getURL(uri string) string {
+func (s *AppTestSuite) buildURL(uri string) string {
 	return s.urlPrefix + uri
 }

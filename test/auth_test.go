@@ -36,13 +36,12 @@ func (s *AppTestSuite) TestSignInSuccess() {
 
 func (s *AppTestSuite) TestSignInFailed() {
 	bodyStr := `{"username":"john1967","password":"qwerty_qQq"}`
-	req, err := http.NewRequest(http.MethodPost, s.getURL("/auth/sign-in"), strings.NewReader(bodyStr))
+	req, err := http.NewRequest(http.MethodPost, s.buildURL("/auth/sign-in"), strings.NewReader(bodyStr))
 	s.NoError(err, "Failed to create request")
 
 	req.Header.Set("X-Fingerprint", fingerprintValue)
 
-	httpClient := &http.Client{Timeout: 5 * time.Second}
-	resp, err := httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	s.NoError(err, "Failed to send request")
 	s.Require().Equal(http.StatusUnauthorized, resp.StatusCode)
 }
@@ -51,13 +50,12 @@ func (s *AppTestSuite) TestRefreshWithBodySuccess() {
 	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
 
 	bodyStr := fmt.Sprintf(`{"refresh_token":"%s"}`, tokenPair.RefreshToken)
-	req, err := http.NewRequest(http.MethodPost, s.getURL("/auth/refresh"), strings.NewReader(bodyStr))
+	req, err := http.NewRequest(http.MethodPost, s.buildURL("/auth/refresh"), strings.NewReader(bodyStr))
 	s.NoError(err, "Failed to create request")
 
 	req.Header.Set("X-Fingerprint", fingerprintValue)
 
-	httpClient := &http.Client{Timeout: 5 * time.Second}
-	resp, err := httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	s.NoError(err, "Failed to send request")
 
 	defer func() { _ = resp.Body.Close() }()
@@ -86,14 +84,13 @@ func (s *AppTestSuite) TestRefreshWithCookieSuccess() {
 	resp := s.authenticateResponse("john1967", "qwerty12345", fingerprintValue)
 	refreshCookie := s.getRefreshCookie(resp.Cookies())
 
-	req, err := http.NewRequest(http.MethodPost, s.getURL("/auth/refresh"), nil)
+	req, err := http.NewRequest(http.MethodPost, s.buildURL("/auth/refresh"), nil)
 	s.NoError(err, "Failed to create request")
 
 	req.AddCookie(refreshCookie)
 	req.Header.Set("X-Fingerprint", fingerprintValue)
 
-	httpClient := &http.Client{Timeout: 5 * time.Second}
-	resp, err = httpClient.Do(req)
+	resp, err = s.httpClient.Do(req)
 	s.NoError(err, "Failed to send request")
 
 	defer func() { _ = resp.Body.Close() }()
@@ -122,13 +119,12 @@ func (s *AppTestSuite) TestRefreshInvalidFingerprint() {
 	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
 
 	bodyStr := fmt.Sprintf(`{"refresh_token":"%s"}`, tokenPair.RefreshToken)
-	req, err := http.NewRequest(http.MethodPost, s.getURL("/auth/refresh"), strings.NewReader(bodyStr))
+	req, err := http.NewRequest(http.MethodPost, s.buildURL("/auth/refresh"), strings.NewReader(bodyStr))
 	s.NoError(err, "Failed to create request")
 
 	req.Header.Add("X-Fingerprint", "invalid_fingerprint")
 
-	httpClient := &http.Client{Timeout: 5 * time.Second}
-	resp, err := httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	s.NoError(err, "Failed to send request")
 
 	defer func() { _ = resp.Body.Close() }()
@@ -211,13 +207,12 @@ func (s *AppTestSuite) authenticate(username, password, fingerprint string) doma
 
 func (s *AppTestSuite) authenticateResponse(username, password, fingerprint string) *http.Response {
 	bodyStr := fmt.Sprintf(`{"username":"%s","password":"%s"}`, username, password)
-	req, err := http.NewRequest(http.MethodPost, s.getURL("/auth/sign-in"), strings.NewReader(bodyStr))
+	req, err := http.NewRequest(http.MethodPost, s.buildURL("/auth/sign-in"), strings.NewReader(bodyStr))
 	s.NoError(err, "Failed to create authenticate request")
 
 	req.Header.Set("X-Fingerprint", fingerprint)
 
-	httpClient := &http.Client{Timeout: 5 * time.Second}
-	resp, err := httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	s.NoError(err, "Failed to authenticate send request")
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
