@@ -16,7 +16,7 @@ const (
 )
 
 func (s *AppTestSuite) TestSignInSuccess() {
-	refreshTokenTTL := s.cfg.Auth.RefreshTokenTTL
+	expectedRefreshTokenTTL := s.cfg.Auth.RefreshTokenTTL
 
 	reqStr := `{"username":"john1967","password":"qwerty12345"}`
 	req, err := http.NewRequest(http.MethodPost, s.getURL("/auth/sign-in"), strings.NewReader(reqStr))
@@ -56,10 +56,9 @@ func (s *AppTestSuite) TestSignInSuccess() {
 		refreshCookieTTL = time.Until(refreshCookie.Expires)
 	}
 
-	s.Require().LessOrEqual(
-		refreshTokenTTL-refreshCookieTTL, 5*time.Second,
-		"Wrong refresh cookie TTL",
-	)
+	ttlDiff := expectedRefreshTokenTTL - refreshCookieTTL
+	s.Require().GreaterOrEqual(ttlDiff, time.Duration(0), "Wrong refresh cookie TTL")
+	s.Require().LessOrEqual(ttlDiff, 5*time.Second, "Wrong refresh cookie TTL")
 
 	payload, err := s.redisClient.Get(context.Background(), tokenPair.RefreshToken).Result()
 	s.NoError(err, "Failed to get session from redis")
@@ -74,7 +73,10 @@ func (s *AppTestSuite) TestSignInSuccess() {
 
 	sessionTTL, err := s.redisClient.TTL(context.Background(), tokenPair.RefreshToken).Result()
 	s.NoError(err, "Failed to get session TTL from redis")
-	s.Require().LessOrEqual(refreshTokenTTL-sessionTTL, 5*time.Second, "Wrong session TTL")
+
+	ttlDiff = expectedRefreshTokenTTL - sessionTTL
+	s.Require().GreaterOrEqual(ttlDiff, time.Duration(0), "Wrong session TTL")
+	s.Require().LessOrEqual(expectedRefreshTokenTTL-sessionTTL, 5*time.Second, "Wrong session TTL")
 }
 
 func (s *AppTestSuite) TestSignInFailed() {
