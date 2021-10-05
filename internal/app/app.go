@@ -48,7 +48,7 @@ type App struct {
 // @in header
 // @name Authorization
 
-// NewApp creates new application
+// NewApp creates new application.
 func NewApp(cfg *config.Config) *App {
 	logger := logging.GetLogger()
 

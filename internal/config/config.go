@@ -82,3 +82,12 @@ func GetConfig(path string) *Config {
 
 	return cfg
 }
+
+func (c *Config) DBConnectionURL() string {
+	pgCfg := c.Postgres
+
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		pgCfg.Username, pgCfg.Password, pgCfg.Host, pgCfg.Port, pgCfg.Database,
+	)
+}

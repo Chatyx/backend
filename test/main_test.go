@@ -8,15 +8,22 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/app"
 	"github.com/Mort4lis/scht-backend/internal/config"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/stretchr/testify/suite"
 )
 
-const configPath = "../configs/test.yml"
+const (
+	configPath     = "../configs/test.yml"
+	migrationsPath = "../internal/db/migrations"
+)
 
 type AppTestSuite struct {
 	suite.Suite
-
-	logger logging.Logger
+	app         *app.App
+	cfg         *config.Config
+	dbMigration *migrate.Migrate
 }
 
 func TestAppTestSuite(t *testing.T) {
@@ -24,50 +31,38 @@ func TestAppTestSuite(t *testing.T) {
 }
 
 func (s *AppTestSuite) SetupSuite() {
-	cfg := config.GetConfig(configPath)
+	s.cfg = config.GetConfig(configPath)
 
 	logging.InitLogger(logging.LogConfig{
-		LogLevel:    cfg.Logging.Level,
-		LogFilePath: cfg.Logging.FilePath,
-		NeedRotate:  cfg.Logging.Rotate,
-		MaxSize:     cfg.Logging.MaxSize,
-		MaxBackups:  cfg.Logging.MaxBackups,
+		LogLevel:    s.cfg.Logging.Level,
+		LogFilePath: s.cfg.Logging.FilePath,
+		NeedRotate:  s.cfg.Logging.Rotate,
+		MaxSize:     s.cfg.Logging.MaxSize,
+		MaxBackups:  s.cfg.Logging.MaxBackups,
 	})
 
-	s.logger = logging.GetLogger()
+	dbMigration, err := migrate.New("file://"+migrationsPath, s.cfg.DBConnectionURL())
+	s.Require().NoError(err, "An error occurred while creating migrate instance")
 
-	s.logger.Info("Start to setup test suite...")
-
-	application := app.NewApp(cfg)
+	s.dbMigration = dbMigration
+	s.app = app.NewApp(s.cfg)
 
 	go func() {
-		if err := application.Run(); err != nil {
-			s.logger.WithError(err).Fatal("An error occurred while running the application")
-		}
+		s.Require().NoError(s.app.Run(), "An error occurred while running the application")
 	}()
 }
 
 func (s *AppTestSuite) TearDownSuite() {
 	process, err := os.FindProcess(syscall.Getpid())
-	if err != nil {
-		s.logger.WithError(err).Fatalf("Failed to find process %d", syscall.Getpid())
-	}
+	s.Require().NoError(err, "Failed to find process", syscall.Getpid())
 
-	if err = process.Signal(syscall.SIGTERM); err != nil {
-		s.logger.WithError(err).Errorf("Failed to send SIGTERM to process %d", process.Pid)
-	}
-
-	s.logger.Info("Test suite is successfully finished!")
+	s.Require().NoError(process.Signal(syscall.SIGTERM), "Failed to send SIGTERM to process", process.Pid)
 }
 
 func (s *AppTestSuite) SetupTest() {
-	s.logger.Info("Setup test 'HelloWorld'")
+	s.Require().NoError(s.dbMigration.Up())
 }
 
 func (s *AppTestSuite) TearDownTest() {
-	s.logger.Info("Teardown test 'HelloWorld'")
-}
-
-func (s *AppTestSuite) TestHelloWorld() {
-	s.T().Error("Hello world from tests")
+	s.Require().NoError(s.dbMigration.Down())
 }

@@ -10,8 +10,12 @@ require (
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/go-redis/redismock/v8 v8.0.6
+	github.com/golang-migrate/migrate v3.5.4+incompatible
+	github.com/golang-migrate/migrate/v4 v4.15.0
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/ilyakaznacheev/cleanenv v1.2.5
 	github.com/jackc/pgconn v1.10.0
 	github.com/jackc/pgerrcode v0.0.0-20201024163028-a0d42d470451
@@ -23,11 +27,11 @@ require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/pashagolub/pgxmock v1.4.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/objx v0.3.0 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/stretchr/testify v1.7.0
 	github.com/swaggo/files v0.0.0-20210815190702-a29dd2bc99b2 // indirect
 	github.com/swaggo/http-swagger v1.1.1
 	github.com/swaggo/swag v1.7.3
+	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20210929193557-e81a3d93ecf6 // indirect
 	golang.org/x/sys v0.0.0-20211002104244-808efd93c36d // indirect
