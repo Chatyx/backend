@@ -1,10 +1,14 @@
 package test
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"syscall"
 	"testing"
+
+	"github.com/go-redis/redis/v8"
 
 	"github.com/Mort4lis/scht-backend/internal/app"
 	"github.com/Mort4lis/scht-backend/internal/config"
@@ -28,7 +32,10 @@ type AppTestSuite struct {
 	app         *app.App
 	cfg         *config.Config
 	dbMigration *migrate.Migrate
+	dbConn      *sql.DB
 	fixtures    *testfixtures.Loader
+	redisClient *redis.Client
+	urlPrefix   string
 }
 
 func TestAppTestSuite(t *testing.T) {
@@ -36,33 +43,53 @@ func TestAppTestSuite(t *testing.T) {
 }
 
 func (s *AppTestSuite) SetupSuite() {
-	s.cfg = config.GetConfig(configPath)
+	cfg := config.GetConfig(configPath)
+	if cfg.Listen.Type != "port" {
+		s.T().Fatalf("can't run integration tests with listen type = %q", cfg.Listen.Type)
+	}
 
 	logging.InitLogger(logging.LogConfig{
-		LogLevel:    s.cfg.Logging.Level,
-		LogFilePath: s.cfg.Logging.FilePath,
-		NeedRotate:  s.cfg.Logging.Rotate,
-		MaxSize:     s.cfg.Logging.MaxSize,
-		MaxBackups:  s.cfg.Logging.MaxBackups,
+		LogLevel:    cfg.Logging.Level,
+		LogFilePath: cfg.Logging.FilePath,
+		NeedRotate:  cfg.Logging.Rotate,
+		MaxSize:     cfg.Logging.MaxSize,
+		MaxBackups:  cfg.Logging.MaxBackups,
 	})
 
-	dbMigration, err := migrate.New("file://"+migrationsPath, s.cfg.DBConnectionURL())
-	s.Require().NoError(err, "Failed to create migrate instance")
-	s.Require().NoError(dbMigration.Up(), "Failed to migrate up")
-
-	db, err := sql.Open("pgx", s.cfg.DBConnectionURL())
+	dbConn, err := sql.Open("pgx", cfg.DBConnectionURL())
 	s.Require().NoError(err, "Failed to create *sql.DB instance")
+	s.Require().NoError(dbConn.Ping(), "Failed to connect to postgres")
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
+		Username: cfg.Redis.Username,
+		Password: cfg.Redis.Password,
+		DB:       0, // use default database
+	})
+
+	s.Require().NoError(redisClient.Ping(context.Background()).Err(), "Failed to connect to redis")
+
+	dbMigration, err := migrate.New("file://"+migrationsPath, cfg.DBConnectionURL())
+	s.Require().NoError(err, "Failed to create migrate instance")
+
+	if err = dbMigration.Up(); err != nil && err != migrate.ErrNoChange {
+		s.Require().NoError(err, "Failed to migrate up")
+	}
 
 	fixtures, err := testfixtures.New(
-		testfixtures.Database(db),
+		testfixtures.Database(dbConn),
 		testfixtures.Dialect("postgres"),
 		testfixtures.Directory(fixturesPath),
 	)
 	s.Require().NoError(err, "Failed to create fixtures loader instance")
 
+	s.cfg = cfg
+	s.app = app.NewApp(cfg)
 	s.dbMigration = dbMigration
+	s.dbConn = dbConn
 	s.fixtures = fixtures
-	s.app = app.NewApp(s.cfg)
+	s.redisClient = redisClient
+	s.urlPrefix = fmt.Sprintf("http://localhost:%d/api", cfg.Listen.BindPort)
 
 	go func() {
 		s.Require().NoError(s.app.Run(), "An error occurred while running the application")
@@ -78,5 +105,16 @@ func (s *AppTestSuite) TearDownSuite() {
 }
 
 func (s *AppTestSuite) SetupTest() {
-	s.Require().NoError(s.fixtures.Load())
+	s.NoError(s.fixtures.Load(), "Failed to populate database")
+}
+
+func (s *AppTestSuite) TearDownTest() {
+	s.NoError(
+		s.redisClient.FlushAll(context.Background()).Err(),
+		"Failed to remove all keys in the redis",
+	)
+}
+
+func (s *AppTestSuite) getURL(uri string) string {
+	return s.urlPrefix + uri
 }
