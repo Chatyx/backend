@@ -118,6 +118,23 @@ func (s *AppTestSuite) TestRefreshWithCookieSuccess() {
 	s.Require().Equal(val, int64(0), "Old session exists")
 }
 
+func (s *AppTestSuite) TestRefreshInvalidFingerprint() {
+	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
+
+	bodyStr := fmt.Sprintf(`{"refresh_token":"%s"}`, tokenPair.RefreshToken)
+	req, err := http.NewRequest(http.MethodPost, s.getURL("/auth/refresh"), strings.NewReader(bodyStr))
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("X-Fingerprint", "invalid_fingerprint")
+
+	httpClient := &http.Client{Timeout: 5 * time.Second}
+	resp, err := httpClient.Do(req)
+	s.NoError(err, "Failed to send request")
+
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
+}
+
 func (s *AppTestSuite) checkRefreshTokenCookie(cookies []*http.Cookie, expectedRefreshToken string) {
 	refreshCookie := s.getRefreshCookie(cookies)
 	s.Require().Equal(refreshCookie.Value, expectedRefreshToken)
