@@ -30,9 +30,9 @@ func (s *AppTestSuite) TestUserList() {
 	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
 
 	resp, err := s.httpClient.Do(req)
-	s.NoError(err, "Failed to send request")
+	s.Require().NoError(err, "Failed to send request")
 
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	var responseList struct {
@@ -67,7 +67,13 @@ func (s *AppTestSuite) TestUserList() {
 }
 
 func (s *AppTestSuite) TestUserCreate() {
-	username, password, email, birthDate := "test_user", "qwerty12345", "test_user@gmail.com", "1998-06-03"
+	var (
+		username  = "test_user"
+		password  = "qwerty12345"
+		email     = "test_user@gmail.com"
+		birthDate = "1998-06-03"
+	)
+
 	strBody := fmt.Sprintf(
 		`{"username":"%s","password":"%s","email":"%s","birth_date":"%s"}`,
 		username, password, email, birthDate,
@@ -77,30 +83,33 @@ func (s *AppTestSuite) TestUserCreate() {
 	s.NoError(err, "Failed to create request")
 
 	resp, err := s.httpClient.Do(req)
-	s.NoError(err, "Failed to send request")
+	s.Require().NoError(err, "Failed to send request")
 
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 	s.Require().Equal(http.StatusCreated, resp.StatusCode)
 
 	var respUser domain.User
 	err = json.NewDecoder(resp.Body).Decode(&respUser)
 	s.NoError(err, "Failed to decode response body")
 
-	s.Require().Equal(username, respUser.Username)
-	s.Require().Equal(email, respUser.Email)
-	s.Require().Equal(birthDate, respUser.BirthDate)
+	expectedUser := domain.User{
+		ID:        respUser.ID,
+		Username:  username,
+		Email:     email,
+		BirthDate: birthDate,
+	}
+
 	s.Require().NotEqual("", respUser.ID, "User id can't be empty")
+	s.compareUsers(expectedUser, respUser)
 
 	dbUser, err := s.getUserFromDB(respUser.ID)
 	s.NoError(err, "Failed to get user from database")
 
-	s.Require().Equal(username, dbUser.Username)
-	s.Require().Equal(email, dbUser.Email)
-	s.Require().Equal(birthDate, dbUser.BirthDate)
 	s.NoError(
 		bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(password)),
 		"Sent password and stored hash aren't equal",
 	)
+	s.compareUsers(expectedUser, dbUser)
 }
 
 func (s *AppTestSuite) TestGetUser() {
@@ -112,9 +121,9 @@ func (s *AppTestSuite) TestGetUser() {
 	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
 
 	resp, err := s.httpClient.Do(req)
-	s.NoError(err, "Failed to send request")
+	s.Require().NoError(err, "Failed to send request")
 
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	var respUser domain.User
@@ -149,9 +158,9 @@ func (s *AppTestSuite) TestUpdateUser() {
 	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
 
 	resp, err := s.httpClient.Do(req)
-	s.NoError(err, "Failed to send request")
+	s.Require().NoError(err, "Failed to send request")
 
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	var respUser domain.User
@@ -184,8 +193,8 @@ func (s *AppTestSuite) TestUpdateUserPassword() {
 	s.Require().NoError(err, "Failed to send request")
 
 	defer resp.Body.Close()
-
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
 	s.authenticate("mick47", newPassword, uuid.New().String())
 }
 
@@ -204,7 +213,9 @@ func (s *AppTestSuite) TestDeleteUser() {
 	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
 
 	resp, err := s.httpClient.Do(req)
-	s.NoError(err, "Failed to send request")
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
 	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	// Check if the user exists after delete

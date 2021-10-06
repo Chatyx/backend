@@ -42,7 +42,9 @@ func (s *AppTestSuite) TestSignInFailed() {
 	req.Header.Set("X-Fingerprint", fingerprintValue)
 
 	resp, err := s.httpClient.Do(req)
-	s.NoError(err, "Failed to send request")
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
 	s.Require().Equal(http.StatusUnauthorized, resp.StatusCode)
 }
 
@@ -56,9 +58,9 @@ func (s *AppTestSuite) TestRefreshWithBodySuccess() {
 	req.Header.Set("X-Fingerprint", fingerprintValue)
 
 	resp, err := s.httpClient.Do(req)
-	s.NoError(err, "Failed to send request")
+	s.Require().NoError(err, "Failed to send request")
 
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	var newTokenPair domain.JWTPair
@@ -91,9 +93,9 @@ func (s *AppTestSuite) TestRefreshWithCookieSuccess() {
 	req.Header.Set("X-Fingerprint", fingerprintValue)
 
 	resp, err = s.httpClient.Do(req)
-	s.NoError(err, "Failed to send request")
+	s.Require().NoError(err, "Failed to send request")
 
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	var newTokenPair domain.JWTPair
@@ -125,9 +127,9 @@ func (s *AppTestSuite) TestRefreshInvalidFingerprint() {
 	req.Header.Add("X-Fingerprint", "invalid_fingerprint")
 
 	resp, err := s.httpClient.Do(req)
-	s.NoError(err, "Failed to send request")
+	s.Require().NoError(err, "Failed to send request")
 
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 }
 
@@ -193,7 +195,7 @@ func (s *AppTestSuite) checkSession(expectedSession domain.Session) {
 
 func (s *AppTestSuite) authenticate(username, password, fingerprint string) domain.JWTPair {
 	resp := s.authenticateResponse(username, password, fingerprint)
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 
 	var tokenPair domain.JWTPair
 	err := json.NewDecoder(resp.Body).Decode(&tokenPair)
@@ -213,7 +215,10 @@ func (s *AppTestSuite) authenticateResponse(username, password, fingerprint stri
 	req.Header.Set("X-Fingerprint", fingerprint)
 
 	resp, err := s.httpClient.Do(req)
-	s.NoError(err, "Failed to authenticate send request")
+	s.Require().NoError(err, "Failed to authenticate send request")
+
+	defer resp.Body.Close()
+
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	return resp
