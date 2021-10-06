@@ -60,14 +60,7 @@ func (s *AppTestSuite) TestUserList() {
 			"User with id = %q is not found in the response list", dbUser.ID,
 		)
 
-		s.Require().Equal(dbUser.Username, respUser.Username)
-		s.Require().Equal(dbUser.Email, respUser.Email)
-		s.Require().Equal(dbUser.FirstName, respUser.FirstName)
-		s.Require().Equal(dbUser.LastName, respUser.LastName)
-		s.Require().Equal(dbUser.BirthDate, respUser.BirthDate)
-		s.Require().Equal(dbUser.Department, respUser.Department)
-		s.Require().Equal(dbUser.CreatedAt, respUser.CreatedAt)
-		s.Require().Equal(dbUser.UpdatedAt, respUser.UpdatedAt)
+		s.compareUsers(dbUser, respUser)
 	}
 }
 
@@ -106,6 +99,30 @@ func (s *AppTestSuite) TestUserCreate() {
 		bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(password)),
 		"Sent password and stored hash aren't equal",
 	)
+}
+
+func (s *AppTestSuite) TestGetUserByID() {
+	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
+
+	req, err := http.NewRequest(http.MethodGet, s.buildURL("/users/ba566522-3305-48df-936a-73f47611934b"), nil)
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.NoError(err, "Failed to send request")
+
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var respUser domain.User
+	err = json.NewDecoder(resp.Body).Decode(&respUser)
+	s.NoError(err, "Failed to decode response body")
+
+	dbUser, err := s.getUserFromDB(respUser.ID)
+	s.NoError(err, "Failed to get user by id")
+
+	s.compareUsers(dbUser, respUser)
 }
 
 func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
@@ -175,4 +192,16 @@ func (s *AppTestSuite) getAllUsersFromDB() ([]domain.User, error) {
 	}
 
 	return users, nil
+}
+
+func (s *AppTestSuite) compareUsers(expect, got domain.User) {
+	s.Require().Equal(expect.ID, got.ID)
+	s.Require().Equal(expect.Username, got.Username)
+	s.Require().Equal(expect.Email, got.Email)
+	s.Require().Equal(expect.FirstName, got.FirstName)
+	s.Require().Equal(expect.LastName, got.LastName)
+	s.Require().Equal(expect.BirthDate, got.BirthDate)
+	s.Require().Equal(expect.Department, got.Department)
+	s.Require().Equal(expect.CreatedAt, got.CreatedAt)
+	s.Require().Equal(expect.UpdatedAt, got.UpdatedAt)
 }
