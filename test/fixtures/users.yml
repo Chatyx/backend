@@ -12,5 +12,9 @@
 - id: 7e7b1825-ef9a-42ec-b4db-6f09dffe3850
   username: mick47
   password: $2a$04$WCZXaFve04nZ.HENiF5FkeyXpT7iEhBUVZ19jsxTyRKb1fFPNsvmS # helloworld12345
+  first_name: ""
+  last_name: ""
   email: mick47@gmail.com
+  department: ""
+  is_deleted: false
   created_at: 2021-10-05T17:12:25.224
