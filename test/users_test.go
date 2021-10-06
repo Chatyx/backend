@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/google/uuid"
 	"github.com/jackc/pgtype"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -126,8 +128,65 @@ func (s *AppTestSuite) TestGetUser() {
 }
 
 func (s *AppTestSuite) TestUpdateUser() {
-	tokenPair := s.authenticate("mick47", "helloworld12345", "123")
-	_ = tokenPair
+	tokenPair := s.authenticate("mick47", "helloworld12345", uuid.New().String())
+
+	expectedUser := domain.User{
+		ID:         "7e7b1825-ef9a-42ec-b4db-6f09dffe3850",
+		Username:   "mick79",
+		Email:      "mick79@gmail.com",
+		FirstName:  "Micky",
+		LastName:   "Tyson",
+		BirthDate:  "1979-01-02",
+		Department: "HR",
+	}
+
+	payload, err := json.Marshal(expectedUser)
+	s.NoError(err, "Failed to marshal user request body")
+
+	req, err := http.NewRequest(http.MethodPatch, s.buildURL("/users/"+expectedUser.ID), bytes.NewReader(payload))
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.NoError(err, "Failed to send request")
+
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var respUser domain.User
+	err = json.NewDecoder(resp.Body).Decode(&respUser)
+	s.NoError(err, "Failed to decode response body")
+
+	s.compareUsers(expectedUser, respUser)
+
+	dbUser, err := s.getUserFromDB(expectedUser.ID)
+	s.NoError(err, "Failed to get user from database")
+
+	s.compareUsers(expectedUser, dbUser)
+}
+
+func (s *AppTestSuite) TestUpdateUserPassword() {
+	oldPassword, newPassword := "helloworld12345", "qwerty55555"
+	strBody := fmt.Sprintf(`{"password":"%s"}`, newPassword)
+	tokenPair := s.authenticate("mick47", oldPassword, uuid.New().String())
+
+	req, err := http.NewRequest(
+		http.MethodPatch,
+		s.buildURL("/users/7e7b1825-ef9a-42ec-b4db-6f09dffe3850"),
+		strings.NewReader(strBody),
+	)
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
+
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+	s.authenticate("mick47", newPassword, uuid.New().String())
 }
 
 func (s *AppTestSuite) TestDeleteUser() {
@@ -225,14 +284,20 @@ func (s *AppTestSuite) getAllUsersFromDB() ([]domain.User, error) {
 	return users, nil
 }
 
-func (s *AppTestSuite) compareUsers(expect, got domain.User) {
-	s.Require().Equal(expect.ID, got.ID)
-	s.Require().Equal(expect.Username, got.Username)
-	s.Require().Equal(expect.Email, got.Email)
-	s.Require().Equal(expect.FirstName, got.FirstName)
-	s.Require().Equal(expect.LastName, got.LastName)
-	s.Require().Equal(expect.BirthDate, got.BirthDate)
-	s.Require().Equal(expect.Department, got.Department)
-	s.Require().Equal(expect.CreatedAt, got.CreatedAt)
-	s.Require().Equal(expect.UpdatedAt, got.UpdatedAt)
+func (s *AppTestSuite) compareUsers(expected, actual domain.User) {
+	s.Require().Equal(expected.ID, actual.ID)
+	s.Require().Equal(expected.Username, actual.Username)
+	s.Require().Equal(expected.Email, actual.Email)
+	s.Require().Equal(expected.FirstName, actual.FirstName)
+	s.Require().Equal(expected.LastName, actual.LastName)
+	s.Require().Equal(expected.BirthDate, actual.BirthDate)
+	s.Require().Equal(expected.Department, actual.Department)
+
+	if expected.CreatedAt != nil {
+		s.Require().Equal(expected.CreatedAt, actual.CreatedAt)
+	}
+
+	if expected.UpdatedAt != nil {
+		s.Require().Equal(expected.UpdatedAt, actual.UpdatedAt)
+	}
 }
