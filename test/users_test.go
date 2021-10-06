@@ -1,6 +1,7 @@
 package test
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -101,7 +102,7 @@ func (s *AppTestSuite) TestUserCreate() {
 	)
 }
 
-func (s *AppTestSuite) TestGetUserByID() {
+func (s *AppTestSuite) TestGetUser() {
 	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
 
 	req, err := http.NewRequest(http.MethodGet, s.buildURL("/users/ba566522-3305-48df-936a-73f47611934b"), nil)
@@ -123,6 +124,29 @@ func (s *AppTestSuite) TestGetUserByID() {
 	s.NoError(err, "Failed to get user by id")
 
 	s.compareUsers(dbUser, respUser)
+}
+
+func (s *AppTestSuite) TestDeleteUser() {
+	id := "ba566522-3305-48df-936a-73f47611934b"
+
+	// Check if the user exists before delete
+	_, err := s.getUserFromDB(id)
+	s.NoError(err, "Failed to get user from database")
+
+	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
+
+	req, err := http.NewRequest(http.MethodDelete, s.buildURL("/users/"+id), nil)
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.NoError(err, "Failed to send request")
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
+
+	// Check if the user exists after delete
+	_, err = s.getUserFromDB(id)
+	s.Require().Equal(sql.ErrNoRows, err, "User hasn't been deleted")
 }
 
 func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
