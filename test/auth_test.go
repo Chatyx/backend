@@ -216,9 +216,6 @@ func (s *AppTestSuite) authenticateResponse(username, password, fingerprint stri
 
 	resp, err := s.httpClient.Do(req)
 	s.Require().NoError(err, "Failed to authenticate send request")
-
-	defer resp.Body.Close()
-
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	return resp

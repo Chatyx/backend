@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -221,6 +222,45 @@ func (s *AppTestSuite) TestDeleteUser() {
 	// Check if the user exists after delete
 	_, err = s.getUserFromDB(id)
 	s.Require().Equal(sql.ErrNoRows, err, "User hasn't been deleted")
+}
+
+func (s *AppTestSuite) TestActionOnAnotherUser() {
+	tokenPair := s.authenticate("john1967", "qwerty12345", uuid.New().String())
+
+	testTable := []struct {
+		name   string
+		method string
+		uri    string
+		body   io.Reader
+	}{
+		{
+			name:   "Update user",
+			method: http.MethodPatch,
+			uri:    "/users/7e7b1825-ef9a-42ec-b4db-6f09dffe3850",
+			body:   strings.NewReader(`{"birth_date":"1967-01-01"}`),
+		},
+		{
+			name:   "Delete user",
+			method: http.MethodDelete,
+			uri:    "/users/7e7b1825-ef9a-42ec-b4db-6f09dffe3850",
+			body:   nil,
+		},
+	}
+
+	for _, testCase := range testTable {
+		s.Run(testCase.name, func() {
+			req, err := http.NewRequest(testCase.method, s.buildURL(testCase.uri), testCase.body)
+			s.NoError(err, "Failed to create request")
+
+			req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
+
+			resp, err := s.httpClient.Do(req)
+			s.Require().NoError(err, "Failed to send request")
+
+			defer resp.Body.Close()
+			s.Require().Equal(http.StatusForbidden, resp.StatusCode)
+		})
+	}
 }
 
 func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
