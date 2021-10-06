@@ -7,11 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"golang.org/x/crypto/bcrypt"
-
-	"github.com/jackc/pgtype"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/jackc/pgtype"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var userTableColumns = []string{
@@ -38,6 +36,7 @@ func (s *AppTestSuite) TestUserList() {
 	var responseList struct {
 		Users []domain.User `json:"list"`
 	}
+
 	err = json.NewDecoder(resp.Body).Decode(&responseList)
 	s.NoError(err, "Failed to decode response body")
 
@@ -126,6 +125,11 @@ func (s *AppTestSuite) TestGetUser() {
 	s.compareUsers(dbUser, respUser)
 }
 
+func (s *AppTestSuite) TestUpdateUser() {
+	tokenPair := s.authenticate("mick47", "helloworld12345", "123")
+	_ = tokenPair
+}
+
 func (s *AppTestSuite) TestDeleteUser() {
 	id := "ba566522-3305-48df-936a-73f47611934b"
 
@@ -159,6 +163,7 @@ func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
 		`SELECT %s FROM users WHERE id = $1 AND is_deleted IS FALSE`,
 		strings.Join(userTableColumns, ", "),
 	)
+
 	row := s.dbConn.QueryRow(query, id)
 	if err := row.Scan(
 		&user.ID, &user.Username, &user.Password,
@@ -183,10 +188,12 @@ func (s *AppTestSuite) getAllUsersFromDB() ([]domain.User, error) {
 		`SELECT %s FROM users WHERE is_deleted IS FALSE`,
 		strings.Join(userTableColumns, ", "),
 	)
+
 	rows, err := s.dbConn.Query(query)
 	if err != nil {
 		return nil, err
 	}
+
 	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
