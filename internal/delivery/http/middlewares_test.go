@@ -5,6 +5,7 @@ package http
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/golang/mock/gomock"
 	"github.com/julienschmidt/httprouter"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuthorizationMiddleware(t *testing.T) {
@@ -124,7 +126,14 @@ func TestAuthorizationMiddleware(t *testing.T) {
 			}, as)
 
 			handler(rec, req, httprouter.Params{})
-			checkResponseResult(t, rec.Result(), testCase.expectedStatusCode, testCase.expectedResponseBody)
+
+			resp := rec.Result()
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err, "Unexpected error while reading response body")
+
+			assert.Equal(t, testCase.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, testCase.expectedResponseBody, string(respBodyPayload))
 		})
 	}
 }

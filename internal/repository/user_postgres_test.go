@@ -6,10 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -164,9 +167,8 @@ func TestUserPostgresRepository_List(t *testing.T) {
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
-			if err != nil {
-				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
-			}
+			require.NoError(t, err, "An error occurred while opening a mock pool of database connections")
+
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
@@ -177,21 +179,18 @@ func TestUserPostgresRepository_List(t *testing.T) {
 
 			users, err := userRepo.List(context.Background())
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUsers, users) {
-				t.Errorf("Wrong created user. Expected %#v, got %#v", testCase.expectedUsers, users)
-			}
+			assert.Equal(t, testCase.expectedUsers, users)
 
-			if err = mockPool.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
+			err = mockPool.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
 		})
 	}
 }
@@ -316,9 +315,8 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
-			if err != nil {
-				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
-			}
+			require.NoError(t, err, "An error occurred while opening a mock pool of database connections")
+
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
@@ -329,21 +327,18 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 
 			user, err := userRepo.Create(context.Background(), testCase.createUserDTO)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUser, user) {
-				t.Errorf("Wrong created user. Expected %#v, got %#v", testCase.expectedUser, user)
-			}
+			assert.Equal(t, testCase.expectedUser, user)
 
-			if err = mockPool.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
+			err = mockPool.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
 		})
 	}
 }
@@ -425,9 +420,8 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
-			if err != nil {
-				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
-			}
+			require.NoError(t, err, "An error occurred while opening a mock pool of database connections")
+
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
@@ -437,21 +431,18 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 			userRepo := NewUserPostgresRepository(mockPool)
 			user, err := userRepo.GetByID(context.Background(), testCase.id)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUser, user) {
-				t.Errorf("Wrong found user. Expected %#v, got %#v", testCase.expectedUser, user)
-			}
+			assert.Equal(t, testCase.expectedUser, user)
 
-			if err = mockPool.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
+			err = mockPool.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
 		})
 	}
 }
@@ -528,9 +519,8 @@ func TestUserPostgresRepository_GetByUsername(t *testing.T) {
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
-			if err != nil {
-				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
-			}
+			require.NoError(t, err, "An error occurred while opening a mock pool of database connections")
+
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
@@ -540,21 +530,18 @@ func TestUserPostgresRepository_GetByUsername(t *testing.T) {
 			userRepo := NewUserPostgresRepository(mockPool)
 			user, err := userRepo.GetByUsername(context.Background(), testCase.username)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUser, user) {
-				t.Errorf("Wrong found user. Expected %#v, got %#v", testCase.expectedUser, user)
-			}
+			assert.Equal(t, testCase.expectedUser, user)
 
-			if err = mockPool.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
+			err = mockPool.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
 		})
 	}
 }
@@ -680,9 +667,8 @@ func TestUserPostgresRepository_Update(t *testing.T) {
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
-			if err != nil {
-				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
-			}
+			require.NoError(t, err, "An error occurred while opening a mock pool of database connections")
+
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
@@ -692,21 +678,18 @@ func TestUserPostgresRepository_Update(t *testing.T) {
 			userRepo := NewUserPostgresRepository(mockPool)
 			user, err := userRepo.Update(context.Background(), testCase.updateUserDTO)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUser, user) {
-				t.Errorf("Wrong updated user. Expected %#v, got %#v", testCase.expectedUser, user)
-			}
+			assert.Equal(t, testCase.expectedUser, user)
 
-			if err = mockPool.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
+			err = mockPool.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
 		})
 	}
 }
@@ -768,9 +751,8 @@ func TestUserPostgresRepository_Delete(t *testing.T) {
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
-			if err != nil {
-				t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
-			}
+			require.NoError(t, err, "An error occurred while opening a mock pool of database connections")
+
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
@@ -780,17 +762,16 @@ func TestUserPostgresRepository_Delete(t *testing.T) {
 			userRepo := NewUserPostgresRepository(mockPool)
 			err = userRepo.Delete(context.Background(), testCase.id)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if err = mockPool.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
+			err = mockPool.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
 		})
 	}
 }
@@ -803,9 +784,8 @@ func TestInvalidDateBirthdayParse(t *testing.T) {
 	)
 
 	mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
-	if err != nil {
-		t.Fatalf("An error occurred while opening a mock pool of database connections: %v", err)
-	}
+	require.NoError(t, err, "An error occurred while opening a mock pool of database connections")
+
 	defer mockPool.Close()
 
 	userRepo := NewUserPostgresRepository(mockPool)
@@ -818,14 +798,10 @@ func TestInvalidDateBirthdayParse(t *testing.T) {
 			BirthDate: "invalid-date",
 		})
 
-		if err == nil {
-			t.Errorf("Expected parse error, got nil")
-		}
-
+		assert.Error(t, err)
 		if err != nil {
-			if _, ok := err.(*time.ParseError); !ok {
-				t.Errorf("Expected parse error, got: %v", err)
-			}
+			_, ok := err.(*time.ParseError)
+			assert.Truef(t, ok, "Expected parse error, got: %v", err)
 		}
 	})
 
@@ -835,14 +811,10 @@ func TestInvalidDateBirthdayParse(t *testing.T) {
 			BirthDate: "invalid-date",
 		})
 
-		if err == nil {
-			t.Errorf("Expected parse error, got nil")
-		}
-
+		assert.Error(t, err)
 		if err != nil {
-			if _, ok := err.(*time.ParseError); !ok {
-				t.Errorf("Expected parse error, got: %v", err)
-			}
+			_, ok := err.(*time.ParseError)
+			assert.Truef(t, ok, "Expected parse error, got: %v", err)
 		}
 	})
 }

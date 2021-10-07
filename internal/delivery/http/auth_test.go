@@ -5,6 +5,7 @@ package http
 import (
 	"context"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,6 +18,8 @@ import (
 	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/golang/mock/gomock"
 	"github.com/julienschmidt/httprouter"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -26,6 +29,12 @@ const (
 
 func TestAuthHandler_signIn(t *testing.T) {
 	type mockBehavior func(as *mockservice.MockAuthService, ctx context.Context, dto domain.SignInDTO, jwtPair domain.JWTPair)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                   string
@@ -130,14 +139,8 @@ func TestAuthHandler_signIn(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	validate, err := validator.New()
-	if err != nil {
-		t.Errorf("Unexpected error while creating validator: %v", err)
-	}
+	require.NoError(t, err, "Unexpected error while creating validator")
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -162,7 +165,11 @@ func TestAuthHandler_signIn(t *testing.T) {
 
 			resp := rec.Result()
 
-			checkResponseResult(t, resp, testCase.expectedStatusCode, testCase.expectedResponseBody)
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err, "Unexpected error while reading response body")
+
+			assert.Equal(t, testCase.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, testCase.expectedResponseBody, string(respBodyPayload))
 
 			if testCase.expectedStatusCode != http.StatusOK {
 				return
@@ -175,6 +182,12 @@ func TestAuthHandler_signIn(t *testing.T) {
 
 func TestAuthHandler_refresh(t *testing.T) {
 	type mockBehavior func(as *mockservice.MockAuthService, ctx context.Context, dto domain.RefreshSessionDTO, jwtPair domain.JWTPair)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                   string
@@ -283,14 +296,8 @@ func TestAuthHandler_refresh(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	validate, err := validator.New()
-	if err != nil {
-		t.Errorf("Unexpected error while creating validator: %v", err)
-	}
+	require.NoError(t, err, "Unexpected error while creating validator")
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -318,7 +325,12 @@ func TestAuthHandler_refresh(t *testing.T) {
 			ah.refresh(rec, req, httprouter.Params{})
 
 			resp := rec.Result()
-			checkResponseResult(t, resp, testCase.expectedStatusCode, testCase.expectedResponseBody)
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err, "Unexpected error while reading response body")
+
+			assert.Equal(t, testCase.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, testCase.expectedResponseBody, string(respBodyPayload))
 
 			if testCase.expectedStatusCode != http.StatusOK {
 				return
@@ -343,47 +355,18 @@ func checkRefreshCookie(t *testing.T, resp *http.Response, expectedRefreshToken 
 		}
 	}
 
-	if refreshCookie == nil {
-		t.Errorf("Expected %s cookie, got nil", refreshCookieName)
-		return
-	}
-
-	if refreshCookie.Value != expectedRefreshToken {
-		t.Errorf(
-			"Wrong %s cookie value. Expected %s, got %s",
-			refreshCookieName, expectedRefreshToken, refreshCookie.Value,
-		)
-	}
-
-	if refreshCookie.Path != refreshURI {
-		t.Errorf(
-			"Wrong %s cookie path. Expected %s, but got %s",
-			refreshCookieName, refreshURI, refreshCookie.Path,
-		)
-	}
-
-	if refreshCookie.Domain != domainName {
-		t.Errorf(
-			"Wrong %s cookie domain. Expected %s, got %s",
-			refreshCookieName, domainName, refreshCookie.Domain,
-		)
-	}
+	assert.NotNilf(t, refreshCookie, "Expected %s cookie, got nil", refreshCookieName)
+	assert.Equal(t, expectedRefreshToken, refreshCookie.Value, "Wrong refresh cookie value")
+	assert.Equal(t, refreshURI, refreshCookie.Path, "Wrong refresh cookie path")
+	assert.Equal(t, domainName, refreshCookie.Domain, "Wrong refresh cookie domain")
+	assert.True(t, refreshCookie.HttpOnly, "Refresh cookie must be http only")
 
 	if refreshCookie.MaxAge != 0 {
-		if expectedMaxAge := int(refreshTokenTTL.Seconds()); refreshCookie.MaxAge != expectedMaxAge {
-			t.Errorf(
-				"Wrong %s cookie max age. Expected %d, got %d",
-				refreshCookieName, expectedMaxAge, refreshCookie.MaxAge,
-			)
-		}
-	} else if cookieExpires := refreshCookie.Expires.Local(); expectedExpiresAt.Sub(cookieExpires) > time.Second {
-		t.Errorf(
-			"Wrong %s cookie expires at. Expected difference less then 1 second, got %s",
-			refreshCookieName, expectedExpiresAt.Sub(cookieExpires),
-		)
-	}
+		assert.Equal(t, int(refreshTokenTTL.Seconds()), refreshCookie.MaxAge, "Wrong refresh cookie max age")
+	} else {
+		ttl := expectedExpiresAt.Sub(refreshCookie.Expires.Local())
 
-	if !refreshCookie.HttpOnly {
-		t.Errorf("Refresh cookie must be http only")
+		assert.GreaterOrEqual(t, ttl, time.Duration(0), "Wrong refresh cookie expires at")
+		assert.LessOrEqual(t, ttl, time.Second, "Wrong refresh cookie expires at")
 	}
 }

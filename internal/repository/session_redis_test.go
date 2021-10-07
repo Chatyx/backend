@@ -6,9 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -94,25 +95,21 @@ func TestSessionRedisRepository_Get(t *testing.T) {
 
 			session, err := sessionRepo.Get(context.Background(), testCase.key)
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if testCase.strictCheckErrors && testCase.expectedErr != nil && testCase.expectedErr != err {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr != nil {
+				assert.Error(t, err)
+				if testCase.strictCheckErrors {
+					assert.EqualError(t, err, testCase.expectedErr.Error())
+				}
 			}
 
-			if !testCase.strictCheckErrors && testCase.expectedErr != nil && err == nil {
-				t.Errorf("Expected error, got nil")
-			}
+			assert.Equal(t, testCase.expectedSession, session)
 
-			if !reflect.DeepEqual(testCase.expectedSession, session) {
-				t.Errorf("Wrong found session. Expected %#v, got %#v", testCase.expectedSession, session)
-			}
-
-			if err = mock.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
+			err = mock.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
 		})
 	}
 }
@@ -166,17 +163,16 @@ func TestSessionRedisRepository_Set(t *testing.T) {
 
 			err := sessionRepo.Set(context.Background(), testCase.key, testCase.session, refreshTokenTTL)
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if testCase.expectedErr != nil && testCase.expectedErr != err {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if err = mock.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
+			err = mock.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
 		})
 	}
 }
@@ -233,17 +229,16 @@ func TestSessionRedisRepository_Delete(t *testing.T) {
 
 			err := sessionRepo.Delete(context.Background(), testCase.key)
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error: %v", err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if testCase.expectedErr != nil && testCase.expectedErr != err {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if err = mock.ExpectationsWereMet(); err != nil {
-				t.Errorf("There were unfulfilled expectations: %v", err)
-			}
+			err = mock.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
 		})
 	}
 }

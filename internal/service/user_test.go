@@ -4,8 +4,6 @@ package service
 
 import (
 	"context"
-	"errors"
-	"reflect"
 	"testing"
 	"time"
 
@@ -14,6 +12,7 @@ import (
 	mockhasher "github.com/Mort4lis/scht-backend/pkg/hasher/mocks"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -67,6 +66,12 @@ var (
 func TestUserService_List(t *testing.T) {
 	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, listUsers []domain.User)
 
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
 	testTable := []struct {
 		name                  string
 		userRepoMockBehaviour userRepoMockBehaviour
@@ -90,10 +95,6 @@ func TestUserService_List(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
@@ -110,23 +111,27 @@ func TestUserService_List(t *testing.T) {
 
 			users, err := us.List(context.Background())
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error %v", err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUsers, users) {
-				t.Errorf("Wrong list user. Expected %#v, got %#v", testCase.expectedUsers, users)
-			}
+			assert.Equal(t, testCase.expectedUsers, users)
 		})
 	}
 }
 
 func TestUserService_GetByID(t *testing.T) {
 	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, id string, returnedUser domain.User)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                  string
@@ -162,10 +167,6 @@ func TestUserService_GetByID(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
@@ -182,23 +183,27 @@ func TestUserService_GetByID(t *testing.T) {
 
 			user, err := us.GetByID(context.Background(), testCase.id)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error %v", err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUser, user) {
-				t.Errorf("Wrong found user. Expected %#v, got %#v", testCase.expectedUser, user)
-			}
+			assert.Equal(t, testCase.expectedUser, user)
 		})
 	}
 }
 
 func TestUserService_Username(t *testing.T) {
 	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, username string, returnedUser domain.User)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                  string
@@ -234,10 +239,6 @@ func TestUserService_Username(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
@@ -254,17 +255,15 @@ func TestUserService_Username(t *testing.T) {
 
 			user, err := us.GetByUsername(context.Background(), testCase.username)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error %v", err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUser, user) {
-				t.Errorf("Wrong found user. Expected %#v, got %#v", testCase.expectedUser, user)
-			}
+			assert.Equal(t, testCase.expectedUser, user)
 		})
 	}
 }
@@ -273,6 +272,12 @@ func TestUserService_Create(t *testing.T) {
 	type hasherMockBehaviour func(h *mockhasher.MockPasswordHasher, password, hash string)
 
 	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, dto domain.CreateUserDTO, createdUser domain.User)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                  string
@@ -330,10 +335,6 @@ func TestUserService_Create(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
@@ -354,17 +355,15 @@ func TestUserService_Create(t *testing.T) {
 
 			user, err := us.Create(context.Background(), testCase.createUserDTO)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error %v", err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUser, user) {
-				t.Errorf("Wrong created user. Expected %#v, got %#v", testCase.expectedUser, user)
-			}
+			assert.Equal(t, testCase.expectedUser, user)
 		})
 	}
 }
@@ -373,6 +372,12 @@ func TestUserService_Update(t *testing.T) {
 	type hasherMockBehaviour func(h *mockhasher.MockPasswordHasher, password, hash string)
 
 	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, dto domain.UpdateUserDTO, updatedUser domain.User)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                  string
@@ -454,10 +459,6 @@ func TestUserService_Update(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
@@ -478,23 +479,27 @@ func TestUserService_Update(t *testing.T) {
 
 			user, err := us.Update(context.Background(), testCase.updateUserDTO)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error %v", err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 
-			if !reflect.DeepEqual(testCase.expectedUser, user) {
-				t.Errorf("Wrong updated user. Expected %#v, got %#v", testCase.expectedUser, user)
-			}
+			assert.Equal(t, testCase.expectedUser, user)
 		})
 	}
 }
 
 func TestUserService_Delete(t *testing.T) {
 	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, id string)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                  string
@@ -528,10 +533,6 @@ func TestUserService_Delete(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
@@ -548,12 +549,12 @@ func TestUserService_Delete(t *testing.T) {
 
 			err := us.Delete(context.Background(), testCase.id)
 
-			if testCase.expectedErr != nil && !errors.Is(testCase.expectedErr, err) {
-				t.Errorf("Wrong returned error. Expected error %v, got %v", testCase.expectedErr, err)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
 			}
 
-			if testCase.expectedErr == nil && err != nil {
-				t.Errorf("Unexpected error %v", err)
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
 			}
 		})
 	}

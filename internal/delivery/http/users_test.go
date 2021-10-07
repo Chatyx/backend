@@ -5,6 +5,7 @@ package http
 import (
 	"context"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,6 +19,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -27,6 +30,12 @@ var (
 
 func TestUserHandler_list(t *testing.T) {
 	type mockBehaviour func(us *mockservice.MockUserService, ctx context.Context, returnedUsers []domain.User)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                 string
@@ -81,14 +90,8 @@ func TestUserHandler_list(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	validate, err := validator.New()
-	if err != nil {
-		t.Errorf("Unexpected error while creating validator: %v", err)
-	}
+	require.NoError(t, err, "Unexpected error while creating validator")
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -106,13 +109,26 @@ func TestUserHandler_list(t *testing.T) {
 			}
 
 			uh.list(rec, req, httprouter.Params{})
-			checkResponseResult(t, rec.Result(), testCase.expectedStatusCode, testCase.expectedResponseBody)
+
+			resp := rec.Result()
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err, "Unexpected error while reading response body")
+
+			assert.Equal(t, testCase.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, testCase.expectedResponseBody, string(respBodyPayload))
 		})
 	}
 }
 
 func TestUserHandler_detail(t *testing.T) {
 	type mockBehaviour func(us *mockservice.MockUserService, ctx context.Context, id string, returnedUser domain.User)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                 string
@@ -177,14 +193,8 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	validate, err := validator.New()
-	if err != nil {
-		t.Errorf("Unexpected error while creating validator: %v", err)
-	}
+	require.NoError(t, err, "Unexpected error while creating validator")
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -203,13 +213,26 @@ func TestUserHandler_detail(t *testing.T) {
 			}
 
 			uh.detail(rec, req, testCase.params)
-			checkResponseResult(t, rec.Result(), testCase.expectedStatusCode, testCase.expectedResponseBody)
+
+			resp := rec.Result()
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err, "Unexpected error while reading response body")
+
+			assert.Equal(t, testCase.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, testCase.expectedResponseBody, string(respBodyPayload))
 		})
 	}
 }
 
 func TestUserHandler_create(t *testing.T) {
 	type mockBehavior func(us *mockservice.MockUserService, ctx context.Context, dto domain.CreateUserDTO, createdUser domain.User)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                 string
@@ -330,14 +353,8 @@ func TestUserHandler_create(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	validate, err := validator.New()
-	if err != nil {
-		t.Errorf("Unexpected error while creating validator: %v", err)
-	}
+	require.NoError(t, err, "Unexpected error while creating validator")
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -355,13 +372,26 @@ func TestUserHandler_create(t *testing.T) {
 			}
 
 			uh.create(rec, req, httprouter.Params{})
-			checkResponseResult(t, rec.Result(), testCase.expectedStatusCode, testCase.expectedResponseBody)
+
+			resp := rec.Result()
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err, "Unexpected error while reading response body")
+
+			assert.Equal(t, testCase.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, testCase.expectedResponseBody, string(respBodyPayload))
 		})
 	}
 }
 
 func TestUserHandler_update(t *testing.T) {
 	type mockBehaviour func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                 string
@@ -500,14 +530,8 @@ func TestUserHandler_update(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	validate, err := validator.New()
-	if err != nil {
-		t.Errorf("Unexpected error while creating validator: %v", err)
-	}
+	require.NoError(t, err, "Unexpected error while creating validator")
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -526,13 +550,26 @@ func TestUserHandler_update(t *testing.T) {
 			}
 
 			uh.update(rec, req, httprouter.Params{})
-			checkResponseResult(t, rec.Result(), testCase.expectedStatusCode, testCase.expectedResponseBody)
+
+			resp := rec.Result()
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err, "Unexpected error while reading response body")
+
+			assert.Equal(t, testCase.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, testCase.expectedResponseBody, string(respBodyPayload))
 		})
 	}
 }
 
 func TestUserHandler_delete(t *testing.T) {
 	type mockBehaviour func(us *mockservice.MockUserService, ctx context.Context, id string)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
 
 	testTable := []struct {
 		name                 string
@@ -569,14 +606,8 @@ func TestUserHandler_delete(t *testing.T) {
 		},
 	}
 
-	logging.InitLogger(logging.LogConfig{
-		LoggerKind: "mock",
-	})
-
 	validate, err := validator.New()
-	if err != nil {
-		t.Errorf("Unexpected error while creating validator: %v", err)
-	}
+	require.NoError(t, err, "Unexpected error while creating validator")
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -595,7 +626,14 @@ func TestUserHandler_delete(t *testing.T) {
 			}
 
 			uh.delete(rec, req, httprouter.Params{})
-			checkResponseResult(t, rec.Result(), testCase.expectedStatusCode, testCase.expectedResponseBody)
+
+			resp := rec.Result()
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err, "Unexpected error while reading response body")
+
+			assert.Equal(t, testCase.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, testCase.expectedResponseBody, string(respBodyPayload))
 		})
 	}
 }
