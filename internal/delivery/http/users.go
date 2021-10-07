@@ -4,17 +4,17 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
 )
 
 const (
-	listUserURL   = "/api/users"
-	detailUserURI = "/api/users/:user_id"
+	currentUserURL = "/api/user"
+	listUserURL    = "/api/users"
+	detailUserURI  = "/api/users/:id"
 )
 
 type UserListResponse struct {
@@ -50,14 +50,8 @@ func (h *userHandler) register(router *httprouter.Router) {
 	router.GET(listUserURL, authorizationMiddleware(h.list, h.authService))
 	router.POST(listUserURL, h.create)
 	router.GET(detailUserURI, authorizationMiddleware(h.detail, h.authService))
-	router.PATCH(detailUserURI, authorizationMiddleware(
-		ownerUserMiddleware(h.update),
-		h.authService),
-	)
-	router.DELETE(detailUserURI, authorizationMiddleware(
-		ownerUserMiddleware(h.delete),
-		h.authService),
-	)
+	router.PATCH(currentUserURL, authorizationMiddleware(h.update, h.authService))
+	router.DELETE(currentUserURL, authorizationMiddleware(h.delete, h.authService))
 }
 
 // @Summary Get list of users
@@ -83,13 +77,13 @@ func (h *userHandler) list(w http.ResponseWriter, req *http.Request, _ httproute
 // @Security JWTTokenAuth
 // @Accept json
 // @Produce json
-// @Param user_id path string true "User id"
+// @Param id path string true "User id"
 // @Success 200 {object} domain.User
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /users/{user_id} [get]
+// @Router /users/{id} [get]
 func (h *userHandler) detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	user, err := h.userService.GetByID(req.Context(), params.ByName("user_id"))
+	user, err := h.userService.GetByID(req.Context(), params.ByName("id"))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:
@@ -140,25 +134,24 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request, _ httprou
 	respondSuccess(http.StatusCreated, w, &user)
 }
 
-// @Summary Update user
+// @Summary Update current authenticated user
 // @Security JWTTokenAuth
 // @Tags Users
 // @Accept json
 // @Produce json
-// @Param user_id path string true "User id"
 // @Param input body domain.UpdateUserDTO true "Update body"
 // @Success 200 {object} domain.User
 // @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /users/{user_id} [patch]
-func (h *userHandler) update(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+// @Router /user [patch]
+func (h *userHandler) update(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	dto := domain.UpdateUserDTO{}
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
 		respondError(w, err)
 		return
 	}
 
-	dto.ID = params.ByName("user_id")
+	dto.ID = domain.UserIDFromContext(req.Context())
 
 	if err := h.validateStruct(dto); err != nil {
 		respondError(w, err)
@@ -182,18 +175,17 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request, params ht
 	respondSuccess(http.StatusOK, w, &user)
 }
 
-// @Summary Delete user
+// @Summary Delete current authenticated user
 // @Security JWTTokenAuth
 // @Tags Users
 // @Accept json
 // @Produce json
-// @Param user_id path string true "User id"
 // @Success 204 "No Content"
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /users/{user_id} [delete]
-func (h *userHandler) delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	err := h.userService.Delete(req.Context(), params.ByName("user_id"))
+// @Router /user [delete]
+func (h *userHandler) delete(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	err := h.userService.Delete(req.Context(), domain.UserIDFromContext(req.Context()))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:

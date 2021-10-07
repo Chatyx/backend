@@ -188,6 +188,62 @@ paths:
       summary: user authentication
       tags:
       - Auth
+  /user:
+    delete:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Delete current authenticated user
+      tags:
+      - Users
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Update body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateUserDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Update current authenticated user
+      tags:
+      - Users
   /users:
     get:
       consumes:
@@ -237,33 +293,6 @@ paths:
       tags:
       - Users
   /users/{id}:
-    delete:
-      consumes:
-      - application/json
-      parameters:
-      - description: User id
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/http.ResponseError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/http.ResponseError'
-      security:
-      - JWTTokenAuth: []
-      summary: Delete user
-      tags:
-      - Users
     get:
       consumes:
       - application/json
@@ -291,45 +320,6 @@ paths:
       security:
       - JWTTokenAuth: []
       summary: Get user by id
-      tags:
-      - Users
-    patch:
-      consumes:
-      - application/json
-      parameters:
-      - description: User id
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Update body
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/domain.UpdateUserDTO'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.User'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/http.ResponseError'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/http.ResponseError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/http.ResponseError'
-      security:
-      - JWTTokenAuth: []
-      summary: Update user
       tags:
       - Users
 securityDefinitions:

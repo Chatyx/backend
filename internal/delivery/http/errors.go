@@ -19,10 +19,6 @@ var (
 		StatusCode: http.StatusInternalServerError,
 		Message:    "internal server error",
 	}
-	errPermissionDenied = ResponseError{
-		StatusCode: http.StatusForbidden,
-		Message:    "permission denied",
-	}
 	errInvalidJSON = ResponseError{
 		StatusCode: http.StatusBadRequest,
 		Message:    "invalid json body",
