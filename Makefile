@@ -19,12 +19,12 @@ infrastructure.test:
 	docker-compose -f docker-compose.test.yml up -d
 
 test.unit:
-	go test -v -coverprofile=cover.out ./...
+	go test -tags=unit -v -coverprofile=cover.out ./...
 	go tool cover -func=cover.out
 
 test.integration: infrastructure.test
 	bash ./scripts/wait-for-postgres.sh
-	go test -v ./test/... || true
+	go test -tags=integration -v ./test/... || true
 	docker-compose -f docker-compose.test.yml down
 
 migrations:
