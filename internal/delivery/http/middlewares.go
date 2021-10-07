@@ -37,7 +37,7 @@ func loggingMiddleware(handler http.Handler) http.Handler {
 			"remote_addr": req.RemoteAddr,
 			"status":      rec.StatusCode,
 			"duration":    time.Since(start),
-		}).Info("Request handled successfully")
+		}).Info("Request has been handled")
 	})
 }
 

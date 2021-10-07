@@ -137,5 +137,10 @@ func Init(container service.ServiceContainer, cfg *config.Config, validate *vali
 
 	router.HandlerFunc(http.MethodGet, "/docs/:any", httpSwagger.WrapHandler)
 
+	router.PanicHandler = func(w http.ResponseWriter, req *http.Request, i interface{}) {
+		logging.GetLogger().Errorf("There was a panic: %v", i)
+		respondError(w, errInternalServer)
+	}
+
 	return loggingMiddleware(router)
 }
