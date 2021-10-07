@@ -78,13 +78,13 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 
 	accessToken, err := s.tokenManager.NewAccessToken(claims)
 	if err != nil {
-		s.logger.WithError(err).Error("Error occurred while creating a new access token")
+		s.logger.WithError(err).Error("An error occurred while creating a new access token")
 		return domain.JWTPair{}, err
 	}
 
 	refreshToken, err := s.tokenManager.NewRefreshToken()
 	if err != nil {
-		s.logger.WithError(err).Error("Error occurred while creating a new refresh token")
+		s.logger.WithError(err).Error("An error occurred while creating a new refresh token")
 		return domain.JWTPair{}, err
 	}
 
@@ -145,13 +145,13 @@ func (s *authService) Refresh(ctx context.Context, dto domain.RefreshSessionDTO)
 
 	newAccessToken, err := s.tokenManager.NewAccessToken(claims)
 	if err != nil {
-		s.logger.WithError(err).Error("Error occurred while creating a new access token")
+		s.logger.WithError(err).Error("An error occurred while creating a new access token")
 		return domain.JWTPair{}, err
 	}
 
 	newRefreshToken, err := s.tokenManager.NewRefreshToken()
 	if err != nil {
-		s.logger.WithError(err).Error("Error occurred while creating a new refresh token")
+		s.logger.WithError(err).Error("An error occurred while creating a new refresh token")
 		return domain.JWTPair{}, err
 	}
 

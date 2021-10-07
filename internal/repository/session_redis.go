@@ -31,14 +31,14 @@ func (r *sessionRedisRepository) Get(ctx context.Context, key string) (domain.Se
 			return domain.Session{}, domain.ErrSessionNotFound
 		}
 
-		r.logger.WithError(err).Error("Error occurred while getting refresh session by key")
+		r.logger.WithError(err).Error("An error occurred while getting refresh session by key")
 
 		return domain.Session{}, err
 	}
 
 	var session domain.Session
 	if err = json.Unmarshal([]byte(payload), &session); err != nil {
-		r.logger.WithError(err).Error("Error occurred while unmarshalling refresh session payload")
+		r.logger.WithError(err).Error("An error occurred while unmarshalling refresh session payload")
 		return domain.Session{}, err
 	}
 
@@ -48,12 +48,12 @@ func (r *sessionRedisRepository) Get(ctx context.Context, key string) (domain.Se
 func (r *sessionRedisRepository) Set(ctx context.Context, key string, session domain.Session, ttl time.Duration) error {
 	payload, err := json.Marshal(session)
 	if err != nil {
-		r.logger.WithError(err).Error("Error occurred while marshaling refresh session")
+		r.logger.WithError(err).Error("An error occurred while marshaling refresh session")
 		return err
 	}
 
 	if err = r.redisClient.Set(ctx, key, payload, ttl).Err(); err != nil {
-		r.logger.WithError(err).Error("Error occurred while setting session to redis")
+		r.logger.WithError(err).Error("An error occurred while setting session to redis")
 		return err
 	}
 
@@ -63,7 +63,7 @@ func (r *sessionRedisRepository) Set(ctx context.Context, key string, session do
 func (r *sessionRedisRepository) Delete(ctx context.Context, key string) error {
 	val, err := r.redisClient.Del(ctx, key).Result()
 	if err != nil {
-		r.logger.WithError(err).Error("Error occurred while deleting refresh session")
+		r.logger.WithError(err).Error("An error occurred while deleting refresh session")
 		return err
 	}
 

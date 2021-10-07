@@ -73,7 +73,7 @@ func (r *userPostgresRepository) List(ctx context.Context) ([]domain.User, error
 	}
 
 	if err = rows.Err(); err != nil {
-		r.logger.WithError(err).Error("Error occurred while reading users")
+		r.logger.WithError(err).Error("An error occurred while reading users")
 		return nil, err
 	}
 
@@ -118,7 +118,7 @@ func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUs
 			return domain.User{}, domain.ErrUserUniqueViolation
 		}
 
-		r.logger.WithError(err).Error("Error occurred while creating user into the database")
+		r.logger.WithError(err).Error("An error occurred while creating user into the database")
 
 		return domain.User{}, err
 	}
@@ -167,7 +167,7 @@ func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fi
 			return domain.User{}, domain.ErrUserNotFound
 		}
 
-		r.logger.WithError(err).Errorf("Error occurred while getting user by %s", fieldName)
+		r.logger.WithError(err).Errorf("An error occurred while getting user by %s", fieldName)
 
 		return domain.User{}, err
 	}
@@ -219,7 +219,7 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 			return domain.User{}, domain.ErrUserUniqueViolation
 		}
 
-		r.logger.WithError(err).Error("Error occurred while updating user into the database")
+		r.logger.WithError(err).Error("An error occurred while updating user into the database")
 
 		return domain.User{}, err
 	}
@@ -313,7 +313,7 @@ func (r *userPostgresRepository) Delete(ctx context.Context, id string) error {
 
 	cmgTag, err := r.dbPool.Exec(ctx, query, id)
 	if err != nil {
-		r.logger.WithError(err).Error("Error occurred while updating user into the database")
+		r.logger.WithError(err).Error("An error occurred while updating user into the database")
 		return err
 	}
 

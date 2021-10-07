@@ -31,6 +31,6 @@ func main() {
 	logger := logging.GetLogger()
 
 	if err := application.Run(); err != nil {
-		logger.WithError(err).Fatal("Error occurred while running the application")
+		logger.WithError(err).Fatal("An error occurred while running the application")
 	}
 }

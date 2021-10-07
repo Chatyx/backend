@@ -31,7 +31,7 @@ func (h *baseHandler) decodeJSONFromBody(body io.ReadCloser, decoder utils.JSOND
 
 	defer func() {
 		if err := body.Close(); err != nil {
-			h.logger.WithError(err).Error("Error occurred while closing body")
+			h.logger.WithError(err).Error("An error occurred while closing body")
 		}
 	}()
 
@@ -93,7 +93,7 @@ func respondSuccess(statusCode int, w http.ResponseWriter, encoder utils.JSONEnc
 
 	respBody, err := encoder.Encode()
 	if err != nil {
-		logging.GetLogger().WithError(err).Error("Error occurred while encoding response structure")
+		logging.GetLogger().WithError(err).Error("An error occurred while encoding response structure")
 		respondError(w, errInternalServer)
 
 		return
@@ -103,7 +103,7 @@ func respondSuccess(statusCode int, w http.ResponseWriter, encoder utils.JSONEnc
 	w.WriteHeader(statusCode)
 
 	if _, err = w.Write(respBody); err != nil {
-		logging.GetLogger().WithError(err).Error("Error occurred while writing response body")
+		logging.GetLogger().WithError(err).Error("An error occurred while writing response body")
 		return
 	}
 }
@@ -117,7 +117,7 @@ func respondError(w http.ResponseWriter, err error) {
 
 	respBody, err := json.Marshal(appErr)
 	if err != nil {
-		logging.GetLogger().WithError(err).Error("Error occurred while marshalling application error")
+		logging.GetLogger().WithError(err).Error("An error occurred while marshalling application error")
 		return
 	}
 
@@ -125,7 +125,7 @@ func respondError(w http.ResponseWriter, err error) {
 	w.WriteHeader(appErr.StatusCode)
 
 	if _, err = w.Write(respBody); err != nil {
-		logging.GetLogger().WithError(err).Error("Error occurred while writing response body")
+		logging.GetLogger().WithError(err).Error("An error occurred while writing response body")
 	}
 }
 

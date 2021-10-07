@@ -33,7 +33,7 @@ func (s *userService) List(ctx context.Context) ([]domain.User, error) {
 func (s *userService) Create(ctx context.Context, dto domain.CreateUserDTO) (domain.User, error) {
 	hash, err := s.hasher.Hash(dto.Password)
 	if err != nil {
-		s.logger.WithError(err).Error("Error occurred while hashing password")
+		s.logger.WithError(err).Error("An error occurred while hashing password")
 		return domain.User{}, err
 	}
 
@@ -54,7 +54,7 @@ func (s *userService) Update(ctx context.Context, dto domain.UpdateUserDTO) (dom
 	if dto.Password != "" {
 		hash, err := s.hasher.Hash(dto.Password)
 		if err != nil {
-			s.logger.WithError(err).Error("Error occurred while hashing password")
+			s.logger.WithError(err).Error("An error occurred while hashing password")
 			return domain.User{}, err
 		}
 
