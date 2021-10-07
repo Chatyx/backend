@@ -137,5 +137,5 @@ func Init(container service.ServiceContainer, cfg *config.Config, validate *vali
 
 	router.HandlerFunc(http.MethodGet, "/docs/:any", httpSwagger.WrapHandler)
 
-	return router
+	return loggingMiddleware(router)
 }

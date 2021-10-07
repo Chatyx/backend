@@ -2,11 +2,44 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/service"
+	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/julienschmidt/httprouter"
 )
+
+type StatusCodeRecorder struct {
+	http.ResponseWriter
+	StatusCode int
+}
+
+func (rec *StatusCodeRecorder) WriteHeader(statusCode int) {
+	rec.StatusCode = statusCode
+	rec.ResponseWriter.WriteHeader(statusCode)
+}
+
+func loggingMiddleware(handler http.Handler) http.Handler {
+	logger := logging.GetLogger()
+
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		rec := &StatusCodeRecorder{
+			ResponseWriter: w,
+		}
+		start := time.Now()
+
+		handler.ServeHTTP(rec, req)
+
+		logger.WithFields(logging.Fields{
+			"path":        req.URL.EscapedPath(),
+			"method":      req.Method,
+			"remote_addr": req.RemoteAddr,
+			"status":      rec.StatusCode,
+			"duration":    time.Since(start),
+		}).Info("Request handled successfully")
+	})
+}
 
 func authorizationMiddleware(handler httprouter.Handle, as service.AuthService) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
