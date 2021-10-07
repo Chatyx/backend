@@ -122,7 +122,7 @@ func TestUserHandler_detail(t *testing.T) {
 	}{
 		{
 			name:   "Success with required fields",
-			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			params: []httprouter.Param{{Key: "user_id", Value: "1"}},
 			returnedUser: domain.User{
 				ID:        "1",
 				Username:  "john1967",
@@ -137,7 +137,7 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 		{
 			name:   "Success with full fields",
-			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			params: []httprouter.Param{{Key: "user_id", Value: "1"}},
 			returnedUser: domain.User{
 				ID:         "1",
 				Username:   "john1967",
@@ -157,7 +157,7 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 		{
 			name:   "Not found",
-			params: []httprouter.Param{{Key: "id", Value: uuid.New().String()}},
+			params: []httprouter.Param{{Key: "user_id", Value: uuid.New().String()}},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string, returnedUser domain.User) {
 				us.EXPECT().GetByID(ctx, id).Return(domain.User{}, domain.ErrUserNotFound)
 			},
@@ -166,7 +166,7 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 		{
 			name:   "Unexpected error",
-			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			params: []httprouter.Param{{Key: "user_id", Value: "1"}},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string, returnedUser domain.User) {
 				us.EXPECT().GetByID(ctx, id).Return(domain.User{}, errors.New("unexpected error"))
 			},
@@ -192,7 +192,7 @@ func TestUserHandler_detail(t *testing.T) {
 			us := mockservice.NewMockUserService(c)
 			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
 
-			id := testCase.params.ByName("id")
+			id := testCase.params.ByName("user_id")
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/users/"+id, nil)
 
@@ -373,7 +373,7 @@ func TestUserHandler_update(t *testing.T) {
 	}{
 		{
 			name:        "Success",
-			params:      []httprouter.Param{{Key: "id", Value: "1"}},
+			params:      []httprouter.Param{{Key: "user_id", Value: "1"}},
 			requestBody: `{"username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR"}`,
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:         "1",
@@ -404,7 +404,7 @@ func TestUserHandler_update(t *testing.T) {
 		},
 		{
 			name:          "Success with empty body",
-			params:        []httprouter.Param{{Key: "id", Value: "1"}},
+			params:        []httprouter.Param{{Key: "user_id", Value: "1"}},
 			requestBody:   `{}`,
 			updateUserDTO: domain.UpdateUserDTO{ID: "1"},
 			updatedUser: domain.User{
@@ -426,35 +426,35 @@ func TestUserHandler_update(t *testing.T) {
 		},
 		{
 			name:                 "Invalid JSON body",
-			params:               []httprouter.Param{{Key: "id", Value: "1"}},
+			params:               []httprouter.Param{{Key: "user_id", Value: "1"}},
 			requestBody:          `{"birth_date""1970-01-01"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"invalid json body"}`,
 		},
 		{
 			name:                 "Short password",
-			params:               []httprouter.Param{{Key: "id", Value: "1"}},
+			params:               []httprouter.Param{{Key: "user_id", Value: "1"}},
 			requestBody:          `{"username":"john1967","password":"test123","email":"john1967@gmail.com"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"password":"field validation for 'password' failed on the 'min' tag"}}`,
 		},
 		{
 			name:                 "Invalid email address",
-			params:               []httprouter.Param{{Key: "id", Value: "1"}},
+			params:               []httprouter.Param{{Key: "user_id", Value: "1"}},
 			requestBody:          `{"username":"john1967","password":"qwerty12345","email":"12345"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"email":"field validation for 'email' failed on the 'email' tag"}}`,
 		},
 		{
 			name:                 "Invalid birth date",
-			params:               []httprouter.Param{{Key: "id", Value: "1"}},
+			params:               []httprouter.Param{{Key: "user_id", Value: "1"}},
 			requestBody:          `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com","birth_date":"20.12.1994"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"birth_date":"field validation for 'birth_date' failed on the 'sql-date' tag"}}`,
 		},
 		{
 			name:          "User is not found",
-			params:        []httprouter.Param{{Key: "id", Value: "2"}},
+			params:        []httprouter.Param{{Key: "user_id", Value: "2"}},
 			requestBody:   `{"department":"IoT"}`,
 			updateUserDTO: domain.UpdateUserDTO{ID: "2", Department: "IoT"},
 			mockBehavior: func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User) {
@@ -465,7 +465,7 @@ func TestUserHandler_update(t *testing.T) {
 		},
 		{
 			name:        "User with such username or email already exists",
-			params:      []httprouter.Param{{Key: "id", Value: "2"}},
+			params:      []httprouter.Param{{Key: "user_id", Value: "2"}},
 			requestBody: `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com"}`,
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:       "2",
@@ -481,7 +481,7 @@ func TestUserHandler_update(t *testing.T) {
 		},
 		{
 			name:        "Unexpected error",
-			params:      []httprouter.Param{{Key: "id", Value: "1"}},
+			params:      []httprouter.Param{{Key: "user_id", Value: "1"}},
 			requestBody: `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com","birth_date":"1998-01-01"}`,
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:        "1",
@@ -515,7 +515,7 @@ func TestUserHandler_update(t *testing.T) {
 			us := mockservice.NewMockUserService(c)
 			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
 
-			id := testCase.params.ByName("id")
+			id := testCase.params.ByName("user_id")
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPatch, "/api/users/"+id, strings.NewReader(testCase.requestBody))
 
@@ -541,7 +541,7 @@ func TestUserHandler_delete(t *testing.T) {
 	}{
 		{
 			name:   "Success",
-			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			params: []httprouter.Param{{Key: "user_id", Value: "1"}},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string) {
 				us.EXPECT().Delete(ctx, id).Return(nil)
 			},
@@ -549,7 +549,7 @@ func TestUserHandler_delete(t *testing.T) {
 		},
 		{
 			name:   "Not found",
-			params: []httprouter.Param{{Key: "id", Value: uuid.New().String()}},
+			params: []httprouter.Param{{Key: "user_id", Value: uuid.New().String()}},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string) {
 				us.EXPECT().Delete(ctx, id).Return(domain.ErrUserNotFound)
 			},
@@ -558,7 +558,7 @@ func TestUserHandler_delete(t *testing.T) {
 		},
 		{
 			name:   "Unexpected error",
-			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			params: []httprouter.Param{{Key: "user_id", Value: "1"}},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string) {
 				us.EXPECT().Delete(ctx, id).Return(errors.New("unexpected error"))
 			},
@@ -584,7 +584,7 @@ func TestUserHandler_delete(t *testing.T) {
 			us := mockservice.NewMockUserService(c)
 			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
 
-			id := testCase.params.ByName("id")
+			id := testCase.params.ByName("user_id")
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodDelete, "/api/users/"+id, nil)
 

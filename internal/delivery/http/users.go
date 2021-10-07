@@ -14,7 +14,7 @@ import (
 
 const (
 	listUserURL   = "/api/users"
-	detailUserURI = "/api/users/:id"
+	detailUserURI = "/api/users/:user_id"
 )
 
 type UserListResponse struct {
@@ -50,8 +50,14 @@ func (h *userHandler) register(router *httprouter.Router) {
 	router.GET(listUserURL, authorizationMiddleware(h.list, h.authService))
 	router.POST(listUserURL, h.create)
 	router.GET(detailUserURI, authorizationMiddleware(h.detail, h.authService))
-	router.PATCH(detailUserURI, authorizationMiddleware(h.update, h.authService))
-	router.DELETE(detailUserURI, authorizationMiddleware(h.delete, h.authService))
+	router.PATCH(detailUserURI, authorizationMiddleware(
+		ownerUserMiddleware(h.update),
+		h.authService),
+	)
+	router.DELETE(detailUserURI, authorizationMiddleware(
+		ownerUserMiddleware(h.delete),
+		h.authService),
+	)
 }
 
 // @Summary Get list of users
@@ -77,13 +83,13 @@ func (h *userHandler) list(w http.ResponseWriter, req *http.Request, _ httproute
 // @Security JWTTokenAuth
 // @Accept json
 // @Produce json
-// @Param id path string true "User id"
+// @Param user_id path string true "User id"
 // @Success 200 {object} domain.User
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /users/{id} [get]
+// @Router /users/{user_id} [get]
 func (h *userHandler) detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	user, err := h.userService.GetByID(req.Context(), params.ByName("id"))
+	user, err := h.userService.GetByID(req.Context(), params.ByName("user_id"))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:
@@ -139,12 +145,12 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request, _ httprou
 // @Tags Users
 // @Accept json
 // @Produce json
-// @Param id path string true "User id"
+// @Param user_id path string true "User id"
 // @Param input body domain.UpdateUserDTO true "Update body"
 // @Success 200 {object} domain.User
 // @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /users/{id} [patch]
+// @Router /users/{user_id} [patch]
 func (h *userHandler) update(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	dto := domain.UpdateUserDTO{}
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
@@ -152,7 +158,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request, params ht
 		return
 	}
 
-	dto.ID = params.ByName("id")
+	dto.ID = params.ByName("user_id")
 
 	if err := h.validateStruct(dto); err != nil {
 		respondError(w, err)
@@ -181,13 +187,13 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request, params ht
 // @Tags Users
 // @Accept json
 // @Produce json
-// @Param id path string true "User id"
+// @Param user_id path string true "User id"
 // @Success 204 "No Content"
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /users/{id} [delete]
+// @Router /users/{user_id} [delete]
 func (h *userHandler) delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	err := h.userService.Delete(req.Context(), params.ByName("id"))
+	err := h.userService.Delete(req.Context(), params.ByName("user_id"))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:
