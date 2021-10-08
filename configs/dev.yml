@@ -25,3 +25,8 @@ logging:
   rotate: true
   max_size: 100   # MB
   max_backups: 5  # max files
+cors:
+  allowed_origins:
+    - 127.0.0.1:3000
+    - localhost:3000
+  max_age: 600 # 10 minutes

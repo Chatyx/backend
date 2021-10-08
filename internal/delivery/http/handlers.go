@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/rs/cors"
+
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "github.com/Mort4lis/scht-backend/docs"
@@ -141,6 +143,21 @@ func Init(container service.ServiceContainer, cfg *config.Config, validate *vali
 		logging.GetLogger().Errorf("There was a panic: %v", i)
 		respondError(w, errInternalServer)
 	}
+	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
 
-	return loggingMiddleware(router)
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins: cfg.Cors.AllowedOrigins,
+		AllowedMethods: []string{
+			http.MethodHead, http.MethodGet, http.MethodPost,
+			http.MethodPut, http.MethodPatch, http.MethodDelete,
+		},
+		AllowedHeaders:   []string{"X-Fingerprint"},
+		MaxAge:           cfg.Cors.MaxAge,
+		AllowCredentials: true,
+		Debug:            cfg.IsDebug,
+	})
+
+	return loggingMiddleware(corsHandler.Handler(router))
 }

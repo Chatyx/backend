@@ -47,6 +47,11 @@ type Logging struct {
 	MaxBackups int    `yaml:"max_backups"`
 }
 
+type Cors struct {
+	AllowedOrigins []string `yaml:"allowed_origins" env-default:"*"`
+	MaxAge         int      `yaml:"max_age"`
+}
+
 type Config struct {
 	IsDebug  bool           `yaml:"is_debug" env-default:"false"`
 	Domain   string         `yaml:"domain"   env-required:"true"`
@@ -55,6 +60,7 @@ type Config struct {
 	Postgres PostgresConfig `yaml:"postgres"`
 	Redis    RedisConfig    `yaml:"redis"`
 	Logging  Logging        `yaml:"logging"`
+	Cors     Cors           `yaml:"cors"`
 }
 
 var (
