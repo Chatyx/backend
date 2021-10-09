@@ -23,3 +23,11 @@ type SessionRepository interface {
 	Set(ctx context.Context, key string, session domain.Session, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
 }
+
+type ChatRepository interface {
+	List(ctx context.Context, memberID string) ([]domain.Chat, error)
+	Create(ctx context.Context, dto domain.CreateChatDTO) (domain.Chat, error)
+	GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error)
+	Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error)
+	Delete(ctx context.Context, chatID, creatorID string) error
+}
