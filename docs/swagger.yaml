@@ -1,5 +1,29 @@
 basePath: /api
 definitions:
+  domain.Chat:
+    properties:
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.CreateChatDTO:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
   domain.CreateUserDTO:
     properties:
       birth_date:
@@ -45,6 +69,15 @@ definitions:
     - password
     - username
     type: object
+  domain.UpdateChatDTO:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
   domain.UpdateUserDTO:
     properties:
       birth_date:
@@ -86,6 +119,13 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  http.ChatListResponse:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/domain.Chat'
+        type: array
     type: object
   http.ErrorFields:
     additionalProperties:
@@ -188,6 +228,152 @@ paths:
       summary: user authentication
       tags:
       - Auth
+  /chats:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ChatListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Get list of chats where user consists
+      tags:
+      - Chats
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateChatDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Create chat
+      tags:
+      - Chats
+  /chats/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chat id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Delete chat where user is creator
+      tags:
+      - Chats
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chat id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Chat'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Get chat by id where user consists
+      tags:
+      - Chats
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chat id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateChatDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Update chat where user is creator
+      tags:
+      - Chats
   /user:
     delete:
       consumes:
