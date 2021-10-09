@@ -89,6 +89,10 @@ func (r *chatPostgresRepository) Create(ctx context.Context, dto domain.CreateCh
 		return domain.Chat{}, err
 	}
 
+	chat.Name = dto.Name
+	chat.Description = dto.Description
+	chat.CreatorID = dto.CreatorID
+
 	return chat, nil
 }
 
@@ -167,7 +171,7 @@ func (r *chatPostgresRepository) Delete(ctx context.Context, chatID, creatorID s
 		return domain.ErrChatNotFound
 	}
 
-	query := "DELETE chats WHERE id = $1 AND creator_id = $2"
+	query := "DELETE FROM chats WHERE id = $1 AND creator_id = $2"
 
 	cmgTag, err := r.dbPool.Exec(ctx, query, chatID, creatorID)
 	if err != nil {
