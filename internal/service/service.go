@@ -23,6 +23,14 @@ type AuthService interface {
 	Authorize(accessToken string) (domain.Claims, error)
 }
 
+type ChatService interface {
+	List(ctx context.Context, memberID string) ([]domain.Chat, error)
+	Create(ctx context.Context, dto domain.CreateChatDTO) (domain.Chat, error)
+	GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error)
+	Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error)
+	Delete(ctx context.Context, chatID, creatorID string) error
+}
+
 type ServiceContainer struct {
 	User UserService
 	Auth AuthService
