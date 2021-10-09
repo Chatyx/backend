@@ -75,8 +75,11 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	userRepo := repository.NewUserPostgresRepository(dbPool)
+	chatRepo := repository.NewChatPostgresRepository(dbPool)
 	sessionRepo := repository.NewSessionRedisRepository(redisClient)
+
 	userService := service.NewUserService(userRepo, hasher)
+	chatService := service.NewChatService(chatRepo)
 	authService := service.NewAuthService(service.AuthServiceConfig{
 		UserService:     userService,
 		SessionRepo:     sessionRepo,
@@ -85,8 +88,10 @@ func NewApp(cfg *config.Config) *App {
 		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
 		RefreshTokenTTL: cfg.Auth.RefreshTokenTTL,
 	})
+
 	container := service.ServiceContainer{
 		User: userService,
+		Chat: chatService,
 		Auth: authService,
 	}
 

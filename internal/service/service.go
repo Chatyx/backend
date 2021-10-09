@@ -33,5 +33,6 @@ type ChatService interface {
 
 type ServiceContainer struct {
 	User UserService
+	Chat ChatService
 	Auth AuthService
 }
