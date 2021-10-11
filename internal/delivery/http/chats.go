@@ -67,6 +67,7 @@ func (h *chatHandler) list(w http.ResponseWriter, req *http.Request, _ httproute
 	chats, err := h.chatService.List(req.Context(), memberID)
 	if err != nil {
 		respondError(w, err)
+		return
 	}
 
 	respondSuccess(http.StatusOK, w, ChatListResponse{List: chats})
