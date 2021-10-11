@@ -55,7 +55,7 @@ var (
 		CreatedAt:  &userCreatedAt,
 		UpdatedAt:  &userUpdatedAt,
 	}
-	defaultShortUserRowValues = []interface{}{
+	defaultShortUserRowValues = Row{
 		"6be043ca-3005-4b1c-b847-eb677897c618", // ID
 		"john1967",                             // Username
 		"8743b52063cd84097a65d1633f5c74f5",     // Password
@@ -68,7 +68,7 @@ var (
 		&userCreatedAt,                         // CreatedAt
 		nil,                                    // UpdatedAt
 	}
-	defaultFullUserRowValues = []interface{}{
+	defaultFullUserRowValues = Row{
 		"02185cd4-05b5-4688-836d-3154e9c8a340", // ID
 		"mick47",                               // Username
 		"8743b52063cd84097a65d1633f5c74f5",     // Password
@@ -87,12 +87,7 @@ var (
 )
 
 func TestUserPostgresRepository_List(t *testing.T) {
-	type ResultRow struct {
-		Err    error
-		Values []interface{}
-	}
-
-	type mockBehavior func(mockPool pgxmock.PgxPoolIface, resRows []ResultRow, rowsErr error)
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, resRows []RowResult, rowsErr error)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -105,18 +100,18 @@ func TestUserPostgresRepository_List(t *testing.T) {
 		strings.Join(userTableColumns, ", "),
 	)
 
-	var defaultMockBehavior mockBehavior = func(mockPool pgxmock.PgxPoolIface, resRows []ResultRow, rowsErr error) {
+	var defaultMockBehavior mockBehavior = func(mockPool pgxmock.PgxPoolIface, rowsRes []RowResult, rowsErr error) {
 		expected := mockPool.ExpectQuery(query)
 
-		if len(resRows) != 0 {
+		if len(rowsRes) != 0 {
 			rows := pgxmock.NewRows(userTableColumns)
-			for i, resRow := range resRows {
-				if len(resRow.Values) != 0 {
-					rows.AddRow(resRow.Values...)
+			for i, rowRes := range rowsRes {
+				if len(rowRes.Row) != 0 {
+					rows.AddRow(rowRes.Row...)
 				}
 
-				if resRow.Err != nil {
-					rows.RowError(i, resRow.Err)
+				if rowRes.Err != nil {
+					rows.RowError(i, rowRes.Err)
 				}
 			}
 
@@ -132,7 +127,7 @@ func TestUserPostgresRepository_List(t *testing.T) {
 
 	testTable := []struct {
 		name          string
-		rows          []ResultRow
+		rows          []RowResult
 		rowsErr       error
 		mockBehavior  mockBehavior
 		expectedUsers []domain.User
@@ -140,22 +135,30 @@ func TestUserPostgresRepository_List(t *testing.T) {
 	}{
 		{
 			name: "Success",
-			rows: []ResultRow{
-				{Values: defaultShortUserRowValues},
-				{Values: defaultFullUserRowValues},
+			rows: []RowResult{
+				{Row: defaultShortUserRowValues},
+				{Row: defaultFullUserRowValues},
 			},
 			mockBehavior:  defaultMockBehavior,
 			expectedUsers: []domain.User{defaultShortUser, defaultFullUser},
 		},
 		{
-			name:         "Unexpected error while scanning the user",
-			rows:         []ResultRow{{Err: errUnexpected}},
+			name:         "Unexpected error while query list of users",
+			rowsErr:      errUnexpected,
 			mockBehavior: defaultMockBehavior,
 			expectedErr:  errUnexpected,
 		},
 		{
-			name:         "Unexpected error while getting list of users",
-			rowsErr:      errUnexpected,
+			name: "Unexpected error while scanning the user",
+			rows: []RowResult{
+				{Row: defaultFullUserRowValues, Err: errUnexpected},
+			},
+			mockBehavior: defaultMockBehavior,
+			expectedErr:  errUnexpected,
+		},
+		{
+			name:         "Unexpected row error",
+			rows:         []RowResult{{Err: errUnexpected}},
 			mockBehavior: defaultMockBehavior,
 			expectedErr:  errUnexpected,
 		},
@@ -193,7 +196,7 @@ func TestUserPostgresRepository_List(t *testing.T) {
 }
 
 func TestUserPostgresRepository_Create(t *testing.T) {
-	type mockBehavior func(mockPool pgxmock.PgxPoolIface, dto domain.CreateUserDTO, rowValues []interface{}, rowErr error)
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, dto domain.CreateUserDTO, row Row, rowErr error)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -219,7 +222,7 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 		strings.Join(returnedColumns, ", "),
 	)
 
-	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, dto domain.CreateUserDTO, rowValues []interface{}, rowErr error) {
+	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, dto domain.CreateUserDTO, row Row, rowErr error) {
 		var birthDate pgtype.Date
 		if dto.BirthDate != "" {
 			tm, _ := time.Parse("2006-01-02", dto.BirthDate)
@@ -234,8 +237,8 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 				dto.LastName, dto.Email, birthDate, dto.Department,
 			)
 
-		if len(rowValues) != 0 {
-			expected.WillReturnRows(pgxmock.NewRows(returnedColumns).AddRow(rowValues...))
+		if len(row) != 0 {
+			expected.WillReturnRows(pgxmock.NewRows(returnedColumns).AddRow(row...))
 		}
 
 		if rowErr != nil {
@@ -246,7 +249,7 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 	testTable := []struct {
 		name          string
 		createUserDTO domain.CreateUserDTO
-		rowValues     []interface{}
+		row           Row
 		rowErr        error
 		mockBehavior  mockBehavior
 		expectedUser  domain.User
@@ -259,7 +262,7 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 				Password: "8743b52063cd84097a65d1633f5c74f5",
 				Email:    "john1967@gmail.com",
 			},
-			rowValues:    []interface{}{"6be043ca-3005-4b1c-b847-eb677897c618", &userCreatedAt},
+			row:          Row{"6be043ca-3005-4b1c-b847-eb677897c618", &userCreatedAt},
 			mockBehavior: defaultMockBehaviour,
 			expectedUser: defaultShortUser,
 			expectedErr:  nil,
@@ -275,7 +278,7 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 				BirthDate:  "1949-10-25",
 				Department: "IoT",
 			},
-			rowValues:    []interface{}{"02185cd4-05b5-4688-836d-3154e9c8a340", &userCreatedAt},
+			row:          Row{"02185cd4-05b5-4688-836d-3154e9c8a340", &userCreatedAt},
 			mockBehavior: defaultMockBehaviour,
 			expectedUser: domain.User{
 				ID:         "02185cd4-05b5-4688-836d-3154e9c8a340",
@@ -317,7 +320,7 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(mockPool, testCase.createUserDTO, testCase.rowValues, testCase.rowErr)
+				testCase.mockBehavior(mockPool, testCase.createUserDTO, testCase.row, testCase.rowErr)
 			}
 
 			userRepo := NewUserPostgresRepository(mockPool)
@@ -341,7 +344,7 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 }
 
 func TestUserPostgresRepository_GetByID(t *testing.T) {
-	type mockBehavior func(mockPool pgxmock.PgxPoolIface, id string, rowValues []interface{}, rowErr error)
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, id string, row Row, rowErr error)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -354,12 +357,12 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 		strings.Join(userTableColumns, ", "),
 	)
 
-	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, id string, rowValues []interface{}, rowErr error) {
+	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, id string, row Row, rowErr error) {
 		expected := mockPool.ExpectQuery(query).WithArgs(id)
 
-		if len(rowValues) != 0 {
+		if len(row) != 0 {
 			expected.WillReturnRows(
-				pgxmock.NewRows(userTableColumns).AddRow(rowValues...),
+				pgxmock.NewRows(userTableColumns).AddRow(row...),
 			)
 		}
 
@@ -371,7 +374,7 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 	testTable := []struct {
 		name         string
 		id           string
-		rowValues    []interface{}
+		row          Row
 		rowErr       error
 		mockBehavior mockBehavior
 		expectedUser domain.User
@@ -380,7 +383,7 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 		{
 			name:         "Success get short user",
 			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
-			rowValues:    defaultShortUserRowValues,
+			row:          defaultShortUserRowValues,
 			mockBehavior: defaultMockBehaviour,
 			expectedUser: defaultShortUser,
 			expectedErr:  nil,
@@ -388,7 +391,7 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 		{
 			name:         "Success get full user",
 			id:           "02185cd4-05b5-4688-836d-3154e9c8a340",
-			rowValues:    defaultFullUserRowValues,
+			row:          defaultFullUserRowValues,
 			mockBehavior: defaultMockBehaviour,
 			expectedUser: defaultFullUser,
 			expectedErr:  nil,
@@ -422,7 +425,7 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(mockPool, testCase.id, testCase.rowValues, testCase.rowErr)
+				testCase.mockBehavior(mockPool, testCase.id, testCase.row, testCase.rowErr)
 			}
 
 			userRepo := NewUserPostgresRepository(mockPool)
@@ -445,7 +448,7 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 }
 
 func TestUserPostgresRepository_GetByUsername(t *testing.T) {
-	type mockBehavior func(mockPool pgxmock.PgxPoolIface, username string, rowValues []interface{}, rowErr error)
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, username string, row Row, rowErr error)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -458,12 +461,12 @@ func TestUserPostgresRepository_GetByUsername(t *testing.T) {
 		strings.Join(userTableColumns, ", "),
 	)
 
-	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, username string, rowValues []interface{}, rowErr error) {
+	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, username string, row Row, rowErr error) {
 		expected := mockPool.ExpectQuery(query).WithArgs(username)
 
-		if len(rowValues) != 0 {
+		if len(row) != 0 {
 			expected.WillReturnRows(
-				pgxmock.NewRows(userTableColumns).AddRow(rowValues...),
+				pgxmock.NewRows(userTableColumns).AddRow(row...),
 			)
 		}
 
@@ -475,7 +478,7 @@ func TestUserPostgresRepository_GetByUsername(t *testing.T) {
 	testTable := []struct {
 		name         string
 		username     string
-		rowValues    []interface{}
+		row          Row ``
 		rowErr       error
 		mockBehavior mockBehavior
 		expectedUser domain.User
@@ -484,7 +487,7 @@ func TestUserPostgresRepository_GetByUsername(t *testing.T) {
 		{
 			name:         "Success get short user",
 			username:     "john1967",
-			rowValues:    defaultShortUserRowValues,
+			row:          defaultShortUserRowValues,
 			mockBehavior: defaultMockBehaviour,
 			expectedUser: defaultShortUser,
 			expectedErr:  nil,
@@ -492,7 +495,7 @@ func TestUserPostgresRepository_GetByUsername(t *testing.T) {
 		{
 			name:         "Success get full user",
 			username:     "mick47",
-			rowValues:    defaultFullUserRowValues,
+			row:          defaultFullUserRowValues,
 			mockBehavior: defaultMockBehaviour,
 			expectedUser: defaultFullUser,
 			expectedErr:  nil,
@@ -521,7 +524,7 @@ func TestUserPostgresRepository_GetByUsername(t *testing.T) {
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(mockPool, testCase.username, testCase.rowValues, testCase.rowErr)
+				testCase.mockBehavior(mockPool, testCase.username, testCase.row, testCase.rowErr)
 			}
 
 			userRepo := NewUserPostgresRepository(mockPool)
