@@ -4,7 +4,6 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -86,8 +85,6 @@ var (
 		&userUpdatedAt, // UpdatedAt
 	}
 )
-
-var errUnexpected = errors.New("unexpected error")
 
 func TestUserPostgresRepository_List(t *testing.T) {
 	type ResultRow struct {
