@@ -191,3 +191,100 @@ func (mr *MockAuthServiceMockRecorder) SignIn(ctx, dto interface{}) *gomock.Call
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignIn", reflect.TypeOf((*MockAuthService)(nil).SignIn), ctx, dto)
 }
+
+// MockChatService is a mock of ChatService interface.
+type MockChatService struct {
+	ctrl     *gomock.Controller
+	recorder *MockChatServiceMockRecorder
+}
+
+// MockChatServiceMockRecorder is the mock recorder for MockChatService.
+type MockChatServiceMockRecorder struct {
+	mock *MockChatService
+}
+
+// NewMockChatService creates a new mock instance.
+func NewMockChatService(ctrl *gomock.Controller) *MockChatService {
+	mock := &MockChatService{ctrl: ctrl}
+	mock.recorder = &MockChatServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockChatService) EXPECT() *MockChatServiceMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockChatService) Create(ctx context.Context, dto domain.CreateChatDTO) (domain.Chat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, dto)
+	ret0, _ := ret[0].(domain.Chat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockChatServiceMockRecorder) Create(ctx, dto interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockChatService)(nil).Create), ctx, dto)
+}
+
+// Delete mocks base method.
+func (m *MockChatService) Delete(ctx context.Context, chatID, creatorID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, chatID, creatorID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockChatServiceMockRecorder) Delete(ctx, chatID, creatorID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockChatService)(nil).Delete), ctx, chatID, creatorID)
+}
+
+// GetByID mocks base method.
+func (m *MockChatService) GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, chatID, memberID)
+	ret0, _ := ret[0].(domain.Chat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockChatServiceMockRecorder) GetByID(ctx, chatID, memberID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockChatService)(nil).GetByID), ctx, chatID, memberID)
+}
+
+// List mocks base method.
+func (m *MockChatService) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, memberID)
+	ret0, _ := ret[0].([]domain.Chat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockChatServiceMockRecorder) List(ctx, memberID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockChatService)(nil).List), ctx, memberID)
+}
+
+// Update mocks base method.
+func (m *MockChatService) Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, dto)
+	ret0, _ := ret[0].(domain.Chat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockChatServiceMockRecorder) Update(ctx, dto interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockChatService)(nil).Update), ctx, dto)
+}
