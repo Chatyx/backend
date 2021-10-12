@@ -535,6 +535,131 @@ func TestUserHandler_update(t *testing.T) {
 	}
 }
 
+func TestUserHandler_updatePassword(t *testing.T) {
+	type mockBehaviour func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserPasswordDTO)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
+	testTable := []struct {
+		name                  string
+		authUserID            string
+		requestBody           string
+		updateUserPasswordDTO domain.UpdateUserPasswordDTO
+		mockBehavior          mockBehaviour
+		expectedStatusCode    int
+		expectedResponseBody  string
+	}{
+		{
+			name:        "Success",
+			authUserID:  "1",
+			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
+			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
+				UserID:  "1",
+				New:     "admin55555",
+				Current: "qwerty12345",
+			},
+			mockBehavior: func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserPasswordDTO) {
+				us.EXPECT().UpdatePassword(ctx, dto).Return(nil)
+			},
+			expectedStatusCode: http.StatusNoContent,
+		},
+		{
+			name:                 "Invalid JSON body",
+			authUserID:           "1",
+			requestBody:          `{"current_password":"qwerty12345","new_password":admin55555"}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"invalid json body"}`,
+		},
+		{
+			name:                 "Empty body",
+			authUserID:           "1",
+			requestBody:          `{}`,
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"validation error","fields":{"current_password":"field validation for 'current_password' failed on the 'required' tag","new_password":"field validation for 'new_password' failed on the 'required' tag"}}`,
+		},
+		{
+			name:        "Wrong user's current password",
+			authUserID:  "1",
+			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
+			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
+				UserID:  "1",
+				New:     "admin55555",
+				Current: "qwerty12345",
+			},
+			mockBehavior: func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserPasswordDTO) {
+				us.EXPECT().UpdatePassword(ctx, dto).Return(domain.ErrWrongCurrentPassword)
+			},
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedResponseBody: `{"message":"wrong current password"}`,
+		},
+		{
+			name:        "User is not found",
+			authUserID:  "1",
+			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
+			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
+				UserID:  "1",
+				New:     "admin55555",
+				Current: "qwerty12345",
+			},
+			mockBehavior: func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserPasswordDTO) {
+				us.EXPECT().UpdatePassword(ctx, dto).Return(domain.ErrUserNotFound)
+			},
+			expectedStatusCode:   http.StatusNotFound,
+			expectedResponseBody: `{"message":"user is not found"}`,
+		},
+		{
+			name:        "Unexpected error",
+			authUserID:  "1",
+			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
+			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
+				UserID:  "1",
+				New:     "admin55555",
+				Current: "qwerty12345",
+			},
+			mockBehavior: func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserPasswordDTO) {
+				us.EXPECT().UpdatePassword(ctx, dto).Return(errors.New("unexpected error"))
+			},
+			expectedStatusCode:   http.StatusInternalServerError,
+			expectedResponseBody: `{"message":"internal server error"}`,
+		},
+	}
+
+	validate, err := validator.New()
+	require.NoError(t, err, "Unexpected error while creating validator")
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			us := mockservice.NewMockUserService(c)
+			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPut, "/api/user/password", strings.NewReader(testCase.requestBody))
+			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.authUserID))
+
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(us, req.Context(), testCase.updateUserPasswordDTO)
+			}
+
+			uh.updatePassword(rec, req, httprouter.Params{})
+
+			resp := rec.Result()
+
+			respBodyPayload, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err, "Unexpected error while reading response body")
+
+			assert.Equal(t, testCase.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, testCase.expectedResponseBody, string(respBodyPayload))
+		})
+	}
+}
+
 func TestUserHandler_delete(t *testing.T) {
 	type mockBehaviour func(us *mockservice.MockUserService, ctx context.Context, id string)
 

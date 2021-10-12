@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/Mort4lis/scht-backend/pkg/logging"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -58,7 +57,7 @@ func (r *sessionRedisRepository) Set(ctx context.Context, key string, session do
 	}
 
 	if err = r.redisClient.RPush(ctx, session.UserID, key).Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while pushing session")
+		r.logger.WithError(err).Error("An error occurred while pushing session to the list of user's sessions")
 		return err
 	}
 
@@ -68,7 +67,7 @@ func (r *sessionRedisRepository) Set(ctx context.Context, key string, session do
 func (r *sessionRedisRepository) Delete(ctx context.Context, key, userID string) error {
 	val, err := r.redisClient.Del(ctx, key).Result()
 	if err != nil {
-		r.logger.WithError(err).Error("An error occurred while deleting refresh session")
+		r.logger.WithError(err).Error("An error occurred while deleting session by key")
 		return err
 	}
 
@@ -78,7 +77,7 @@ func (r *sessionRedisRepository) Delete(ctx context.Context, key, userID string)
 	}
 
 	if err = r.redisClient.LRem(ctx, userID, 0, key).Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while deleting refresh session")
+		r.logger.WithError(err).Error("An error occurred while deleting session key from list of user's sessions")
 		return err
 	}
 
@@ -88,14 +87,14 @@ func (r *sessionRedisRepository) Delete(ctx context.Context, key, userID string)
 func (r *sessionRedisRepository) DeleteAllByUserID(ctx context.Context, userID string) error {
 	keys, err := r.redisClient.LRange(ctx, userID, 0, -1).Result()
 	if err != nil {
-		r.logger.WithError(err).Error("An error occurred while range session keys by user_id")
+		r.logger.WithError(err).Error("An error occurred while range user's session keys")
 		return err
 	}
 
 	keys = append(keys, userID)
 
 	if err = r.redisClient.Del(ctx, keys...).Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while deleting session keys by user_id")
+		r.logger.WithError(err).Error("An error occurred while deleting session keys and key which aggregated them")
 		return err
 	}
 

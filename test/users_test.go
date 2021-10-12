@@ -4,6 +4,7 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -178,6 +179,7 @@ func (s *AppTestSuite) TestUpdateUser() {
 }
 
 func (s *AppTestSuite) TestUpdateUserPassword() {
+	userID := "7e7b1825-ef9a-42ec-b4db-6f09dffe3850"
 	currPassword, newPassword := "helloworld12345", "qwerty55555"
 	strBody := fmt.Sprintf(`{"current_password":"%s","new_password":"%s"}`, currPassword, newPassword)
 	tokenPair := s.authenticate("mick47", currPassword, uuid.New().String())
@@ -193,7 +195,31 @@ func (s *AppTestSuite) TestUpdateUserPassword() {
 	defer resp.Body.Close()
 	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
+	val, err := s.redisClient.Exists(context.Background(), tokenPair.RefreshToken).Result()
+	s.NoError(err, "Failed to check exist old session")
+	s.Require().Equal(int64(0), val, "Old session exists after change password")
+
+	val, err = s.redisClient.Exists(context.Background(), userID).Result()
+	s.NoError(err, "Failed to check exist userID key")
+	s.Require().Equal(int64(0), val, "userID key must not exist")
+
 	s.authenticate("mick47", newPassword, uuid.New().String())
+}
+
+func (s *AppTestSuite) TestUpdateUserPasswordWrong() {
+	tokenPair := s.authenticate("mick47", "helloworld12345", uuid.New().String())
+
+	strBody := fmt.Sprintf(`{"current_password":"%s","new_password":"%s"}`, "qQq123456", "qwerty12345")
+	req, err := http.NewRequest(http.MethodPut, s.buildURL("/user/password"), strings.NewReader(strBody))
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
+	s.Require().Equal(http.StatusBadRequest, resp.StatusCode)
 }
 
 func (s *AppTestSuite) TestDeleteUser() {

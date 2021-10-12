@@ -36,6 +36,11 @@ var (
 		Password: "8743b52063cd84097a65d1633f5c74f5",
 		Email:    "john1967@gmail.com",
 	}
+	defaultUpdateUserPasswordDTO = domain.UpdateUserPasswordDTO{
+		UserID:  "1",
+		New:     "admin5555",
+		Current: "qwerty12345",
+	}
 )
 
 func TestUserService_Create(t *testing.T) {
@@ -135,6 +140,160 @@ func TestUserService_Create(t *testing.T) {
 			}
 
 			assert.Equal(t, testCase.expectedUser, user)
+		})
+	}
+}
+
+func TestUserService_UpdatePassword(t *testing.T) {
+	type hasherMockBehaviour func(h *mockhasher.MockPasswordHasher, currentPassword, newPassword, currentHash, newHash string)
+
+	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, userID, newHash string, returnedUser domain.User)
+
+	type sessionRepoMockBehaviour func(sr *mockrepository.MockSessionRepository, userID string)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
+	testTable := []struct {
+		name                     string
+		updateUserPasswordDTO    domain.UpdateUserPasswordDTO
+		returnedUser             domain.User
+		newPasswordHash          string
+		userRepoMockBehaviour    userRepoMockBehaviour
+		sessionRepoMockBehaviour sessionRepoMockBehaviour
+		hasherMockBehaviour      hasherMockBehaviour
+		expectedErr              error
+	}{
+		{
+			name:                  "Success",
+			updateUserPasswordDTO: defaultUpdateUserPasswordDTO,
+			returnedUser:          defaultUser,
+			newPasswordHash:       "84097a65d1633f5c74f58743b",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, userID, newHash string, returnedUser domain.User) {
+				ur.EXPECT().GetByID(context.Background(), userID).Return(returnedUser, nil)
+				ur.EXPECT().UpdatePassword(context.Background(), userID, newHash).Return(nil)
+			},
+			sessionRepoMockBehaviour: func(sr *mockrepository.MockSessionRepository, userID string) {
+				sr.EXPECT().DeleteAllByUserID(context.Background(), userID).Return(nil)
+			},
+			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, currentPassword, newPassword, currentHash, newHash string) {
+				h.EXPECT().CompareHashAndPassword(currentHash, currentPassword).Return(true)
+				h.EXPECT().Hash(newPassword).Return(newHash, nil)
+			},
+			expectedErr: nil,
+		},
+		{
+			name:                  "User is not found",
+			updateUserPasswordDTO: defaultUpdateUserPasswordDTO,
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, userID, newHash string, returnedUser domain.User) {
+				ur.EXPECT().GetByID(context.Background(), userID).Return(domain.User{}, domain.ErrUserNotFound)
+			},
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name:                  "Current password is wrong",
+			updateUserPasswordDTO: defaultUpdateUserPasswordDTO,
+			returnedUser:          defaultUser,
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, userID, newHash string, returnedUser domain.User) {
+				ur.EXPECT().GetByID(context.Background(), userID).Return(returnedUser, nil)
+			},
+			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, currentPassword, newPassword, currentHash, newHash string) {
+				h.EXPECT().CompareHashAndPassword(currentHash, currentPassword).Return(false)
+			},
+			expectedErr: domain.ErrWrongCurrentPassword,
+		},
+		{
+			name:                  "Unexpected error while hashing new password",
+			updateUserPasswordDTO: defaultUpdateUserPasswordDTO,
+			returnedUser:          defaultUser,
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, userID, newHash string, returnedUser domain.User) {
+				ur.EXPECT().GetByID(context.Background(), userID).Return(returnedUser, nil)
+			},
+			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, currentPassword, newPassword, currentHash, newHash string) {
+				h.EXPECT().CompareHashAndPassword(currentHash, currentPassword).Return(true)
+				h.EXPECT().Hash(newPassword).Return("", errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+		{
+			name:                  "Unexpected error while reset all user sessions",
+			updateUserPasswordDTO: defaultUpdateUserPasswordDTO,
+			returnedUser:          defaultUser,
+			newPasswordHash:       "84097a65d1633f5c74f58743b",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, userID, newHash string, returnedUser domain.User) {
+				ur.EXPECT().GetByID(context.Background(), userID).Return(returnedUser, nil)
+			},
+			sessionRepoMockBehaviour: func(sr *mockrepository.MockSessionRepository, userID string) {
+				sr.EXPECT().DeleteAllByUserID(context.Background(), userID).Return(errUnexpected)
+			},
+			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, currentPassword, newPassword, currentHash, newHash string) {
+				h.EXPECT().CompareHashAndPassword(currentHash, currentPassword).Return(true)
+				h.EXPECT().Hash(newPassword).Return(newHash, nil)
+			},
+			expectedErr: errUnexpected,
+		},
+		{
+			name:                  "Unexpected error while update password",
+			updateUserPasswordDTO: defaultUpdateUserPasswordDTO,
+			returnedUser:          defaultUser,
+			newPasswordHash:       "84097a65d1633f5c74f58743b",
+			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, userID, newHash string, returnedUser domain.User) {
+				ur.EXPECT().GetByID(context.Background(), userID).Return(returnedUser, nil)
+				ur.EXPECT().UpdatePassword(context.Background(), userID, newHash).Return(errUnexpected)
+			},
+			sessionRepoMockBehaviour: func(sr *mockrepository.MockSessionRepository, userID string) {
+				sr.EXPECT().DeleteAllByUserID(context.Background(), userID).Return(nil)
+			},
+			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, currentPassword, newPassword, currentHash, newHash string) {
+				h.EXPECT().CompareHashAndPassword(currentHash, currentPassword).Return(true)
+				h.EXPECT().Hash(newPassword).Return(newHash, nil)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			hasher := mockhasher.NewMockPasswordHasher(c)
+			userRepo := mockrepository.NewMockUserRepository(c)
+			sessionRepo := mockrepository.NewMockSessionRepository(c)
+
+			us := NewUserService(userRepo, sessionRepo, hasher)
+
+			if testCase.userRepoMockBehaviour != nil {
+				testCase.userRepoMockBehaviour(
+					userRepo,
+					testCase.updateUserPasswordDTO.UserID, testCase.newPasswordHash, testCase.returnedUser,
+				)
+			}
+
+			if testCase.hasherMockBehaviour != nil {
+				testCase.hasherMockBehaviour(
+					hasher,
+					testCase.updateUserPasswordDTO.Current, testCase.updateUserPasswordDTO.New,
+					testCase.returnedUser.Password, testCase.newPasswordHash,
+				)
+			}
+
+			if testCase.sessionRepoMockBehaviour != nil {
+				testCase.sessionRepoMockBehaviour(sessionRepo, testCase.updateUserPasswordDTO.UserID)
+			}
+
+			err := us.UpdatePassword(context.Background(), testCase.updateUserPasswordDTO)
+
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
+			}
+
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

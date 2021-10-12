@@ -152,7 +152,7 @@ func TestSessionRedisRepository_Set(t *testing.T) {
 			expectedErr: errUnexpected,
 		},
 		{
-			name:    "Unexpected error while pushing session",
+			name:    "Unexpected error while pushing session to the list of user's sessions",
 			key:     "qGVFLRQw37TnSmG0LKFN",
 			session: exampleSession,
 			mockBehavior: func(mock redismock.ClientMock, key string, session domain.Session, ttl time.Duration) {
@@ -225,11 +225,21 @@ func TestSessionRedisRepository_Delete(t *testing.T) {
 			expectedErr: domain.ErrSessionNotFound,
 		},
 		{
-			name:   "Unexpected error while deleting the session",
+			name:   "Unexpected error while deleting session by key",
 			key:    "qGVFLRQw37TnSmG0LKFN",
 			userID: "1",
 			mockBehavior: func(mock redismock.ClientMock, key, userID string) {
 				mock.ExpectDel(key).SetErr(errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+		{
+			name:   "Unexpected error while deleting session key from list of user's sessions",
+			key:    "qGVFLRQw37TnSmG0LKFN",
+			userID: "1",
+			mockBehavior: func(mock redismock.ClientMock, key, userID string) {
+				mock.ExpectDel(key).SetVal(1)
+				mock.ExpectLRem(userID, 0, key).SetErr(errUnexpected)
 			},
 			expectedErr: errUnexpected,
 		},
@@ -245,6 +255,82 @@ func TestSessionRedisRepository_Delete(t *testing.T) {
 			}
 
 			err := sessionRepo.Delete(context.Background(), testCase.key, testCase.userID)
+
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
+			}
+
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
+			}
+
+			err = mock.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
+		})
+	}
+}
+
+func TestSessionRedisRepository_DeleteAllByUserID(t *testing.T) {
+	type mockBehavior func(mock redismock.ClientMock, userID string)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
+	testTable := []struct {
+		name         string
+		userID       string
+		mockBehavior mockBehavior
+		expectedErr  error
+	}{
+		{
+			name:   "Success",
+			userID: "1",
+			mockBehavior: func(mock redismock.ClientMock, userID string) {
+				returnedKeys := []string{"qGVFLRQw37TnSmG0LKFN", "TnSmG0LKFNqGVFLRQw37"}
+				mock.ExpectLRange(userID, 0, -1).SetVal(returnedKeys)
+
+				returnedKeys = append(returnedKeys, userID)
+
+				mock.ExpectDel(returnedKeys...).SetVal(int64(len(returnedKeys)))
+			},
+			expectedErr: nil,
+		},
+		{
+			name:   "Unexpected error while range user's session keys",
+			userID: "1",
+			mockBehavior: func(mock redismock.ClientMock, userID string) {
+				mock.ExpectLRange(userID, 0, -1).SetErr(errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+		{
+			name:   "Unexpected error while deleting session keys and key which aggregated them",
+			userID: "1",
+			mockBehavior: func(mock redismock.ClientMock, userID string) {
+				returnedKeys := []string{"qGVFLRQw37TnSmG0LKFN", "TnSmG0LKFNqGVFLRQw37"}
+				mock.ExpectLRange(userID, 0, -1).SetVal(returnedKeys)
+
+				returnedKeys = append(returnedKeys, userID)
+
+				mock.ExpectDel(returnedKeys...).SetErr(errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			client, mock := redismock.NewClientMock()
+			sessionRepo := NewSessionRedisRepository(client)
+
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(mock, testCase.userID)
+			}
+
+			err := sessionRepo.DeleteAllByUserID(context.Background(), testCase.userID)
 
 			if testCase.expectedErr == nil {
 				assert.NoError(t, err)

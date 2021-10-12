@@ -19,6 +19,7 @@ const (
 )
 
 func (s *AppTestSuite) TestSignInSuccess() {
+	userID := "ba566522-3305-48df-936a-73f47611934b"
 	resp := s.authenticateResponse("john1967", "qwerty12345", fingerprintValue)
 
 	var tokenPair domain.JWTPair
@@ -30,14 +31,21 @@ func (s *AppTestSuite) TestSignInSuccess() {
 
 	s.checkRefreshTokenCookie(resp.Cookies(), tokenPair.RefreshToken)
 	s.checkSession(domain.Session{
-		UserID:       "ba566522-3305-48df-936a-73f47611934b",
+		UserID:       userID,
 		RefreshToken: tokenPair.RefreshToken,
 		Fingerprint:  fingerprintValue,
 	})
+
+	refreshTokens, err := s.redisClient.LRange(context.Background(), userID, 0, -1).Result()
+	s.NoError(err, "Failed to range user's sessions from redis")
+
+	s.Require().Equal([]string{tokenPair.RefreshToken}, refreshTokens)
 }
 
 func (s *AppTestSuite) TestSignInFailed() {
+	userID := "ba566522-3305-48df-936a-73f47611934b"
 	bodyStr := `{"username":"john1967","password":"qwerty_qQq"}`
+
 	req, err := http.NewRequest(http.MethodPost, s.buildURL("/auth/sign-in"), strings.NewReader(bodyStr))
 	s.NoError(err, "Failed to create request")
 
@@ -48,9 +56,14 @@ func (s *AppTestSuite) TestSignInFailed() {
 
 	defer resp.Body.Close()
 	s.Require().Equal(http.StatusUnauthorized, resp.StatusCode)
+
+	val, err := s.redisClient.Exists(context.Background(), userID).Result()
+	s.NoError(err, "Failed to check exist userID key")
+	s.Require().Equal(int64(0), val, "userID key must not exist")
 }
 
 func (s *AppTestSuite) TestRefreshWithBodySuccess() {
+	userID := "ba566522-3305-48df-936a-73f47611934b"
 	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
 
 	bodyStr := fmt.Sprintf(`{"refresh_token":"%s"}`, tokenPair.RefreshToken)
@@ -74,17 +87,23 @@ func (s *AppTestSuite) TestRefreshWithBodySuccess() {
 
 	s.checkRefreshTokenCookie(resp.Cookies(), newTokenPair.RefreshToken)
 	s.checkSession(domain.Session{
-		UserID:       "ba566522-3305-48df-936a-73f47611934b",
+		UserID:       userID,
 		RefreshToken: newTokenPair.RefreshToken,
 		Fingerprint:  fingerprintValue,
 	})
 
+	refreshTokens, err := s.redisClient.LRange(context.Background(), userID, 0, -1).Result()
+	s.NoError(err, "Failed to range user's sessions from redis")
+
+	s.Require().Equal([]string{newTokenPair.RefreshToken}, refreshTokens)
+
 	val, err := s.redisClient.Exists(context.Background(), tokenPair.RefreshToken).Result()
 	s.NoError(err, "Failed to check exist old session")
-	s.Require().Equal(val, int64(0), "Old session exists")
+	s.Require().Equal(int64(0), val, "Old session exists")
 }
 
 func (s *AppTestSuite) TestRefreshWithCookieSuccess() {
+	userID := "ba566522-3305-48df-936a-73f47611934b"
 	resp := s.authenticateResponse("john1967", "qwerty12345", fingerprintValue)
 	refreshCookie := s.getRefreshCookie(resp.Cookies())
 
@@ -109,14 +128,19 @@ func (s *AppTestSuite) TestRefreshWithCookieSuccess() {
 
 	s.checkRefreshTokenCookie(resp.Cookies(), newTokenPair.RefreshToken)
 	s.checkSession(domain.Session{
-		UserID:       "ba566522-3305-48df-936a-73f47611934b",
+		UserID:       userID,
 		RefreshToken: newTokenPair.RefreshToken,
 		Fingerprint:  fingerprintValue,
 	})
 
+	refreshTokens, err := s.redisClient.LRange(context.Background(), userID, 0, -1).Result()
+	s.NoError(err, "Failed to range user's sessions from redis")
+
+	s.Require().Equal([]string{newTokenPair.RefreshToken}, refreshTokens)
+
 	val, err := s.redisClient.Exists(context.Background(), refreshCookie.Value).Result()
 	s.NoError(err, "Failed to check exist old session")
-	s.Require().Equal(val, int64(0), "Old session exists")
+	s.Require().Equal(int64(0), val, "Old session exists")
 }
 
 func (s *AppTestSuite) TestRefreshInvalidFingerprint() {

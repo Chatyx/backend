@@ -9,10 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/jackc/pgconn"
@@ -20,6 +16,8 @@ import (
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
 	"github.com/pashagolub/pgxmock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var userTableColumns = []string{
@@ -688,6 +686,93 @@ func TestUserPostgresRepository_Update(t *testing.T) {
 			}
 
 			assert.Equal(t, testCase.expectedUser, user)
+
+			err = mockPool.ExpectationsWereMet()
+			assert.NoError(t, err, "There were unfulfilled expectations")
+		})
+	}
+}
+
+func TestUserPostgresRepository_UpdatePassword(t *testing.T) {
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, userID, password string)
+
+	logging.InitLogger(
+		logging.LogConfig{
+			LoggerKind: "mock",
+		},
+	)
+
+	query := `UPDATE users SET password = $2 WHERE id = $1 AND is_deleted IS FALSE`
+
+	testTable := []struct {
+		name         string
+		userID       string
+		password     string
+		mockBehavior mockBehavior
+		expectedErr  error
+	}{
+		{
+			name:     "Success",
+			userID:   "02185cd4-05b5-4688-836d-3154e9c8a340",
+			password: "qwerty12345",
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, userID, password string) {
+				mockPool.ExpectExec(query).
+					WithArgs(userID, password).
+					WillReturnResult(pgxmock.NewResult("updated", 1))
+			},
+			expectedErr: nil,
+		},
+		{
+			name:        "With invalid user id (not uuid4)",
+			userID:      "1",
+			password:    "qwerty12345",
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name:     "User is not found",
+			userID:   "02185cd4-05b5-4688-836d-3154e9c8a340",
+			password: "qwerty12345",
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, userID, password string) {
+				mockPool.ExpectExec(query).
+					WithArgs(userID, password).
+					WillReturnResult(pgxmock.NewResult("updated", 0))
+			},
+			expectedErr: domain.ErrUserNotFound,
+		},
+		{
+			name:     "Unexpected error",
+			userID:   "02185cd4-05b5-4688-836d-3154e9c8a340",
+			password: "qwerty12345",
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, userID, password string) {
+				mockPool.ExpectExec(query).
+					WithArgs(userID, password).
+					WillReturnError(errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockPool, err := pgxmock.NewPool(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
+			require.NoError(t, err, "An error occurred while opening a mock pool of database connections")
+
+			defer mockPool.Close()
+
+			if testCase.mockBehavior != nil {
+				testCase.mockBehavior(mockPool, testCase.userID, testCase.password)
+			}
+
+			userRepo := NewUserPostgresRepository(mockPool)
+			err = userRepo.UpdatePassword(context.Background(), testCase.userID, testCase.password)
+
+			if testCase.expectedErr == nil {
+				assert.NoError(t, err)
+			}
+
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
+			}
 
 			err = mockPool.ExpectationsWereMet()
 			assert.NoError(t, err, "There were unfulfilled expectations")

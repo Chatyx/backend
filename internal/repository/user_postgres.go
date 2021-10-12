@@ -250,9 +250,9 @@ func (r *userPostgresRepository) UpdatePassword(ctx context.Context, id, passwor
 		return domain.ErrUserNotFound
 	}
 
-	query := "UPDATE users SET password = $1 WHERE id = $2 AND is_deleted IS FALSE"
+	query := "UPDATE users SET password = $2 WHERE id = $1 AND is_deleted IS FALSE"
 
-	cmdTag, err := r.dbPool.Exec(ctx, query, password, id)
+	cmdTag, err := r.dbPool.Exec(ctx, query, id, password)
 	if err != nil {
 		r.logger.WithError(err).Error("An error occurred while updating user password into the database")
 		return err

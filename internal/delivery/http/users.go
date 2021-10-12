@@ -207,6 +207,8 @@ func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request, _
 			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
 		case domain.ErrUserNotFound:
 			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		default:
+			respondError(w, errInternalServer)
 		}
 
 		return
