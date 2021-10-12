@@ -16,31 +16,44 @@ type CreateUserDTO struct {
 	Department string `json:"department" validate:"max=255"`
 }
 
-func (c *CreateUserDTO) Decode(payload []byte) error {
-	return json.Unmarshal(payload, c)
+func (d *CreateUserDTO) Decode(payload []byte) error {
+	return json.Unmarshal(payload, d)
 }
 
-func (c *CreateUserDTO) DecodeFrom(r io.Reader) error {
-	return json.NewDecoder(r).Decode(c)
+func (d *CreateUserDTO) DecodeFrom(r io.Reader) error {
+	return json.NewDecoder(r).Decode(d)
 }
 
 type UpdateUserDTO struct {
-	ID         string `json:"id"         validate:"required"`
-	Username   string `json:"username"   validate:"omitempty,max=50"`
-	Password   string `json:"password"   validate:"omitempty,min=8,max=27"`
-	Email      string `json:"email"      validate:"omitempty,email,max=255"`
-	FirstName  string `json:"first_name" validate:"omitempty,max=50"`
-	LastName   string `json:"last_name"  validate:"omitempty,max=50"`
+	ID         string `json:"-"`
+	Username   string `json:"username"   validate:"required,max=50"`
+	Email      string `json:"email"      validate:"required,email,max=255"`
+	FirstName  string `json:"first_name" validate:"max=50"`
+	LastName   string `json:"last_name"  validate:"max=50"`
 	BirthDate  string `json:"birth_date" validate:"sql-date"`
-	Department string `json:"department" validate:"omitempty,max=255"`
+	Department string `json:"department" validate:"max=255"`
 }
 
-func (c *UpdateUserDTO) Decode(payload []byte) error {
-	return json.Unmarshal(payload, c)
+func (d *UpdateUserDTO) Decode(payload []byte) error {
+	return json.Unmarshal(payload, d)
 }
 
-func (c *UpdateUserDTO) DecodeFrom(r io.Reader) error {
-	return json.NewDecoder(r).Decode(c)
+func (d *UpdateUserDTO) DecodeFrom(r io.Reader) error {
+	return json.NewDecoder(r).Decode(d)
+}
+
+type UpdateUserPasswordDTO struct {
+	UserID  string `json:"-"`
+	New     string `json:"new_password"     validate:"required,min=8,max=27"`
+	Current string `json:"current_password" validate:"required,min=8,max=27"`
+}
+
+func (d *UpdateUserPasswordDTO) Decode(payload []byte) error {
+	return json.Unmarshal(payload, d)
+}
+
+func (d *UpdateUserPasswordDTO) DecodeFrom(r io.Reader) error {
+	return json.NewDecoder(r).Decode(d)
 }
 
 type User struct {

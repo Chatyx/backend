@@ -78,7 +78,7 @@ func NewApp(cfg *config.Config) *App {
 	chatRepo := repository.NewChatPostgresRepository(dbPool)
 	sessionRepo := repository.NewSessionRedisRepository(redisClient)
 
-	userService := service.NewUserService(userRepo, hasher)
+	userService := service.NewUserService(userRepo, sessionRepo, hasher)
 	chatService := service.NewChatService(chatRepo)
 	authService := service.NewAuthService(service.AuthServiceConfig{
 		UserService:     userService,

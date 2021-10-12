@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgtype"
@@ -185,28 +184,38 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 		return domain.User{}, domain.ErrUserNotFound
 	}
 
-	query, args, err := r.buildUpdateQuery(dto)
-	if err != nil {
-		r.logger.WithError(err).Error("Failed to build update sql query")
-		return domain.User{}, err
-	}
-
-	if len(args) == 1 {
-		r.logger.Debugf("no need to update user with id = %s", dto.ID)
-		return domain.User{}, domain.ErrUserNoNeedUpdate
-	}
-
 	var (
 		user      domain.User
 		birthDate pgtype.Date
 	)
 
+	query := `UPDATE users SET 
+		username = $2, email = $3, first_name = $4, 
+		last_name = $5, birth_date = $6, department = $7
+	WHERE id = $1 AND is_deleted IS FALSE
+	RETURNING password, is_deleted, created_at, updated_at`
+
+	if dto.BirthDate != "" {
+		tm, err := time.Parse("2006-01-02", dto.BirthDate)
+		if err != nil {
+			r.logger.WithError(err).Error("")
+			return domain.User{}, err
+		}
+
+		birthDate = pgtype.Date{
+			Time:   tm,
+			Status: pgtype.Present,
+		}
+	} else {
+		birthDate = pgtype.Date{Status: pgtype.Null}
+	}
+
 	if err := r.dbPool.QueryRow(
-		ctx, query, args...,
+		ctx, query, dto.ID,
+		dto.Username, dto.Email, dto.FirstName,
+		dto.LastName, birthDate, dto.Department,
 	).Scan(
-		&user.ID, &user.Username, &user.Password,
-		&user.FirstName, &user.LastName, &user.Email,
-		&birthDate, &user.Department, &user.IsDeleted,
+		&user.Password, &user.IsDeleted,
 		&user.CreatedAt, &user.UpdatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -224,79 +233,37 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 		return domain.User{}, err
 	}
 
-	if birthDate.Status == pgtype.Present {
-		user.BirthDate = birthDate.Time.Format("2006-01-02")
-	}
+	user.ID = dto.ID
+	user.Username = dto.Username
+	user.Email = dto.Email
+	user.FirstName = dto.FirstName
+	user.LastName = dto.LastName
+	user.BirthDate = dto.BirthDate
+	user.Department = dto.Department
 
 	return user, nil
 }
 
-func (r *userPostgresRepository) buildUpdateQuery(dto domain.UpdateUserDTO) (query string, args []interface{}, err error) {
-	num := 2
-	setConditions := make([]string, 0)
-
-	args = append(args, dto.ID)
-
-	if dto.Username != "" {
-		setConditions = append(setConditions, fmt.Sprintf("username = $%d", num))
-		args = append(args, dto.Username)
-		num++
+func (r *userPostgresRepository) UpdatePassword(ctx context.Context, id, password string) error {
+	if !utils.IsValidUUID(id) {
+		r.logger.Debugf("user is not found with id = %s", id)
+		return domain.ErrUserNotFound
 	}
 
-	if dto.Password != "" {
-		setConditions = append(setConditions, fmt.Sprintf("password = $%d", num))
-		args = append(args, dto.Password)
-		num++
+	query := "UPDATE users SET password = $1 WHERE id = $2 AND is_deleted IS FALSE"
+
+	cmdTag, err := r.dbPool.Exec(ctx, query, password, id)
+	if err != nil {
+		r.logger.WithError(err).Error("An error occurred while updating user password into the database")
+		return err
 	}
 
-	if dto.Email != "" {
-		setConditions = append(setConditions, fmt.Sprintf("email = $%d", num))
-		args = append(args, dto.Email)
-		num++
+	if cmdTag.RowsAffected() == 0 {
+		r.logger.Debugf("user is not found with id = %s", id)
+		return domain.ErrUserNotFound
 	}
 
-	if dto.FirstName != "" {
-		setConditions = append(setConditions, fmt.Sprintf("first_name = $%d", num))
-		args = append(args, dto.FirstName)
-		num++
-	}
-
-	if dto.LastName != "" {
-		setConditions = append(setConditions, fmt.Sprintf("last_name = $%d", num))
-		args = append(args, dto.LastName)
-		num++
-	}
-
-	if dto.BirthDate != "" {
-		tm, err := time.Parse("2006-01-02", dto.BirthDate)
-		if err != nil {
-			return "", nil, err
-		}
-
-		setConditions = append(setConditions, fmt.Sprintf("birth_date = $%d", num))
-		args = append(args, pgtype.Date{
-			Time:   tm,
-			Status: pgtype.Present,
-		})
-		num++
-	}
-
-	if dto.Department != "" {
-		setConditions = append(setConditions, fmt.Sprintf("department = $%d", num))
-		args = append(args, dto.Department)
-	}
-
-	query = fmt.Sprintf(`
-		UPDATE users SET %s
-			WHERE id = $1 AND is_deleted IS FALSE
-		RETURNING
-			id, username, password, 
-			first_name, last_name, email, 
-			birth_date, department, is_deleted, 
-			created_at, updated_at
-	`, strings.Join(setConditions, ", "))
-
-	return query, args, nil
+	return nil
 }
 
 func (r *userPostgresRepository) Delete(ctx context.Context, id string) error {

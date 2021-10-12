@@ -435,28 +435,6 @@ func TestUserHandler_update(t *testing.T) {
 			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"}`,
 		},
 		{
-			name:          "Success with empty body",
-			authUserID:    "1",
-			requestBody:   `{}`,
-			updateUserDTO: domain.UpdateUserDTO{ID: "1"},
-			updatedUser: domain.User{
-				ID:         "1",
-				Username:   "john1967",
-				Password:   uuid.New().String(),
-				Email:      "john1967@gmail.com",
-				FirstName:  "John",
-				LastName:   "Lennon",
-				BirthDate:  "1967-10-09",
-				Department: "HR",
-				CreatedAt:  &userCreatedAt,
-			},
-			mockBehavior: func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User) {
-				us.EXPECT().Update(ctx, dto).Return(updatedUser, nil)
-			},
-			expectedStatusCode:   http.StatusOK,
-			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
-		},
-		{
 			name:                 "Invalid JSON body",
 			authUserID:           "1",
 			requestBody:          `{"birth_date""1970-01-01"}`,
@@ -464,31 +442,28 @@ func TestUserHandler_update(t *testing.T) {
 			expectedResponseBody: `{"message":"invalid json body"}`,
 		},
 		{
-			name:                 "Short password",
-			authUserID:           "1",
-			requestBody:          `{"username":"john1967","password":"test123","email":"john1967@gmail.com"}`,
-			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"message":"validation error","fields":{"password":"field validation for 'password' failed on the 'min' tag"}}`,
-		},
-		{
 			name:                 "Invalid email address",
 			authUserID:           "1",
-			requestBody:          `{"username":"john1967","password":"qwerty12345","email":"12345"}`,
+			requestBody:          `{"username":"john1967","email":"12345"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"email":"field validation for 'email' failed on the 'email' tag"}}`,
 		},
 		{
 			name:                 "Invalid birth date",
 			authUserID:           "1",
-			requestBody:          `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com","birth_date":"20.12.1994"}`,
+			requestBody:          `{"username":"john1967","email":"john1967@gmail.com","birth_date":"20.12.1994"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"birth_date":"field validation for 'birth_date' failed on the 'sql-date' tag"}}`,
 		},
 		{
-			name:          "User is not found",
-			authUserID:    "2",
-			requestBody:   `{"department":"IoT"}`,
-			updateUserDTO: domain.UpdateUserDTO{ID: "2", Department: "IoT"},
+			name:        "User is not found",
+			authUserID:  "2",
+			requestBody: `{"username":"john1967","email":"john1967@gmail.com"}`,
+			updateUserDTO: domain.UpdateUserDTO{
+				ID:       "2",
+				Username: "john1967",
+				Email:    "john1967@gmail.com",
+			},
 			mockBehavior: func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User) {
 				us.EXPECT().Update(ctx, dto).Return(domain.User{}, domain.ErrUserNotFound)
 			},
@@ -498,11 +473,10 @@ func TestUserHandler_update(t *testing.T) {
 		{
 			name:        "User with such username or email already exists",
 			authUserID:  "2",
-			requestBody: `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com"}`,
+			requestBody: `{"username":"john1967","email":"john1967@gmail.com"}`,
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:       "2",
 				Username: "john1967",
-				Password: "qwerty12345",
 				Email:    "john1967@gmail.com",
 			},
 			mockBehavior: func(us *mockservice.MockUserService, ctx context.Context, dto domain.UpdateUserDTO, updatedUser domain.User) {
@@ -514,11 +488,10 @@ func TestUserHandler_update(t *testing.T) {
 		{
 			name:        "Unexpected error",
 			authUserID:  "1",
-			requestBody: `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com","birth_date":"1998-01-01"}`,
+			requestBody: `{"username":"john1967","email":"john1967@gmail.com","birth_date":"1998-01-01"}`,
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:        "1",
 				Username:  "john1967",
-				Password:  "qwerty12345",
 				Email:     "john1967@gmail.com",
 				BirthDate: "1998-01-01",
 			},
@@ -542,7 +515,7 @@ func TestUserHandler_update(t *testing.T) {
 			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
 
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPatch, "/api/user", strings.NewReader(testCase.requestBody))
+			req := httptest.NewRequest(http.MethodPut, "/api/user", strings.NewReader(testCase.requestBody))
 			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.authUserID))
 
 			if testCase.mockBehavior != nil {

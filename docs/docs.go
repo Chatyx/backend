@@ -372,6 +372,60 @@ var doc = `{
             }
         },
         "/user": {
+            "put": {
+                "security": [
+                    {
+                        "JWTTokenAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update current authenticated user",
+                "parameters": [
+                    {
+                        "description": "Update body",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateUserDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -405,8 +459,10 @@ var doc = `{
                         }
                     }
                 }
-            },
-            "patch": {
+            }
+        },
+        "/user/password": {
+            "put": {
                 "security": [
                     {
                         "JWTTokenAuth": []
@@ -421,7 +477,7 @@ var doc = `{
                 "tags": [
                     "Users"
                 ],
-                "summary": "Update current authenticated user",
+                "summary": "Update current authenticated user's password",
                 "parameters": [
                     {
                         "description": "Update body",
@@ -429,16 +485,13 @@ var doc = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.UpdateUserDTO"
+                            "$ref": "#/definitions/domain.UpdateUserPasswordDTO"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.User"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -709,7 +762,8 @@ var doc = `{
         "domain.UpdateUserDTO": {
             "type": "object",
             "required": [
-                "id"
+                "email",
+                "username"
             ],
             "properties": {
                 "birth_date": {
@@ -724,16 +778,25 @@ var doc = `{
                 "first_name": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "string"
-                },
                 "last_name": {
                     "type": "string"
                 },
-                "password": {
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.UpdateUserPasswordDTO": {
+            "type": "object",
+            "required": [
+                "current_password",
+                "new_password"
+            ],
+            "properties": {
+                "current_password": {
                     "type": "string"
                 },
-                "username": {
+                "new_password": {
                     "type": "string"
                 }
             }

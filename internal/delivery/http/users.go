@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	currentUserURL = "/api/user"
-	listUserURL    = "/api/users"
-	detailUserURI  = "/api/users/:id"
+	currentUserURL  = "/api/user"
+	userPasswordURI = "/api/user/password"
+	listUserURL     = "/api/users"
+	detailUserURI   = "/api/users/:id"
 )
 
 type UserListResponse struct {
@@ -50,7 +51,8 @@ func (h *userHandler) register(router *httprouter.Router) {
 	router.GET(listUserURL, authorizationMiddleware(h.list, h.authService))
 	router.POST(listUserURL, h.create)
 	router.GET(detailUserURI, authorizationMiddleware(h.detail, h.authService))
-	router.PATCH(currentUserURL, authorizationMiddleware(h.update, h.authService))
+	router.PUT(currentUserURL, authorizationMiddleware(h.update, h.authService))
+	router.PUT(userPasswordURI, authorizationMiddleware(h.updatePassword, h.authService))
 	router.DELETE(currentUserURL, authorizationMiddleware(h.delete, h.authService))
 }
 
@@ -143,7 +145,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request, _ httprou
 // @Success 200 {object} domain.User
 // @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /user [patch]
+// @Router /user [put]
 func (h *userHandler) update(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	dto := domain.UpdateUserDTO{}
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
@@ -173,6 +175,44 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request, _ httprou
 	}
 
 	respondSuccess(http.StatusOK, w, &user)
+}
+
+// @Summary Update current authenticated user's password
+// @Security JWTTokenAuth
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param input body domain.UpdateUserPasswordDTO true "Update body"
+// @Success 204 "No Content"
+// @Failure 400,404 {object} ResponseError
+// @Failure 500 {object} ResponseError
+// @Router /user/password [put]
+func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	dto := domain.UpdateUserPasswordDTO{}
+	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+		respondError(w, err)
+		return
+	}
+
+	dto.UserID = domain.UserIDFromContext(req.Context())
+
+	if err := h.validateStruct(dto); err != nil {
+		respondError(w, err)
+		return
+	}
+
+	if err := h.userService.UpdatePassword(req.Context(), dto); err != nil {
+		switch err {
+		case domain.ErrWrongCurrentPassword:
+			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+		case domain.ErrUserNotFound:
+			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		}
+
+		return
+	}
+
+	respondSuccess(http.StatusNoContent, w, nil)
 }
 
 // @Summary Delete current authenticated user

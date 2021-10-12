@@ -125,6 +125,20 @@ func (mr *MockUserRepositoryMockRecorder) Update(ctx, dto interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockUserRepository)(nil).Update), ctx, dto)
 }
 
+// UpdatePassword mocks base method.
+func (m *MockUserRepository) UpdatePassword(ctx context.Context, id, password string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePassword", ctx, id, password)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePassword indicates an expected call of UpdatePassword.
+func (mr *MockUserRepositoryMockRecorder) UpdatePassword(ctx, id, password interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePassword", reflect.TypeOf((*MockUserRepository)(nil).UpdatePassword), ctx, id, password)
+}
+
 // MockSessionRepository is a mock of SessionRepository interface.
 type MockSessionRepository struct {
 	ctrl     *gomock.Controller
@@ -149,17 +163,31 @@ func (m *MockSessionRepository) EXPECT() *MockSessionRepositoryMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockSessionRepository) Delete(ctx context.Context, key string) error {
+func (m *MockSessionRepository) Delete(ctx context.Context, key, userID string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, key)
+	ret := m.ctrl.Call(m, "Delete", ctx, key, userID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockSessionRepositoryMockRecorder) Delete(ctx, key interface{}) *gomock.Call {
+func (mr *MockSessionRepositoryMockRecorder) Delete(ctx, key, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSessionRepository)(nil).Delete), ctx, key)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSessionRepository)(nil).Delete), ctx, key, userID)
+}
+
+// DeleteAllByUserID mocks base method.
+func (m *MockSessionRepository) DeleteAllByUserID(ctx context.Context, userID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAllByUserID", ctx, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAllByUserID indicates an expected call of DeleteAllByUserID.
+func (mr *MockSessionRepositoryMockRecorder) DeleteAllByUserID(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllByUserID", reflect.TypeOf((*MockSessionRepository)(nil).DeleteAllByUserID), ctx, userID)
 }
 
 // Get mocks base method.

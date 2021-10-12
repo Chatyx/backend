@@ -116,7 +116,7 @@ func (s *authService) Refresh(ctx context.Context, dto domain.RefreshSessionDTO)
 	}
 
 	defer func() {
-		_ = s.sessionRepo.Delete(ctx, dto.RefreshToken)
+		_ = s.sessionRepo.Delete(ctx, dto.RefreshToken, session.UserID)
 	}()
 
 	if dto.Fingerprint != session.Fingerprint {

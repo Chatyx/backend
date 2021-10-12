@@ -154,7 +154,7 @@ func (s *AppTestSuite) TestUpdateUser() {
 	payload, err := json.Marshal(expectedUser)
 	s.NoError(err, "Failed to marshal user request body")
 
-	req, err := http.NewRequest(http.MethodPatch, s.buildURL("/user"), bytes.NewReader(payload))
+	req, err := http.NewRequest(http.MethodPut, s.buildURL("/user"), bytes.NewReader(payload))
 	s.NoError(err, "Failed to create request")
 
 	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
@@ -178,11 +178,11 @@ func (s *AppTestSuite) TestUpdateUser() {
 }
 
 func (s *AppTestSuite) TestUpdateUserPassword() {
-	oldPassword, newPassword := "helloworld12345", "qwerty55555"
-	strBody := fmt.Sprintf(`{"password":"%s"}`, newPassword)
-	tokenPair := s.authenticate("mick47", oldPassword, uuid.New().String())
+	currPassword, newPassword := "helloworld12345", "qwerty55555"
+	strBody := fmt.Sprintf(`{"current_password":"%s","new_password":"%s"}`, currPassword, newPassword)
+	tokenPair := s.authenticate("mick47", currPassword, uuid.New().String())
 
-	req, err := http.NewRequest(http.MethodPatch, s.buildURL("/user"), strings.NewReader(strBody))
+	req, err := http.NewRequest(http.MethodPut, s.buildURL("/user/password"), strings.NewReader(strBody))
 	s.NoError(err, "Failed to create request")
 
 	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
@@ -191,7 +191,7 @@ func (s *AppTestSuite) TestUpdateUserPassword() {
 	s.Require().NoError(err, "Failed to send request")
 
 	defer resp.Body.Close()
-	s.Require().Equal(http.StatusOK, resp.StatusCode)
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	s.authenticate("mick47", newPassword, uuid.New().String())
 }

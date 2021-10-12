@@ -88,16 +88,23 @@ definitions:
         type: string
       first_name:
         type: string
-      id:
-        type: string
       last_name:
-        type: string
-      password:
         type: string
       username:
         type: string
     required:
-    - id
+    - email
+    - username
+    type: object
+  domain.UpdateUserPasswordDTO:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        type: string
+    required:
+    - current_password
+    - new_password
     type: object
   domain.User:
     properties:
@@ -396,7 +403,7 @@ paths:
       summary: Delete current authenticated user
       tags:
       - Users
-    patch:
+    put:
       consumes:
       - application/json
       parameters:
@@ -428,6 +435,39 @@ paths:
       security:
       - JWTTokenAuth: []
       summary: Update current authenticated user
+      tags:
+      - Users
+  /user/password:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Update body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateUserPasswordDTO'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Update current authenticated user's password
       tags:
       - Users
   /users:
