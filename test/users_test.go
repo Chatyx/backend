@@ -25,8 +25,10 @@ var userTableColumns = []string{
 }
 
 func (s *AppTestSuite) TestUserList() {
-	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
+	dbUsers, err := s.getAllUsersFromDB()
+	s.NoError(err, "Failed to get all users from database")
 
+	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
 	req, err := http.NewRequest(http.MethodGet, s.buildURL("/users"), nil)
 	s.NoError(err, "Failed to create request")
 
@@ -44,9 +46,6 @@ func (s *AppTestSuite) TestUserList() {
 
 	err = json.NewDecoder(resp.Body).Decode(&responseList)
 	s.NoError(err, "Failed to decode response body")
-
-	dbUsers, err := s.getAllUsersFromDB()
-	s.NoError(err, "Failed to get all users from database")
 
 	s.Require().Equal(
 		len(dbUsers), len(responseList.Users),
@@ -116,9 +115,12 @@ func (s *AppTestSuite) TestUserCreate() {
 }
 
 func (s *AppTestSuite) TestGetUser() {
-	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
+	userID := "ba566522-3305-48df-936a-73f47611934b"
+	dbUser, err := s.getUserFromDB(userID)
+	s.NoError(err, "Failed to get user by id")
 
-	req, err := http.NewRequest(http.MethodGet, s.buildURL("/users/ba566522-3305-48df-936a-73f47611934b"), nil)
+	tokenPair := s.authenticate("john1967", "qwerty12345", fingerprintValue)
+	req, err := http.NewRequest(http.MethodGet, s.buildURL("/users/"+userID), nil)
 	s.NoError(err, "Failed to create request")
 
 	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
@@ -132,9 +134,6 @@ func (s *AppTestSuite) TestGetUser() {
 	var respUser domain.User
 	err = json.NewDecoder(resp.Body).Decode(&respUser)
 	s.NoError(err, "Failed to decode response body")
-
-	dbUser, err := s.getUserFromDB(respUser.ID)
-	s.NoError(err, "Failed to get user by id")
 
 	s.compareUsers(dbUser, respUser)
 }
