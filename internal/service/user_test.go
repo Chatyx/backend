@@ -301,6 +301,8 @@ func TestUserService_UpdatePassword(t *testing.T) {
 func TestUserService_Delete(t *testing.T) {
 	type userRepoMockBehaviour func(ur *mockrepository.MockUserRepository, id string)
 
+	type sessionRepoMockBehaviour func(sr *mockrepository.MockSessionRepository, id string)
+
 	logging.InitLogger(
 		logging.LogConfig{
 			LoggerKind: "mock",
@@ -308,16 +310,20 @@ func TestUserService_Delete(t *testing.T) {
 	)
 
 	testTable := []struct {
-		name                  string
-		id                    string
-		userRepoMockBehaviour userRepoMockBehaviour
-		expectedErr           error
+		name                     string
+		id                       string
+		userRepoMockBehaviour    userRepoMockBehaviour
+		sessionRepoMockBehaviour sessionRepoMockBehaviour
+		expectedErr              error
 	}{
 		{
 			name: "Success",
 			id:   "1",
 			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, id string) {
 				ur.EXPECT().Delete(context.Background(), id).Return(nil)
+			},
+			sessionRepoMockBehaviour: func(sr *mockrepository.MockSessionRepository, id string) {
+				sr.EXPECT().DeleteAllByUserID(context.Background(), id).Return(nil)
 			},
 			expectedErr: nil,
 		},
@@ -327,13 +333,27 @@ func TestUserService_Delete(t *testing.T) {
 			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, id string) {
 				ur.EXPECT().Delete(context.Background(), id).Return(domain.ErrUserNotFound)
 			},
+			sessionRepoMockBehaviour: func(sr *mockrepository.MockSessionRepository, id string) {
+				sr.EXPECT().DeleteAllByUserID(context.Background(), id).Return(nil)
+			},
 			expectedErr: domain.ErrUserNotFound,
 		},
 		{
-			name: "Unexpected error",
+			name: "Unexpected error while deleting user's session",
+			id:   "1",
+			sessionRepoMockBehaviour: func(sr *mockrepository.MockSessionRepository, id string) {
+				sr.EXPECT().DeleteAllByUserID(context.Background(), id).Return(errUnexpected)
+			},
+			expectedErr: errUnexpected,
+		},
+		{
+			name: "Unexpected error while deleting user from repo",
 			id:   "1",
 			userRepoMockBehaviour: func(ur *mockrepository.MockUserRepository, id string) {
 				ur.EXPECT().Delete(context.Background(), id).Return(errUnexpected)
+			},
+			sessionRepoMockBehaviour: func(sr *mockrepository.MockSessionRepository, id string) {
+				sr.EXPECT().DeleteAllByUserID(context.Background(), id).Return(nil)
 			},
 			expectedErr: errUnexpected,
 		},
@@ -352,6 +372,10 @@ func TestUserService_Delete(t *testing.T) {
 
 			if testCase.userRepoMockBehaviour != nil {
 				testCase.userRepoMockBehaviour(userRepo, testCase.id)
+			}
+
+			if testCase.sessionRepoMockBehaviour != nil {
+				testCase.sessionRepoMockBehaviour(sessionRepo, testCase.id)
 			}
 
 			err := us.Delete(context.Background(), testCase.id)
