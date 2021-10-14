@@ -1,9 +1,14 @@
 is_debug: true
 domain: localhost
 listen:
-  type: port
-  bind_id: 127.0.0.1
-  bind_port: 8001
+  api:
+    type: port
+    bind_ip: 127.0.0.1
+    bind_port: 8001
+  chat:
+    type: port
+    bind_ip: 127.0.0.1
+    bind_port: 8081
 auth:
   sign_key: qwerty
   access_token_ttl: 30      # 30 minutes

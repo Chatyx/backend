@@ -49,8 +49,10 @@ func TestAppTestSuite(t *testing.T) {
 
 func (s *AppTestSuite) SetupSuite() {
 	cfg := config.GetConfig(configPath)
-	if cfg.Listen.Type != "port" {
-		s.T().Fatalf("can't run integration tests with listen type = %q", cfg.Listen.Type)
+	apiListenCfg := cfg.Listen.API
+
+	if apiListenCfg.Type != "port" {
+		s.T().Fatalf("can't run integration tests with listen type = %q", apiListenCfg.Type)
 	}
 
 	logging.InitLogger(logging.LogConfig{
@@ -95,7 +97,7 @@ func (s *AppTestSuite) SetupSuite() {
 	s.fixtures = fixtures
 	s.redisClient = redisClient
 	s.httpClient = &http.Client{Timeout: 5 * time.Second}
-	s.urlPrefix = fmt.Sprintf("http://localhost:%d/api", cfg.Listen.BindPort)
+	s.urlPrefix = fmt.Sprintf("http://localhost:%d/api", apiListenCfg.BindPort)
 
 	go func() {
 		s.Require().NoError(s.app.Run(), "An error occurred while running the application")

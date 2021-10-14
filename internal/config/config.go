@@ -18,6 +18,11 @@ type ListenConfig struct {
 	BindPort int    `yaml:"bind_port" env-default:"8000"`
 }
 
+type ListenServers struct {
+	API  ListenConfig `yaml:"api"`
+	Chat ListenConfig `yaml:"chat"`
+}
+
 type AuthConfig struct {
 	SignKey         string        `yaml:"sign_key"          env:"SCHT_AUTH_SIGN_KEY" env-required:"true"`
 	AccessTokenTTL  time.Duration `yaml:"access_token_ttl"  env-default:"15"`
@@ -55,7 +60,7 @@ type Cors struct {
 type Config struct {
 	IsDebug  bool           `yaml:"is_debug" env-default:"false"`
 	Domain   string         `yaml:"domain"   env-required:"true"`
-	Listen   ListenConfig   `yaml:"listen"`
+	Listen   ListenServers  `yaml:"listen"`
 	Auth     AuthConfig     `yaml:"auth"`
 	Postgres PostgresConfig `yaml:"postgres"`
 	Redis    RedisConfig    `yaml:"redis"`

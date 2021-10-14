@@ -2,20 +2,18 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"path"
-	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/config"
-	handlers "github.com/Mort4lis/scht-backend/internal/delivery/http"
+	apiHandlers "github.com/Mort4lis/scht-backend/internal/delivery/http"
+	chatHandlers "github.com/Mort4lis/scht-backend/internal/delivery/websocket"
 	"github.com/Mort4lis/scht-backend/internal/repository"
+	"github.com/Mort4lis/scht-backend/internal/server"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/auth"
 	password "github.com/Mort4lis/scht-backend/pkg/hasher"
@@ -27,9 +25,11 @@ import (
 
 type App struct {
 	cfg         *config.Config
-	server      *http.Server
 	dbPool      *pgxpool.Pool
 	redisClient *redis.Client
+
+	apiServer  server.Server
+	chatServer server.Server
 
 	logger logging.Logger
 }
@@ -95,16 +95,43 @@ func NewApp(cfg *config.Config) *App {
 		Auth: authService,
 	}
 
+	apiListenCfg := cfg.Listen.API
+	apiServer := server.NewHttpServerWrapper(
+		server.Config{
+			ServerName: "API Server",
+			ListenType: apiListenCfg.Type,
+			BindIP:     apiListenCfg.BindIP,
+			BindPort:   apiListenCfg.BindPort,
+		},
+		&http.Server{
+			Handler:      apiHandlers.Init(container, cfg, validate),
+			ReadTimeout:  15 * time.Second,
+			WriteTimeout: 15 * time.Second,
+		},
+	)
+
+	chatListenCfg := cfg.Listen.Chat
+	chatServer := server.NewHttpServerWrapper(
+		server.Config{
+			ServerName: "Chat Server",
+			ListenType: chatListenCfg.Type,
+			BindIP:     chatListenCfg.BindIP,
+			BindPort:   chatListenCfg.BindPort,
+		},
+		&http.Server{
+			Handler:      chatHandlers.Init(cfg),
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 5 * time.Second,
+		},
+	)
+
 	return &App{
 		cfg:         cfg,
 		logger:      logger,
 		dbPool:      dbPool,
 		redisClient: redisClient,
-		server: &http.Server{
-			Handler:      handlers.Init(container, cfg, validate),
-			ReadTimeout:  15 * time.Second,
-			WriteTimeout: 15 * time.Second,
-		},
+		apiServer:   apiServer,
+		chatServer:  chatServer,
 	}
 }
 
@@ -145,51 +172,13 @@ func initRedis(cfg config.RedisConfig) (*redis.Client, error) {
 }
 
 func (app *App) Run() error {
-	var (
-		lis    net.Listener
-		lisErr error
-	)
-
-	logger := app.logger
-
-	lisType := app.cfg.Listen.Type
-	switch lisType {
-	case "sock":
-		appDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-		if err != nil {
-			logger.WithError(err).Error("Failed to get the application directory")
-			return fmt.Errorf("failed to get the application directory")
-		}
-
-		sockPath := path.Join(appDir, "scht.sock")
-
-		logger.Infof("Bind application to unix socket %s", sockPath)
-		lis, lisErr = net.Listen("unix", sockPath)
-	case "port":
-		ip, port := app.cfg.Listen.BindIP, app.cfg.Listen.BindPort
-		addr := fmt.Sprintf("%s:%d", ip, port)
-
-		logger.Infof("Bind application to tcp %s", addr)
-		lis, lisErr = net.Listen("tcp", addr)
-	default:
-		return fmt.Errorf("unsupport listen type %q", lisType)
+	if err := app.apiServer.Run(); err != nil {
+		return err
 	}
 
-	if lisErr != nil {
-		logger.WithError(lisErr).Errorf("Failed to listen %s", lisType)
-		return fmt.Errorf("failed to listen %s", lisType)
+	if err := app.chatServer.Run(); err != nil {
+		return err
 	}
-
-	go func() {
-		if err := app.server.Serve(lis); err != nil {
-			switch {
-			case errors.Is(err, http.ErrServerClosed):
-				logger.Info("Server shutdown")
-			default:
-				logger.Fatal(err)
-			}
-		}
-	}()
 
 	return app.gracefulShutdown()
 }
@@ -206,5 +195,9 @@ func (app *App) gracefulShutdown() error {
 
 	app.dbPool.Close()
 
-	return app.server.Close()
+	if err := app.chatServer.Stop(); err != nil {
+		return err
+	}
+
+	return app.apiServer.Stop()
 }

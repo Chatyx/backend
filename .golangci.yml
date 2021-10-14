@@ -80,6 +80,9 @@ issues:
         - bodyclose
         - funlen
         - gocognit
+    - path: internal/app/app.go
+      linters:
+        - funlen
     - path: internal/delivery/http
       linters:
         - godot
