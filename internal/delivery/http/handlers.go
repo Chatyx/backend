@@ -133,9 +133,10 @@ func respondError(w http.ResponseWriter, err error) {
 
 func Init(container service.ServiceContainer, cfg *config.Config, validate *validator.Validate) http.Handler {
 	router := httprouter.New()
+	authMid := AuthorizationMiddlewareFactory(container.Auth)
 
-	newUserHandler(container.User, container.Auth, validate).register(router)
-	newChatHandler(container.Chat, container.Auth, validate).register(router)
+	newUserHandler(container.User, validate).register(router, authMid)
+	newChatHandler(container.Chat, validate).register(router, authMid)
 	newAuthHandler(container.Auth, validate, cfg.Domain, cfg.Auth.RefreshTokenTTL).register(router)
 
 	router.HandlerFunc(http.MethodGet, "/docs/:any", httpSwagger.WrapHandler)

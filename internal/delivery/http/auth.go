@@ -43,8 +43,8 @@ func newAuthHandler(as service.AuthService, validate *validator.Validate, domain
 }
 
 func (h *authHandler) register(router *httprouter.Router) {
-	router.POST(signInURI, h.signIn)
-	router.POST(refreshURI, h.refresh)
+	router.HandlerFunc(http.MethodPost, signInURI, h.signIn)
+	router.HandlerFunc(http.MethodPost, refreshURI, h.refresh)
 }
 
 // @Summary user authentication
@@ -59,7 +59,7 @@ func (h *authHandler) register(router *httprouter.Router) {
 // @Failure 400,401 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /auth/sign-in [post]
-func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 	var dto domain.SignInDTO
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
 		respondError(w, err)
@@ -114,7 +114,7 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request, _ httprou
 // @Failure 400 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /auth/refresh [post]
-func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 	var dto domain.RefreshSessionDTO
 	if cookie, err := req.Cookie(refreshCookieName); err == nil {
 		dto.RefreshToken = cookie.Value

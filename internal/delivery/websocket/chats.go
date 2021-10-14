@@ -13,5 +13,5 @@ type chatSessionHandler struct {
 }
 
 func (h *chatSessionHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-
+	w.WriteHeader(http.StatusNoContent)
 }

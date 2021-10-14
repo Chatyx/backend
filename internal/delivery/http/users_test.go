@@ -12,13 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/julienschmidt/httprouter"
+
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	mockservice "github.com/Mort4lis/scht-backend/internal/service/mocks"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -99,7 +100,7 @@ func TestUserHandler_list(t *testing.T) {
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
+			uh := newUserHandler(us, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/users", nil)
@@ -108,7 +109,7 @@ func TestUserHandler_list(t *testing.T) {
 				testCase.mockBehaviour(us, req.Context(), testCase.returnedUsers)
 			}
 
-			uh.list(rec, req, httprouter.Params{})
+			uh.list(rec, req)
 
 			resp := rec.Result()
 
@@ -132,7 +133,7 @@ func TestUserHandler_detail(t *testing.T) {
 
 	testTable := []struct {
 		name                 string
-		params               httprouter.Params
+		userID               string
 		returnedUser         domain.User
 		mockBehaviour        mockBehaviour
 		expectedStatusCode   int
@@ -140,7 +141,7 @@ func TestUserHandler_detail(t *testing.T) {
 	}{
 		{
 			name:   "Success with required fields",
-			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			userID: "1",
 			returnedUser: domain.User{
 				ID:        "1",
 				Username:  "john1967",
@@ -155,7 +156,7 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 		{
 			name:   "Success with full fields",
-			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			userID: "1",
 			returnedUser: domain.User{
 				ID:         "1",
 				Username:   "john1967",
@@ -175,7 +176,7 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 		{
 			name:   "Not found",
-			params: []httprouter.Param{{Key: "id", Value: uuid.New().String()}},
+			userID: uuid.New().String(),
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string, returnedUser domain.User) {
 				us.EXPECT().GetByID(ctx, id).Return(domain.User{}, domain.ErrUserNotFound)
 			},
@@ -184,7 +185,7 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 		{
 			name:   "Unexpected error",
-			params: []httprouter.Param{{Key: "id", Value: "1"}},
+			userID: "1",
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string, returnedUser domain.User) {
 				us.EXPECT().GetByID(ctx, id).Return(domain.User{}, errors.New("unexpected error"))
 			},
@@ -202,17 +203,23 @@ func TestUserHandler_detail(t *testing.T) {
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
+			uh := newUserHandler(us, validate)
 
-			id := testCase.params.ByName("id")
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/api/users/"+id, nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/users/"+testCase.userID, nil)
+			ctx := context.WithValue(
+				req.Context(),
+				httprouter.ParamsKey,
+				httprouter.Params{{Key: "id", Value: testCase.userID}},
+			)
+
+			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(us, req.Context(), id, testCase.returnedUser)
+				testCase.mockBehaviour(us, req.Context(), testCase.userID, testCase.returnedUser)
 			}
 
-			uh.detail(rec, req, testCase.params)
+			uh.detail(rec, req)
 
 			resp := rec.Result()
 
@@ -362,7 +369,7 @@ func TestUserHandler_create(t *testing.T) {
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
+			uh := newUserHandler(us, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/users", strings.NewReader(testCase.requestBody))
@@ -371,7 +378,7 @@ func TestUserHandler_create(t *testing.T) {
 				testCase.mockBehavior(us, req.Context(), testCase.createUserDTO, testCase.createdUser)
 			}
 
-			uh.create(rec, req, httprouter.Params{})
+			uh.create(rec, req)
 
 			resp := rec.Result()
 
@@ -512,7 +519,7 @@ func TestUserHandler_update(t *testing.T) {
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
+			uh := newUserHandler(us, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPut, "/api/user", strings.NewReader(testCase.requestBody))
@@ -522,7 +529,7 @@ func TestUserHandler_update(t *testing.T) {
 				testCase.mockBehavior(us, req.Context(), testCase.updateUserDTO, testCase.updatedUser)
 			}
 
-			uh.update(rec, req, httprouter.Params{})
+			uh.update(rec, req)
 
 			resp := rec.Result()
 
@@ -637,7 +644,7 @@ func TestUserHandler_updatePassword(t *testing.T) {
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
+			uh := newUserHandler(us, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPut, "/api/user/password", strings.NewReader(testCase.requestBody))
@@ -647,7 +654,7 @@ func TestUserHandler_updatePassword(t *testing.T) {
 				testCase.mockBehavior(us, req.Context(), testCase.updateUserPasswordDTO)
 			}
 
-			uh.updatePassword(rec, req, httprouter.Params{})
+			uh.updatePassword(rec, req)
 
 			resp := rec.Result()
 
@@ -713,7 +720,7 @@ func TestUserHandler_delete(t *testing.T) {
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, mockservice.NewMockAuthService(c), validate)
+			uh := newUserHandler(us, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodDelete, "/api/user", nil)
@@ -723,7 +730,7 @@ func TestUserHandler_delete(t *testing.T) {
 				testCase.mockBehaviour(us, req.Context(), testCase.authUserID)
 			}
 
-			uh.delete(rec, req, httprouter.Params{})
+			uh.delete(rec, req)
 
 			resp := rec.Result()
 

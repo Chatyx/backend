@@ -7,8 +7,9 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/julienschmidt/httprouter"
 )
+
+type Middleware func(handler http.Handler) http.Handler
 
 type StatusCodeRecorder struct {
 	http.ResponseWriter
@@ -41,28 +42,30 @@ func loggingMiddleware(handler http.Handler) http.Handler {
 	})
 }
 
-func authorizationMiddleware(handler httprouter.Handle, as service.AuthService) httprouter.Handle {
-	return func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		accessToken, err := extractTokenFromHeader(req.Header.Get("Authorization"))
-		if err != nil {
-			respondError(w, err)
-			return
-		}
-
-		claims, err := as.Authorize(accessToken)
-		if err != nil {
-			switch err {
-			case domain.ErrInvalidAccessToken:
-				respondError(w, errInvalidAccessToken)
-			default:
-				respondError(w, errInternalServer)
+func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
+	return func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			accessToken, err := extractTokenFromHeader(req.Header.Get("Authorization"))
+			if err != nil {
+				respondError(w, err)
+				return
 			}
 
-			return
-		}
+			claims, err := as.Authorize(accessToken)
+			if err != nil {
+				switch err {
+				case domain.ErrInvalidAccessToken:
+					respondError(w, errInvalidAccessToken)
+				default:
+					respondError(w, errInternalServer)
+				}
 
-		ctx := domain.NewContextFromUserID(req.Context(), claims.Subject)
+				return
+			}
 
-		handler(w, req.WithContext(ctx), params)
+			ctx := domain.NewContextFromUserID(req.Context(), claims.Subject)
+
+			handler.ServeHTTP(w, req.WithContext(ctx))
+		})
 	}
 }

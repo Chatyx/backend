@@ -15,7 +15,6 @@ import (
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/golang/mock/gomock"
-	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -108,6 +107,7 @@ func TestAuthorizationMiddleware(t *testing.T) {
 			defer c.Finish()
 
 			as := mockservice.NewMockAuthService(c)
+			authMid := AuthorizationMiddlewareFactory(as)
 
 			if testCase.mockBehaviour != nil {
 				testCase.mockBehaviour(as, testCase.accessToken, testCase.claims)
@@ -120,12 +120,12 @@ func TestAuthorizationMiddleware(t *testing.T) {
 				req.Header.Add(testCase.authorizationHeaderKey, testCase.authorizationHeaderValue)
 			}
 
-			handler := authorizationMiddleware(func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+			handler := authMid(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				id := domain.UserIDFromContext(req.Context())
 				_, _ = fmt.Fprintf(w, `{"id":"%s"}`, id)
-			}, as)
+			}))
 
-			handler(rec, req, httprouter.Params{})
+			handler.ServeHTTP(rec, req)
 
 			resp := rec.Result()
 

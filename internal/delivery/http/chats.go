@@ -27,11 +27,10 @@ func (r ChatListResponse) Encode() ([]byte, error) {
 type chatHandler struct {
 	*baseHandler
 	chatService service.ChatService
-	authService service.AuthService
 	logger      logging.Logger
 }
 
-func newChatHandler(chatService service.ChatService, authService service.AuthService, validate *validator.Validate) *chatHandler {
+func newChatHandler(chatService service.ChatService, validate *validator.Validate) *chatHandler {
 	logger := logging.GetLogger()
 
 	return &chatHandler{
@@ -40,17 +39,16 @@ func newChatHandler(chatService service.ChatService, authService service.AuthSer
 			validate: validate,
 		},
 		chatService: chatService,
-		authService: authService,
 		logger:      logger,
 	}
 }
 
-func (h *chatHandler) register(router *httprouter.Router) {
-	router.GET(listChatURI, authorizationMiddleware(h.list, h.authService))
-	router.POST(listChatURI, authorizationMiddleware(h.create, h.authService))
-	router.GET(detailChatURI, authorizationMiddleware(h.detail, h.authService))
-	router.PUT(detailChatURI, authorizationMiddleware(h.update, h.authService))
-	router.DELETE(detailChatURI, authorizationMiddleware(h.delete, h.authService))
+func (h *chatHandler) register(router *httprouter.Router, authMid Middleware) {
+	router.Handler(http.MethodGet, listChatURI, authMid(http.HandlerFunc(h.list)))
+	router.Handler(http.MethodPost, listChatURI, authMid(http.HandlerFunc(h.create)))
+	router.Handler(http.MethodGet, detailChatURI, authMid(http.HandlerFunc(h.detail)))
+	router.Handler(http.MethodPut, detailChatURI, authMid(http.HandlerFunc(h.update)))
+	router.Handler(http.MethodDelete, detailChatURI, authMid(http.HandlerFunc(h.delete)))
 }
 
 // @Summary Get list of chats where user consists
@@ -61,7 +59,7 @@ func (h *chatHandler) register(router *httprouter.Router) {
 // @Success 200 {object} ChatListResponse
 // @Failure 500 {object} ResponseError
 // @Router /chats [get]
-func (h *chatHandler) list(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *chatHandler) list(w http.ResponseWriter, req *http.Request) {
 	memberID := domain.UserIDFromContext(req.Context())
 
 	chats, err := h.chatService.List(req.Context(), memberID)
@@ -83,7 +81,7 @@ func (h *chatHandler) list(w http.ResponseWriter, req *http.Request, _ httproute
 // @Failure 400 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats [post]
-func (h *chatHandler) create(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 	dto := domain.CreateChatDTO{}
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
 		respondError(w, err)
@@ -116,8 +114,9 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request, _ httprou
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats/{id} [get]
-func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	chatID, memberID := params.ByName("id"), domain.UserIDFromContext(req.Context())
+func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
+	ps := httprouter.ParamsFromContext(req.Context())
+	chatID, memberID := ps.ByName("id"), domain.UserIDFromContext(req.Context())
 
 	chat, err := h.chatService.GetByID(req.Context(), chatID, memberID)
 	if err != nil {
@@ -145,14 +144,16 @@ func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request, params ht
 // @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats/{id} [put]
-func (h *chatHandler) update(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateChatDTO{}
+	ps := httprouter.ParamsFromContext(req.Context())
+
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
 		respondError(w, err)
 		return
 	}
 
-	dto.ID = params.ByName("id")
+	dto.ID = ps.ByName("id")
 	dto.CreatorID = domain.UserIDFromContext(req.Context())
 
 	if err := h.validateStruct(dto); err != nil {
@@ -185,8 +186,9 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request, params ht
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats/{id} [delete]
-func (h *chatHandler) delete(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	chatID, creatorID := params.ByName("id"), domain.UserIDFromContext(req.Context())
+func (h *chatHandler) delete(w http.ResponseWriter, req *http.Request) {
+	ps := httprouter.ParamsFromContext(req.Context())
+	chatID, creatorID := ps.ByName("id"), domain.UserIDFromContext(req.Context())
 
 	err := h.chatService.Delete(req.Context(), chatID, creatorID)
 	if err != nil {

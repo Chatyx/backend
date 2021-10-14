@@ -29,11 +29,10 @@ func (r UserListResponse) Encode() ([]byte, error) {
 type userHandler struct {
 	*baseHandler
 	userService service.UserService
-	authService service.AuthService
 	logger      logging.Logger
 }
 
-func newUserHandler(us service.UserService, as service.AuthService, validate *validator.Validate) *userHandler {
+func newUserHandler(us service.UserService, validate *validator.Validate) *userHandler {
 	logger := logging.GetLogger()
 
 	return &userHandler{
@@ -42,18 +41,17 @@ func newUserHandler(us service.UserService, as service.AuthService, validate *va
 			validate: validate,
 		},
 		userService: us,
-		authService: as,
 		logger:      logger,
 	}
 }
 
-func (h *userHandler) register(router *httprouter.Router) {
-	router.GET(listUserURL, authorizationMiddleware(h.list, h.authService))
-	router.POST(listUserURL, h.create)
-	router.GET(detailUserURI, authorizationMiddleware(h.detail, h.authService))
-	router.PUT(currentUserURL, authorizationMiddleware(h.update, h.authService))
-	router.PUT(userPasswordURI, authorizationMiddleware(h.updatePassword, h.authService))
-	router.DELETE(currentUserURL, authorizationMiddleware(h.delete, h.authService))
+func (h *userHandler) register(router *httprouter.Router, authMid Middleware) {
+	router.Handler(http.MethodGet, listUserURL, authMid(http.HandlerFunc(h.list)))
+	router.HandlerFunc(http.MethodPost, listUserURL, h.create)
+	router.Handler(http.MethodGet, detailUserURI, authMid(http.HandlerFunc(h.detail)))
+	router.Handler(http.MethodPut, currentUserURL, authMid(http.HandlerFunc(h.update)))
+	router.Handler(http.MethodPut, userPasswordURI, authMid(http.HandlerFunc(h.updatePassword)))
+	router.Handler(http.MethodDelete, currentUserURL, authMid(http.HandlerFunc(h.delete)))
 }
 
 // @Summary Get list of users
@@ -64,7 +62,7 @@ func (h *userHandler) register(router *httprouter.Router) {
 // @Success 200 {object} UserListResponse
 // @Failure 500 {object} ResponseError
 // @Router /users [get]
-func (h *userHandler) list(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *userHandler) list(w http.ResponseWriter, req *http.Request) {
 	users, err := h.userService.List(req.Context())
 	if err != nil {
 		respondError(w, errInternalServer)
@@ -84,8 +82,10 @@ func (h *userHandler) list(w http.ResponseWriter, req *http.Request, _ httproute
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /users/{id} [get]
-func (h *userHandler) detail(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	user, err := h.userService.GetByID(req.Context(), params.ByName("id"))
+func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
+	ps := httprouter.ParamsFromContext(req.Context())
+
+	user, err := h.userService.GetByID(req.Context(), ps.ByName("id"))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:
@@ -109,7 +109,7 @@ func (h *userHandler) detail(w http.ResponseWriter, req *http.Request, params ht
 // @Failure 400 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /users [post]
-func (h *userHandler) create(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 	dto := domain.CreateUserDTO{}
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
 		respondError(w, err)
@@ -146,7 +146,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request, _ httprou
 // @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /user [put]
-func (h *userHandler) update(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateUserDTO{}
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
 		respondError(w, err)
@@ -187,7 +187,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request, _ httprou
 // @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /user/password [put]
-func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateUserPasswordDTO{}
 	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
 		respondError(w, err)
@@ -226,7 +226,7 @@ func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request, _
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /user [delete]
-func (h *userHandler) delete(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (h *userHandler) delete(w http.ResponseWriter, req *http.Request) {
 	err := h.userService.Delete(req.Context(), domain.UserIDFromContext(req.Context()))
 	if err != nil {
 		switch err {

@@ -17,7 +17,6 @@ import (
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/golang/mock/gomock"
-	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -161,7 +160,7 @@ func TestAuthHandler_signIn(t *testing.T) {
 				testCase.mockBehavior(as, req.Context(), testCase.signInDTO, testCase.jwtPair)
 			}
 
-			ah.signIn(rec, req, httprouter.Params{})
+			ah.signIn(rec, req)
 
 			resp := rec.Result()
 
@@ -322,7 +321,7 @@ func TestAuthHandler_refresh(t *testing.T) {
 				testCase.mockBehavior(as, req.Context(), testCase.refreshSessionDTO, testCase.jwtPair)
 			}
 
-			ah.refresh(rec, req, httprouter.Params{})
+			ah.refresh(rec, req)
 
 			resp := rec.Result()
 

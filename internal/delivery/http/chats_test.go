@@ -99,7 +99,7 @@ func TestChatHandler_list(t *testing.T) {
 			defer c.Finish()
 
 			chs := mockservice.NewMockChatService(c)
-			chh := newChatHandler(chs, mockservice.NewMockAuthService(c), validate)
+			chh := newChatHandler(chs, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/chats", nil)
@@ -109,7 +109,7 @@ func TestChatHandler_list(t *testing.T) {
 				testCase.mockBehaviour(chs, req.Context(), testCase.memberID, testCase.returnedChats)
 			}
 
-			chh.list(rec, req, httprouter.Params{})
+			chh.list(rec, req)
 
 			resp := rec.Result()
 
@@ -205,17 +205,24 @@ func TestChatHandler_detail(t *testing.T) {
 			defer c.Finish()
 
 			chs := mockservice.NewMockChatService(c)
-			chh := newChatHandler(chs, mockservice.NewMockAuthService(c), validate)
+			chh := newChatHandler(chs, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/chats/"+testCase.chatID, nil)
 			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.memberID))
+			ctx := context.WithValue(
+				req.Context(),
+				httprouter.ParamsKey,
+				httprouter.Params{{Key: "id", Value: testCase.chatID}},
+			)
+
+			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
 				testCase.mockBehaviour(chs, req.Context(), testCase.chatID, testCase.memberID, testCase.returnedChat)
 			}
 
-			chh.detail(rec, req, []httprouter.Param{{Key: "id", Value: testCase.chatID}})
+			chh.detail(rec, req)
 
 			resp := rec.Result()
 
@@ -328,7 +335,7 @@ func TestChatHandler_create(t *testing.T) {
 			defer c.Finish()
 
 			chs := mockservice.NewMockChatService(c)
-			chh := newChatHandler(chs, mockservice.NewMockAuthService(c), validate)
+			chh := newChatHandler(chs, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/chats", strings.NewReader(testCase.requestBody))
@@ -338,7 +345,7 @@ func TestChatHandler_create(t *testing.T) {
 				testCase.mockBehaviour(chs, req.Context(), testCase.createChatDTO, testCase.createdChat)
 			}
 
-			chh.create(rec, req, httprouter.Params{})
+			chh.create(rec, req)
 
 			resp := rec.Result()
 
@@ -478,17 +485,24 @@ func TestChatHandler_update(t *testing.T) {
 			defer c.Finish()
 
 			chs := mockservice.NewMockChatService(c)
-			chh := newChatHandler(chs, mockservice.NewMockAuthService(c), validate)
+			chh := newChatHandler(chs, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPut, "/api/chats/"+testCase.chatID, strings.NewReader(testCase.requestBody))
-			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.creatorID))
+			ctx := context.WithValue(
+				req.Context(),
+				httprouter.ParamsKey,
+				httprouter.Params{{Key: "id", Value: testCase.chatID}},
+			)
+
+			ctx = domain.NewContextFromUserID(ctx, testCase.creatorID)
+			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
 				testCase.mockBehaviour(chs, req.Context(), testCase.updateChatDTO, testCase.updatedChat)
 			}
 
-			chh.update(rec, req, []httprouter.Param{{Key: "id", Value: testCase.chatID}})
+			chh.update(rec, req)
 
 			resp := rec.Result()
 
@@ -558,17 +572,24 @@ func TestChatHandler_delete(t *testing.T) {
 			defer c.Finish()
 
 			chs := mockservice.NewMockChatService(c)
-			chh := newChatHandler(chs, mockservice.NewMockAuthService(c), validate)
+			chh := newChatHandler(chs, validate)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodDelete, "/api/chats/"+testCase.chatID, nil)
-			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.creatorID))
+			ctx := context.WithValue(
+				req.Context(),
+				httprouter.ParamsKey,
+				httprouter.Params{{Key: "id", Value: testCase.chatID}},
+			)
+
+			ctx = domain.NewContextFromUserID(ctx, testCase.creatorID)
+			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
 				testCase.mockBehaviour(chs, req.Context(), testCase.chatID, testCase.creatorID)
 			}
 
-			chh.delete(rec, req, []httprouter.Param{{Key: "id", Value: testCase.chatID}})
+			chh.delete(rec, req)
 
 			resp := rec.Result()
 
