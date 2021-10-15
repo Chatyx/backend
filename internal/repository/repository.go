@@ -33,3 +33,16 @@ type ChatRepository interface {
 	Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error)
 	Delete(ctx context.Context, chatID, creatorID string) error
 }
+
+type MessagePubSub interface {
+	Publish(ctx context.Context, message domain.Message, topic string) error
+	Subscribe(ctx context.Context, topics ...string) MessageSubscriber
+}
+
+type MessageSubscriber interface {
+	Subscribe(ctx context.Context, topics ...string) error
+	Unsubscribe(ctx context.Context, topics ...string) error
+	ReceiveMessage(ctx context.Context) (domain.Message, error)
+	MessageChannel(ctx context.Context) <-chan domain.Message
+	Close() error
+}

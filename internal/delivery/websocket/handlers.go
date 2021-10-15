@@ -13,7 +13,7 @@ func Init(container service.ServiceContainer, cfg *config.Config) http.Handler {
 	mux := http.NewServeMux()
 	authMid := httpHandlers.AuthorizationMiddlewareFactory(container.Auth)
 
-	mux.Handle("/", authMid(&chatSessionHandler{}))
+	mux.Handle("/", authMid(newChatSessionHandler(container.Message)))
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins: cfg.Cors.AllowedOrigins,

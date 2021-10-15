@@ -32,8 +32,13 @@ type ChatService interface {
 	Delete(ctx context.Context, chatID, creatorID string) error
 }
 
+type MessageService interface {
+	NewServeSession(ctx context.Context, userID string) (inCh chan<- domain.Message, outCh <-chan domain.Message, errCh <-chan error)
+}
+
 type ServiceContainer struct {
-	User UserService
-	Chat ChatService
-	Auth AuthService
+	User    UserService
+	Chat    ChatService
+	Message MessageService
+	Auth    AuthService
 }

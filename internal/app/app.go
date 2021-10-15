@@ -74,12 +74,14 @@ func NewApp(cfg *config.Config) *App {
 		logger.WithError(err).Fatal("Failed to init validator")
 	}
 
+	msgPubSub := repository.NewMessagePubSub(redisClient)
 	userRepo := repository.NewUserPostgresRepository(dbPool)
 	chatRepo := repository.NewChatPostgresRepository(dbPool)
 	sessionRepo := repository.NewSessionRedisRepository(redisClient)
 
 	userService := service.NewUserService(userRepo, sessionRepo, hasher)
 	chatService := service.NewChatService(chatRepo)
+	messageService := service.NewMessageService(chatService, msgPubSub)
 	authService := service.NewAuthService(service.AuthServiceConfig{
 		UserService:     userService,
 		SessionRepo:     sessionRepo,
@@ -90,9 +92,10 @@ func NewApp(cfg *config.Config) *App {
 	})
 
 	container := service.ServiceContainer{
-		User: userService,
-		Chat: chatService,
-		Auth: authService,
+		User:    userService,
+		Chat:    chatService,
+		Message: messageService,
+		Auth:    authService,
 	}
 
 	apiListenCfg := cfg.Listen.API
