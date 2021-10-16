@@ -11,10 +11,12 @@ require (
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/go-redis/redismock/v8 v8.0.6
 	github.com/go-testfixtures/testfixtures/v3 v3.6.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/golang-migrate/migrate/v4 v4.15.0
 	github.com/golang/mock v1.6.0
+	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/ilyakaznacheev/cleanenv v1.2.5

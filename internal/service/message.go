@@ -87,21 +87,19 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 }
 
 func (s *messageService) Create(ctx context.Context, senderID string, dto domain.CreateMessageDTO) (domain.Message, error) {
-	if dto.Action == "" {
-		dto.Action = domain.MessageSendAction
-	}
-
-	// TODO: check if user has access to this chat
-	// TODO: store this message (redis)
-
 	curTime := time.Now()
 	message := domain.Message{
-		Action:    dto.Action,
 		Text:      dto.Text,
 		ChatID:    dto.ChatID,
 		SenderID:  senderID,
 		CreatedAt: &curTime,
 	}
+
+	/*
+		TODO: at the beginning of the function:
+		1.  check if user has access to this chat
+		2.  store this message (redis)
+	*/
 
 	if err := s.pubSub.Publish(ctx, message, "chat:"+message.ChatID); err != nil {
 		s.logger.WithError(err).Errorf("An error occurred while publishing the message to the chat (id=%s)", message.ChatID)

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-redis/redis/v8"
 )
@@ -21,7 +22,7 @@ func (s *messageRedisSubscriber) ReceiveMessage(ctx context.Context) (domain.Mes
 	}
 
 	var message domain.Message
-	if err = message.Decode([]byte(msg.Payload)); err != nil {
+	if err = encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(msg.Payload)); err != nil {
 		s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
 		return domain.Message{}, err
 	}
@@ -46,7 +47,7 @@ func (s *messageRedisSubscriber) MessageChannel(ctx context.Context) <-chan doma
 				}
 
 				var message domain.Message
-				if err := message.Decode([]byte(msg.Payload)); err != nil {
+				if err := encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(msg.Payload)); err != nil {
 					s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
 					return
 				}
@@ -99,7 +100,7 @@ func NewMessagePubSub(redisClient *redis.Client) MessagePubSub {
 }
 
 func (ps *messageRedisPubSub) Publish(ctx context.Context, message domain.Message, topic string) error {
-	payload, err := message.Encode()
+	payload, err := encoding.NewProtobufMessageMarshaler(message).Marshal()
 	if err != nil {
 		ps.logger.WithError(err).Error("An error occurred while marshaling the message")
 		return err

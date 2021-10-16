@@ -1,0 +1,27 @@
+syntax = "proto3";
+package decoders;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "./proto-gen";
+
+message CreateMessageDTO {
+  string text = 1;
+  string chat_id = 2;
+}
+
+message Message {
+  enum Action {
+    SEND = 0;
+    JOIN = 1;
+    LEAVE = 2;
+    BLOCK = 3;
+  }
+
+  Action action = 1;
+  string text = 2;
+  string chat_id = 3;
+  string sender_id = 4;
+
+  google.protobuf.Timestamp created_at = 5;
+}

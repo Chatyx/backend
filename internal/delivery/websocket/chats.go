@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-playground/validator/v10"
@@ -37,13 +38,13 @@ func (s *chatSession) Serve() {
 		case <-errCh2:
 			return
 		case msg := <-outCh:
-			payload, err := msg.Encode()
+			payload, err := encoding.NewProtobufMessageMarshaler(msg).Marshal()
 			if err != nil {
 				s.logger.WithError(err).Error("An error occurred while marshalling the message")
 				return
 			}
 
-			if err = s.conn.WriteMessage(ws.TextMessage, payload); err != nil {
+			if err = s.conn.WriteMessage(ws.BinaryMessage, payload); err != nil {
 				s.logger.WithError(err).Error("An error occurred while writing the message to websocket")
 				return
 			}
@@ -73,7 +74,7 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) <-chan e
 			}
 
 			var dto domain.CreateMessageDTO
-			if err = dto.Decode(payload); err != nil {
+			if err = encoding.NewProtobufCreateDTOMessageUnmarshaler(&dto).Unmarshal(payload); err != nil {
 				s.logger.WithError(err).Debug("failed to unmarshalling the message")
 				errCh <- err
 
