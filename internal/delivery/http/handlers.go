@@ -119,7 +119,7 @@ func respondError(w http.ResponseWriter, err error) {
 
 	respBody, err := json.Marshal(appErr)
 	if err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while marshalling application error")
+		logging.GetLogger().WithError(err).Error("An error occurred while marshaling application error")
 		return
 	}
 

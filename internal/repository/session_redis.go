@@ -37,7 +37,7 @@ func (r *sessionRedisRepository) Get(ctx context.Context, key string) (domain.Se
 
 	var session domain.Session
 	if err = json.Unmarshal([]byte(payload), &session); err != nil {
-		r.logger.WithError(err).Error("An error occurred while unmarshalling refresh session payload")
+		r.logger.WithError(err).Error("An error occurred while unmarshaling refresh session payload")
 		return domain.Session{}, err
 	}
 

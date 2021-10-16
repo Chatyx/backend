@@ -40,7 +40,7 @@ func (s *chatSession) Serve() {
 		case msg := <-outCh:
 			payload, err := encoding.NewProtobufMessageMarshaler(msg).Marshal()
 			if err != nil {
-				s.logger.WithError(err).Error("An error occurred while marshalling the message")
+				s.logger.WithError(err).Error("An error occurred while marshaling the message")
 				return
 			}
 
@@ -75,7 +75,7 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) <-chan e
 
 			var dto domain.CreateMessageDTO
 			if err = encoding.NewProtobufCreateDTOMessageUnmarshaler(&dto).Unmarshal(payload); err != nil {
-				s.logger.WithError(err).Debug("failed to unmarshalling the message")
+				s.logger.WithError(err).Debug("failed to unmarshaling the message")
 				errCh <- err
 
 				return

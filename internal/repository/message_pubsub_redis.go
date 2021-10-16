@@ -23,7 +23,7 @@ func (s *messageRedisSubscriber) ReceiveMessage(ctx context.Context) (domain.Mes
 
 	var message domain.Message
 	if err = encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(msg.Payload)); err != nil {
-		s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
+		s.logger.WithError(err).Error("An error occurred while unmarshaling the message")
 		return domain.Message{}, err
 	}
 
@@ -48,7 +48,7 @@ func (s *messageRedisSubscriber) MessageChannel(ctx context.Context) <-chan doma
 
 				var message domain.Message
 				if err := encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(msg.Payload)); err != nil {
-					s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
+					s.logger.WithError(err).Error("An error occurred while unmarshaling the message")
 					return
 				}
 

@@ -73,14 +73,14 @@ func TestSessionRedisRepository_Get(t *testing.T) {
 			expectedErr:       errUnexpected,
 		},
 		{
-			name:  "Unexpected error while unmarshalling",
+			name:  "Unexpected error while unmarshaling",
 			key:   "qGVFLRQw37TnSmG0LKFN",
 			value: `{"UserID":"1","RefreshToken":"qGVFLRQw37TnSmG0LKFN"`,
 			mockBehavior: func(mock redismock.ClientMock, key, value string) {
 				mock.ExpectGet(key).SetVal(value)
 			},
 			strictCheckErrors: false,
-			expectedErr:       errors.New("unmarshalling error"),
+			expectedErr:       errors.New("unmarshaling error"),
 		},
 	}
 
