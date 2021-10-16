@@ -3,17 +3,18 @@ package websocket
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/go-playground/validator/v10"
 	ws "github.com/gorilla/websocket"
 )
 
 type chatSession struct {
 	conn       *ws.Conn
 	userID     string
+	validate   *validator.Validate
 	msgService service.MessageService
 	logger     logging.Logger
 }
@@ -50,7 +51,7 @@ func (s *chatSession) Serve() {
 	}
 }
 
-func (s *chatSession) readMessages(inCh chan<- domain.Message) <-chan error {
+func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) <-chan error {
 	errCh := make(chan error)
 
 	go func() {
@@ -71,19 +72,22 @@ func (s *chatSession) readMessages(inCh chan<- domain.Message) <-chan error {
 				return
 			}
 
-			var message domain.Message
-			if err = message.Decode(payload); err != nil {
-				s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
+			var dto domain.CreateMessageDTO
+			if err = dto.Decode(payload); err != nil {
+				s.logger.WithError(err).Debug("failed to unmarshalling the message")
 				errCh <- err
 
 				return
 			}
 
-			curTime := time.Now()
-			message.SenderID = s.userID
-			message.CreatedAt = &curTime
+			if err = s.validate.Struct(dto); err != nil {
+				s.logger.WithError(err).Debug("message validation error")
+				errCh <- err
 
-			inCh <- message
+				return
+			}
+
+			inCh <- dto
 		}
 
 		errCh <- nil
@@ -94,16 +98,18 @@ func (s *chatSession) readMessages(inCh chan<- domain.Message) <-chan error {
 
 type chatSessionHandler struct {
 	upgrader   *ws.Upgrader
+	validate   *validator.Validate
 	msgService service.MessageService
 	logger     logging.Logger
 }
 
-func newChatSessionHandler(msgService service.MessageService) *chatSessionHandler {
+func newChatSessionHandler(msgService service.MessageService, validate *validator.Validate) *chatSessionHandler {
 	return &chatSessionHandler{
 		upgrader: &ws.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
+		validate:   validate,
 		msgService: msgService,
 		logger:     logging.GetLogger(),
 	}
@@ -121,6 +127,7 @@ func (h *chatSessionHandler) ServeHTTP(w http.ResponseWriter, req *http.Request)
 	chs := &chatSession{
 		conn:       conn,
 		logger:     h.logger,
+		validate:   h.validate,
 		msgService: h.msgService,
 		userID:     domain.UserIDFromContext(req.Context()),
 	}

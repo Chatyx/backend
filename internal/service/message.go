@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 
@@ -23,9 +24,9 @@ func NewMessageService(chatService ChatService, pubSub repository.MessagePubSub)
 	}
 }
 
-func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.Message, <-chan domain.Message, <-chan error) {
+func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, <-chan error) {
 	errCh := make(chan error)
-	inCh := make(chan domain.Message)
+	inCh := make(chan domain.CreateMessageDTO)
 	outCh := make(chan domain.Message)
 
 	go func() {
@@ -51,18 +52,13 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 	LOOP:
 		for {
 			select {
-			case message, ok := <-inCh:
+			case dto, ok := <-inCh:
 				if !ok {
 					break LOOP
 				}
 
-				// TODO: check if user has access to this chat
-				// TODO: store this message (redis)
-
-				if err = s.pubSub.Publish(ctx, message, "chat:"+message.ChatID); err != nil {
-					s.logger.WithError(err).Errorf("An error occurred while publishing the message to the chat (id=%s)", message.ChatID)
+				if _, err = s.Create(ctx, userID, dto); err != nil {
 					errCh <- err
-
 					return
 				}
 			case message, ok := <-subCh:
@@ -88,4 +84,29 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 	}()
 
 	return inCh, outCh, errCh
+}
+
+func (s *messageService) Create(ctx context.Context, senderID string, dto domain.CreateMessageDTO) (domain.Message, error) {
+	if dto.Action == "" {
+		dto.Action = domain.MessageSendAction
+	}
+
+	// TODO: check if user has access to this chat
+	// TODO: store this message (redis)
+
+	curTime := time.Now()
+	message := domain.Message{
+		Action:    dto.Action,
+		Text:      dto.Text,
+		ChatID:    dto.ChatID,
+		SenderID:  senderID,
+		CreatedAt: &curTime,
+	}
+
+	if err := s.pubSub.Publish(ctx, message, "chat:"+message.ChatID); err != nil {
+		s.logger.WithError(err).Errorf("An error occurred while publishing the message to the chat (id=%s)", message.ChatID)
+		return domain.Message{}, err
+	}
+
+	return message, nil
 }

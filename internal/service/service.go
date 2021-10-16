@@ -33,7 +33,8 @@ type ChatService interface {
 }
 
 type MessageService interface {
-	NewServeSession(ctx context.Context, userID string) (inCh chan<- domain.Message, outCh <-chan domain.Message, errCh <-chan error)
+	NewServeSession(ctx context.Context, userID string) (inCh chan<- domain.CreateMessageDTO, outCh <-chan domain.Message, errCh <-chan error)
+	Create(ctx context.Context, senderID string, dto domain.CreateMessageDTO) (domain.Message, error)
 }
 
 type ServiceContainer struct {

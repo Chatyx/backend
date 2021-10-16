@@ -122,7 +122,7 @@ func NewApp(cfg *config.Config) *App {
 			BindPort:   chatListenCfg.BindPort,
 		},
 		&http.Server{
-			Handler:      chatHandlers.Init(container, cfg),
+			Handler:      chatHandlers.Init(container, cfg, validate),
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 5 * time.Second,
 		},
