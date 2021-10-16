@@ -7,18 +7,18 @@ import (
 )
 
 const (
-	MessageSendType  = "send"
-	MessageJoinType  = "join"
-	MessageLeaveType = "leave"
-	MessageBlockType = "block"
+	MessageSendAction  = "send"
+	MessageJoinAction  = "join"
+	MessageLeaveAction = "leave"
+	MessageBlockAction = "block"
 )
 
 type Message struct {
-	Type      string `json:"type"`
-	Message   string `json:"text"`
-	ChatID    string `json:"chat_id"`
-	SenderID  string
-	CreatedAt *time.Time
+	Action    string     `json:"action"`
+	Message   string     `json:"text"`
+	ChatID    string     `json:"chat_id"`
+	SenderID  string     `json:"sender_id"`
+	CreatedAt *time.Time `json:"created_at"`
 }
 
 func (m *Message) Encode() ([]byte, error) {

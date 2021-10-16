@@ -19,11 +19,7 @@ type chatSession struct {
 }
 
 func (s *chatSession) Serve() {
-	defer func() {
-		if err := s.conn.Close(); err != nil {
-			s.logger.WithError(err).Error("Failed to close websocket connection")
-		}
-	}()
+	defer s.conn.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -31,11 +27,13 @@ func (s *chatSession) Serve() {
 	inCh, outCh, errCh := s.msgService.NewServeSession(ctx, s.userID)
 	defer close(inCh)
 
+	errCh2 := s.readMessages(inCh)
+
 	for {
 		select {
 		case <-errCh:
 			return
-		case <-s.readMessages(inCh):
+		case <-errCh2:
 			return
 		case msg := <-outCh:
 			payload, err := msg.Encode()
@@ -53,19 +51,22 @@ func (s *chatSession) Serve() {
 }
 
 func (s *chatSession) readMessages(inCh chan<- domain.Message) <-chan error {
-	errCh := make(chan error, 0)
+	errCh := make(chan error)
 
 	go func() {
-		for {
-			close(errCh)
+		defer close(errCh)
 
+	LOOP:
+		for {
 			_, payload, err := s.conn.ReadMessage()
 			if err != nil {
 				if closeErr, ok := err.(*ws.CloseError); ok {
-					s.logger.Infof("User (id=%s) closed the websocket connection (%v)", s.userID, closeErr)
-				} else {
-					s.logger.WithError(err).Error("An error occurred while reading the message from websocket")
+					s.logger.Infof("User (id=%s) closed the websocket connection (%s)", s.userID, closeErr)
+					break LOOP
 				}
+
+				s.logger.WithError(err).Error("An error occurred while reading the message from websocket")
+				errCh <- err
 
 				return
 			}
@@ -73,6 +74,8 @@ func (s *chatSession) readMessages(inCh chan<- domain.Message) <-chan error {
 			var message domain.Message
 			if err = message.Decode(payload); err != nil {
 				s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
+				errCh <- err
+
 				return
 			}
 
@@ -82,6 +85,8 @@ func (s *chatSession) readMessages(inCh chan<- domain.Message) <-chan error {
 
 			inCh <- message
 		}
+
+		errCh <- nil
 	}()
 
 	return errCh

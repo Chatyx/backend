@@ -11,7 +11,7 @@ listen:
     bind_port: 8080
 auth:
   sign_key: qwerty
-  access_token_ttl: 15      # 15 minutes
+  access_token_ttl: 1440    # 1 day
   refresh_token_ttl: 43200  # 30 days
 postgres:
   host: 127.0.0.1
