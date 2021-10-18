@@ -12,15 +12,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-redis/redis/v8"
-
 	"github.com/Mort4lis/scht-backend/internal/app"
 	"github.com/Mort4lis/scht-backend/internal/config"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/go-redis/redis/v8"
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	ws "github.com/gorilla/websocket"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/stretchr/testify/suite"
 )
@@ -33,14 +33,16 @@ const (
 
 type AppTestSuite struct {
 	suite.Suite
-	app         *app.App
-	cfg         *config.Config
-	dbMigration *migrate.Migrate
-	dbConn      *sql.DB
-	fixtures    *testfixtures.Loader
-	redisClient *redis.Client
-	httpClient  *http.Client
-	urlPrefix   string
+	app          *app.App
+	cfg          *config.Config
+	dbMigration  *migrate.Migrate
+	dbConn       *sql.DB
+	fixtures     *testfixtures.Loader
+	redisClient  *redis.Client
+	httpClient   *http.Client
+	wsDialer     *ws.Dialer
+	apiURLPrefix string
+	chatURL      string
 }
 
 func TestAppTestSuite(t *testing.T) {
@@ -50,9 +52,14 @@ func TestAppTestSuite(t *testing.T) {
 func (s *AppTestSuite) SetupSuite() {
 	cfg := config.GetConfig(configPath)
 	apiListenCfg := cfg.Listen.API
+	chatListenCfg := cfg.Listen.Chat
 
 	if apiListenCfg.Type != "port" {
-		s.T().Fatalf("can't run integration tests with listen type = %q", apiListenCfg.Type)
+		s.T().Fatalf("[API Server]: can't run integration tests with listen type = %q", apiListenCfg.Type)
+	}
+
+	if chatListenCfg.Type != "port" {
+		s.T().Fatalf("[Chat Server]: can't run integration tests with listen type = %q", chatListenCfg.Type)
 	}
 
 	logging.InitLogger(logging.LogConfig{
@@ -97,7 +104,9 @@ func (s *AppTestSuite) SetupSuite() {
 	s.fixtures = fixtures
 	s.redisClient = redisClient
 	s.httpClient = &http.Client{Timeout: 5 * time.Second}
-	s.urlPrefix = fmt.Sprintf("http://localhost:%d/api", apiListenCfg.BindPort)
+	s.wsDialer = &ws.Dialer{}
+	s.apiURLPrefix = fmt.Sprintf("http://localhost:%d/api", apiListenCfg.BindPort)
+	s.chatURL = fmt.Sprintf("ws://localhost:%d", chatListenCfg.BindPort)
 
 	go func() {
 		s.Require().NoError(s.app.Run(), "An error occurred while running the application")
@@ -124,5 +133,19 @@ func (s *AppTestSuite) TearDownTest() {
 }
 
 func (s *AppTestSuite) buildURL(uri string) string {
-	return s.urlPrefix + uri
+	return s.apiURLPrefix + uri
+}
+
+func (s *AppTestSuite) newWebsocketConnection(username, password, fingerprint string) *ws.Conn {
+	tokenPair := s.authenticate(username, password, fingerprint)
+
+	reqHeaders := http.Header{}
+	reqHeaders.Add("Authorization", "Bearer "+tokenPair.AccessToken)
+
+	conn, _, err := s.wsDialer.Dial(s.chatURL, reqHeaders)
+	s.Require().NoError(err, "Failed to create websocket connection")
+
+	time.Sleep(50 * time.Millisecond)
+
+	return conn
 }
