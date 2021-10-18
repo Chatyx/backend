@@ -34,6 +34,10 @@ type ChatRepository interface {
 	Delete(ctx context.Context, chatID, creatorID string) error
 }
 
+type MessageRepository interface {
+	Store(ctx context.Context, key string, message domain.Message) error
+}
+
 type MessagePubSub interface {
 	Publish(ctx context.Context, message domain.Message, topic string) error
 	Subscribe(ctx context.Context, topics ...string) MessageSubscriber

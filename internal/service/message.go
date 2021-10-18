@@ -2,23 +2,25 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
-
-	"github.com/Mort4lis/scht-backend/pkg/logging"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/repository"
+	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 type messageService struct {
 	chatService ChatService
+	messageRepo repository.MessageRepository
 	pubSub      repository.MessagePubSub
 	logger      logging.Logger
 }
 
-func NewMessageService(chatService ChatService, pubSub repository.MessagePubSub) MessageService {
+func NewMessageService(chatService ChatService, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
 	return &messageService{
 		chatService: chatService,
+		messageRepo: messageRepo,
 		pubSub:      pubSub,
 		logger:      logging.GetLogger(),
 	}
@@ -95,14 +97,14 @@ func (s *messageService) Create(ctx context.Context, senderID string, dto domain
 		CreatedAt: &curTime,
 	}
 
-	/*
-		TODO: at the beginning of the function:
-		1.  check if user has access to this chat
-		2.  store this message (redis)
-	*/
+	// TODO: check if user has access to this chat
+
+	key := fmt.Sprintf("chat:%s:messages", dto.ChatID)
+	if err := s.messageRepo.Store(ctx, key, message); err != nil {
+		return domain.Message{}, err
+	}
 
 	if err := s.pubSub.Publish(ctx, message, "chat:"+message.ChatID); err != nil {
-		s.logger.WithError(err).Errorf("An error occurred while publishing the message to the chat (id=%s)", message.ChatID)
 		return domain.Message{}, err
 	}
 
