@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/encoding"
@@ -21,13 +22,14 @@ func NewMessageRedisRepository(redisClient *redis.Client) MessageRepository {
 	}
 }
 
-func (r *messageRedisRepository) Store(ctx context.Context, key string, message domain.Message) error {
+func (r *messageRedisRepository) Store(ctx context.Context, message domain.Message) error {
 	payload, err := encoding.NewProtobufMessageMarshaler(message).Marshal()
 	if err != nil {
 		r.logger.WithError(err).Error("An error occurred while marshaling the message")
 		return err
 	}
 
+	key := fmt.Sprintf("chat:%s:messages", message.ChatID)
 	if err = r.redisClient.ZAdd(ctx, key, &redis.Z{
 		Score:  float64(message.CreatedAt.Unix()),
 		Member: payload,

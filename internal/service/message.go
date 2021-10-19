@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
@@ -99,8 +98,7 @@ func (s *messageService) Create(ctx context.Context, senderID string, dto domain
 
 	// TODO: check if user has access to this chat
 
-	key := fmt.Sprintf("chat:%s:messages", dto.ChatID)
-	if err := s.messageRepo.Store(ctx, key, message); err != nil {
+	if err := s.messageRepo.Store(ctx, message); err != nil {
 		return domain.Message{}, err
 	}
 

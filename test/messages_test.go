@@ -33,7 +33,7 @@ func (s *AppTestSuite) TestSendAndReceiveMessageInTheSameChat() {
 		s.Require().Equal(msgDTO.Text, msg.Text)
 		s.Require().Equal(johnID, msg.SenderID)
 		s.Require().Equal(msgDTO.ChatID, msg.ChatID)
-	case <-time.After(100 * time.Second):
+	case <-time.After(1 * time.Second):
 		s.T().Error("timeout exceeded")
 	}
 }
