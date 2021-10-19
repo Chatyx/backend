@@ -52,6 +52,19 @@ definitions:
       refresh_token:
         type: string
     type: object
+  domain.Message:
+    properties:
+      action:
+        type: integer
+      chat_id:
+        type: string
+      created_at:
+        type: string
+      sender_id:
+        type: string
+      text:
+        type: string
+    type: object
   domain.RefreshSessionDTO:
     properties:
       refresh_token:
@@ -137,6 +150,13 @@ definitions:
   http.ErrorFields:
     additionalProperties:
       type: string
+    type: object
+  http.MessageListResponse:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/domain.Message'
+        type: array
     type: object
   http.ResponseError:
     properties:
@@ -381,6 +401,45 @@ paths:
       summary: Update chat where user is creator
       tags:
       - Chats
+  /chats/{id}/messages:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chat id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Last timestamp of received message
+        in: query
+        name: timestamp
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.MessageListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Get chat's messages
+      tags:
+      - Messages
   /user:
     delete:
       consumes:

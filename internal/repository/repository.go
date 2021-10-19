@@ -36,6 +36,7 @@ type ChatRepository interface {
 
 type MessageRepository interface {
 	Store(ctx context.Context, message domain.Message) error
+	List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error)
 }
 
 type MessagePubSub interface {

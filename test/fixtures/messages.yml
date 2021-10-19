@@ -1,0 +1,27 @@
+- id: 62ae2b9f-1125-4f41-907b-ace07e731ec4
+  action: 0
+  text: Hi, Mick!
+  sender_id: ba566522-3305-48df-936a-73f47611934b
+  chat_id: 609fce45-458f-477a-b2bb-e886d75d22ab
+  created_at: 2021-10-13T11:40:21.555
+
+- id: 2f5c50d7-8bda-49f3-a9a5-05b01c7d3d33
+  action: 0
+  text: Hello, John.
+  sender_id: 7e7b1825-ef9a-42ec-b4db-6f09dffe3850
+  chat_id: 609fce45-458f-477a-b2bb-e886d75d22ab
+  created_at: 2021-10-13T11:42:52.231
+
+- id: 36c1576d-b092-4307-9eea-77787ea0b3d4
+  action: 0
+  text: How are you?
+  sender_id: ba566522-3305-48df-936a-73f47611934b
+  chat_id: 609fce45-458f-477a-b2bb-e886d75d22ab
+  created_at: 2021-10-13T11:43:10.105
+
+- id: 12cdd255-a28c-4d49-ad99-f2705c04cecf
+  action: 0
+  text: I'm fine. Thanks you!
+  sender_id: 7e7b1825-ef9a-42ec-b4db-6f09dffe3850
+  chat_id: 609fce45-458f-477a-b2bb-e886d75d22ab
+  created_at: 2021-10-13T11:47:43.631

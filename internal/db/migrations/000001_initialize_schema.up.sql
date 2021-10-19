@@ -42,12 +42,13 @@ CREATE TABLE IF NOT EXISTS users_chats
 CREATE TABLE IF NOT EXISTS messages
 (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    text       TEXT NOT NULL,
-    author_id  UUID NOT NULL,
-    chat_id    UUID NOT NULL,
+    action     SMALLINT NOT NULL,
+    text       TEXT     NOT NULL,
+    sender_id  UUID     NOT NULL,
+    chat_id    UUID     NOT NULL,
     created_at TIMESTAMPTZ      DEFAULT current_timestamp,
 
-    CONSTRAINT author_fk FOREIGN KEY (author_id) REFERENCES users (id),
+    CONSTRAINT author_fk FOREIGN KEY (sender_id) REFERENCES users (id),
     CONSTRAINT chat_fk FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
 );
 

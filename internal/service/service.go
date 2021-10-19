@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 )
@@ -35,6 +36,7 @@ type ChatService interface {
 type MessageService interface {
 	NewServeSession(ctx context.Context, userID string) (inCh chan<- domain.CreateMessageDTO, outCh <-chan domain.Message, errCh <-chan error)
 	Create(ctx context.Context, senderID string, dto domain.CreateMessageDTO) (domain.Message, error)
+	List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error)
 }
 
 type ServiceContainer struct {

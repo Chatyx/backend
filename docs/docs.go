@@ -371,6 +371,67 @@ var doc = `{
                 }
             }
         },
+        "/chats/{id}/messages": {
+            "get": {
+                "security": [
+                    {
+                        "JWTTokenAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Get chat's messages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chat id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Last timestamp of received message",
+                        "name": "timestamp",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.MessageListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
         "/user": {
             "put": {
                 "security": [
@@ -719,6 +780,26 @@ var doc = `{
                 }
             }
         },
+        "domain.Message": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "integer"
+                },
+                "chat_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "sender_id": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.RefreshSessionDTO": {
             "type": "object",
             "required": [
@@ -848,6 +929,17 @@ var doc = `{
             "type": "object",
             "additionalProperties": {
                 "type": "string"
+            }
+        },
+        "http.MessageListResponse": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Message"
+                    }
+                }
             }
         },
         "http.ResponseError": {

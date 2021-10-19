@@ -137,6 +137,7 @@ func Init(container service.ServiceContainer, cfg *config.Config, validate *vali
 
 	newUserHandler(container.User, validate).register(router, authMid)
 	newChatHandler(container.Chat, validate).register(router, authMid)
+	newMessageHandler(container.Message, validate).register(router, authMid)
 	newAuthHandler(container.Auth, validate, cfg.Domain, cfg.Auth.RefreshTokenTTL).register(router)
 
 	router.HandlerFunc(http.MethodGet, "/docs/:any", httpSwagger.WrapHandler)

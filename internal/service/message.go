@@ -108,3 +108,9 @@ func (s *messageService) Create(ctx context.Context, senderID string, dto domain
 
 	return message, nil
 }
+
+func (s *messageService) List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error) {
+	// TODO: check if user has access to this chat
+
+	return s.messageRepo.List(ctx, chatID, timestamp)
+}
