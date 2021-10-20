@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-playground/validator/v10"
@@ -20,7 +21,7 @@ type ChatListResponse struct {
 	List []domain.Chat `json:"list"`
 }
 
-func (r ChatListResponse) Encode() ([]byte, error) {
+func (r ChatListResponse) Marshal() ([]byte, error) {
 	return json.Marshal(r)
 }
 
@@ -83,7 +84,7 @@ func (h *chatHandler) list(w http.ResponseWriter, req *http.Request) {
 // @Router /chats [post]
 func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 	dto := domain.CreateChatDTO{}
-	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+	if err := h.decodeBody(req.Body, encoding.NewJSONCreateChatDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -101,7 +102,7 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondSuccess(http.StatusCreated, w, &chat)
+	respondSuccess(http.StatusCreated, w, encoding.NewJSONChatMarshaler(chat))
 }
 
 // @Summary Get chat by id where user consists
@@ -130,7 +131,7 @@ func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, &chat)
+	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
 }
 
 // @Summary Update chat where user is creator
@@ -148,7 +149,7 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateChatDTO{}
 	ps := httprouter.ParamsFromContext(req.Context())
 
-	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChatDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -173,7 +174,7 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, &chat)
+	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
 }
 
 // @Summary Delete chat where user is creator

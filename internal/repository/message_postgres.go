@@ -21,7 +21,7 @@ func NewMessagePostgresRepository(dbPool PgxPool) MessageRepository {
 	}
 }
 
-func (r *messagePostgresRepository) Store(ctx context.Context, message domain.Message) error {
+func (r *messagePostgresRepository) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
 	panic("implement me")
 }
 
@@ -32,7 +32,8 @@ func (r *messagePostgresRepository) List(ctx context.Context, chatID string, tim
 	}
 
 	query := `SELECT 
-		action, text, sender_id, chat_id, created_at 
+		id, action, text, 
+		sender_id, chat_id, created_at 
 	FROM messages 
 	WHERE chat_id = $1 AND created_at >= $2 
 	ORDER BY created_at`
@@ -50,7 +51,7 @@ func (r *messagePostgresRepository) List(ctx context.Context, chatID string, tim
 		var message domain.Message
 
 		if err = rows.Scan(
-			&message.Action, &message.Text,
+			&message.ID, &message.Action, &message.Text,
 			&message.SenderID, &message.ChatID, &message.CreatedAt,
 		); err != nil {
 			r.logger.WithError(err).Error("Unable to scan message")

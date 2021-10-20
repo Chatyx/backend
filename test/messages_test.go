@@ -19,7 +19,7 @@ import (
 )
 
 var messageTableColumns = []string{
-	"action", "text",
+	"id", "action", "text",
 	"sender_id", "chat_id", "created_at",
 }
 
@@ -173,7 +173,7 @@ func (s *AppTestSuite) getChatMessagesFromDB(chatID string, timestamp time.Time)
 		var message domain.Message
 
 		if err = rows.Scan(
-			&message.Action, &message.Text,
+			&message.ID, &message.Action, &message.Text,
 			&message.SenderID, &message.ChatID, &message.CreatedAt,
 		); err != nil {
 			return nil, err

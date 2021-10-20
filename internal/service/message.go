@@ -40,12 +40,12 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 			return
 		}
 
-		topics := make([]string, 0, len(userChats))
+		chatIDs := make([]string, 0, len(userChats))
 		for _, userChat := range userChats {
-			topics = append(topics, "chat:"+userChat.ID)
+			chatIDs = append(chatIDs, userChat.ID)
 		}
 
-		subscriber := s.pubSub.Subscribe(ctx, topics...)
+		subscriber := s.pubSub.Subscribe(ctx, chatIDs...)
 		defer subscriber.Close()
 
 		subCh := subscriber.MessageChannel(ctx)
@@ -58,7 +58,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 					break LOOP
 				}
 
-				if _, err = s.Create(ctx, userID, dto); err != nil {
+				if _, err = s.Create(ctx, dto); err != nil {
 					errCh <- err
 					return
 				}
@@ -87,22 +87,15 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 	return inCh, outCh, errCh
 }
 
-func (s *messageService) Create(ctx context.Context, senderID string, dto domain.CreateMessageDTO) (domain.Message, error) {
-	curTime := time.Now()
-	message := domain.Message{
-		Text:      dto.Text,
-		ChatID:    dto.ChatID,
-		SenderID:  senderID,
-		CreatedAt: &curTime,
-	}
-
+func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
 	// TODO: check if user has access to this chat
 
-	if err := s.messageRepo.Store(ctx, message); err != nil {
+	message, err := s.messageRepo.Create(ctx, dto)
+	if err != nil {
 		return domain.Message{}, err
 	}
 
-	if err := s.pubSub.Publish(ctx, message, "chat:"+message.ChatID); err != nil {
+	if err = s.pubSub.Publish(ctx, message); err != nil {
 		return domain.Message{}, err
 	}
 

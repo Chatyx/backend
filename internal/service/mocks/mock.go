@@ -7,6 +7,7 @@ package mock_service
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	domain "github.com/Mort4lis/scht-backend/internal/domain"
 	gomock "github.com/golang/mock/gomock"
@@ -301,4 +302,73 @@ func (m *MockChatService) Update(ctx context.Context, dto domain.UpdateChatDTO) 
 func (mr *MockChatServiceMockRecorder) Update(ctx, dto interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockChatService)(nil).Update), ctx, dto)
+}
+
+// MockMessageService is a mock of MessageService interface.
+type MockMessageService struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessageServiceMockRecorder
+}
+
+// MockMessageServiceMockRecorder is the mock recorder for MockMessageService.
+type MockMessageServiceMockRecorder struct {
+	mock *MockMessageService
+}
+
+// NewMockMessageService creates a new mock instance.
+func NewMockMessageService(ctrl *gomock.Controller) *MockMessageService {
+	mock := &MockMessageService{ctrl: ctrl}
+	mock.recorder = &MockMessageServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessageService) EXPECT() *MockMessageServiceMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockMessageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, dto)
+	ret0, _ := ret[0].(domain.Message)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockMessageServiceMockRecorder) Create(ctx, dto interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockMessageService)(nil).Create), ctx, dto)
+}
+
+// List mocks base method.
+func (m *MockMessageService) List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, chatID, userID, timestamp)
+	ret0, _ := ret[0].([]domain.Message)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockMessageServiceMockRecorder) List(ctx, chatID, userID, timestamp interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMessageService)(nil).List), ctx, chatID, userID, timestamp)
+}
+
+// NewServeSession mocks base method.
+func (m *MockMessageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, <-chan error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewServeSession", ctx, userID)
+	ret0, _ := ret[0].(chan<- domain.CreateMessageDTO)
+	ret1, _ := ret[1].(<-chan domain.Message)
+	ret2, _ := ret[2].(<-chan error)
+	return ret0, ret1, ret2
+}
+
+// NewServeSession indicates an expected call of NewServeSession.
+func (mr *MockMessageServiceMockRecorder) NewServeSession(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewServeSession", reflect.TypeOf((*MockMessageService)(nil).NewServeSession), ctx, userID)
 }

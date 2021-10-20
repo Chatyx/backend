@@ -301,7 +301,7 @@ func TestChatHandler_create(t *testing.T) {
 			creatorID:            "123",
 			requestBody:          `{"name":"Test chat"`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"message":"invalid json body"}`,
+			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Empty body",
@@ -448,7 +448,7 @@ func TestChatHandler_update(t *testing.T) {
 			creatorID:            "123",
 			requestBody:          `{"name":"Test chat"`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"message":"invalid json body"}`,
+			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Empty body",

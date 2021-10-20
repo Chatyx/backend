@@ -23,7 +23,7 @@ func (s *messageRedisSubscriber) ReceiveMessage(ctx context.Context) (domain.Mes
 
 	var message domain.Message
 	if err = encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(msg.Payload)); err != nil {
-		s.logger.WithError(err).Error("An error occurred while unmarshaling the message")
+		s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
 		return domain.Message{}, err
 	}
 
@@ -48,7 +48,7 @@ func (s *messageRedisSubscriber) MessageChannel(ctx context.Context) <-chan doma
 
 				var message domain.Message
 				if err := encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(msg.Payload)); err != nil {
-					s.logger.WithError(err).Error("An error occurred while unmarshaling the message")
+					s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
 					return
 				}
 
@@ -60,7 +60,9 @@ func (s *messageRedisSubscriber) MessageChannel(ctx context.Context) <-chan doma
 	return msgCh
 }
 
-func (s *messageRedisSubscriber) Unsubscribe(ctx context.Context, topics ...string) error {
+func (s *messageRedisSubscriber) Unsubscribe(ctx context.Context, chatIDs ...string) error {
+	topics := getPubSubTopicsFromChatIDs(chatIDs...)
+
 	if err := s.pubSub.Unsubscribe(ctx, topics...); err != nil {
 		s.logger.WithError(err).Errorf("An error occurred while unsubscribing to topics %v", topics)
 		return err
@@ -69,7 +71,9 @@ func (s *messageRedisSubscriber) Unsubscribe(ctx context.Context, topics ...stri
 	return nil
 }
 
-func (s *messageRedisSubscriber) Subscribe(ctx context.Context, topics ...string) error {
+func (s *messageRedisSubscriber) Subscribe(ctx context.Context, chatIDs ...string) error {
+	topics := getPubSubTopicsFromChatIDs(chatIDs...)
+
 	if err := s.pubSub.Subscribe(ctx, topics...); err != nil {
 		s.logger.WithError(err).Errorf("An error occurred while subscribing to topics %v", topics)
 		return err
@@ -99,12 +103,14 @@ func NewMessagePubSub(redisClient *redis.Client) MessagePubSub {
 	}
 }
 
-func (ps *messageRedisPubSub) Publish(ctx context.Context, message domain.Message, topic string) error {
+func (ps *messageRedisPubSub) Publish(ctx context.Context, message domain.Message) error {
 	payload, err := encoding.NewProtobufMessageMarshaler(message).Marshal()
 	if err != nil {
 		ps.logger.WithError(err).Error("An error occurred while marshaling the message")
 		return err
 	}
+
+	topic := getPubSubTopicFromChatID(message.ChatID)
 
 	if err = ps.redisClient.Publish(ctx, topic, payload).Err(); err != nil {
 		ps.logger.WithError(err).Error("An error occurred while publishing the message")
@@ -114,9 +120,24 @@ func (ps *messageRedisPubSub) Publish(ctx context.Context, message domain.Messag
 	return nil
 }
 
-func (ps *messageRedisPubSub) Subscribe(ctx context.Context, topics ...string) MessageSubscriber {
+func (ps *messageRedisPubSub) Subscribe(ctx context.Context, chatIDs ...string) MessageSubscriber {
+	topics := getPubSubTopicsFromChatIDs(chatIDs...)
+
 	return &messageRedisSubscriber{
 		logger: ps.logger,
 		pubSub: ps.redisClient.Subscribe(ctx, topics...),
 	}
+}
+
+func getPubSubTopicsFromChatIDs(chatIDs ...string) []string {
+	topics := make([]string, 0, len(chatIDs))
+	for _, chatID := range chatIDs {
+		topics = append(topics, getPubSubTopicFromChatID(chatID))
+	}
+
+	return topics
+}
+
+func getPubSubTopicFromChatID(chatID string) string {
+	return "chat:" + chatID
 }

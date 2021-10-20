@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/Mort4lis/scht-backend/internal/encoding"
 
 	"github.com/rs/cors"
 
@@ -14,7 +17,6 @@ import (
 	_ "github.com/Mort4lis/scht-backend/docs"
 	"github.com/Mort4lis/scht-backend/internal/config"
 	"github.com/Mort4lis/scht-backend/internal/service"
-	"github.com/Mort4lis/scht-backend/internal/utils"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
@@ -25,17 +27,19 @@ type baseHandler struct {
 	validate *validator.Validate
 }
 
-func (h *baseHandler) decodeJSONFromBody(body io.ReadCloser, decoder utils.JSONDecoder) error {
-	if err := decoder.DecodeFrom(body); err != nil {
-		h.logger.WithError(err).Debug("Invalid json body")
-		return errInvalidJSON
+func (h *baseHandler) decodeBody(body io.ReadCloser, unmarshaler encoding.Unmarshaler) error {
+	defer body.Close()
+
+	payload, err := ioutil.ReadAll(body)
+	if err != nil {
+		h.logger.WithError(err).Error("An error occurred while reading body")
+		return err
 	}
 
-	defer func() {
-		if err := body.Close(); err != nil {
-			h.logger.WithError(err).Error("An error occurred while closing body")
-		}
-	}()
+	if err = unmarshaler.Unmarshal(payload); err != nil {
+		h.logger.WithError(err).Debug("failed to unmarshal body")
+		return errInvalidDecodeBody
+	}
 
 	return nil
 }
@@ -87,15 +91,15 @@ func extractTokenFromHeader(header string) (string, error) {
 	return headerParts[1], nil
 }
 
-func respondSuccess(statusCode int, w http.ResponseWriter, encoder utils.JSONEncoder) {
-	if encoder == nil {
+func respondSuccess(statusCode int, w http.ResponseWriter, marshaler encoding.Marshaler) {
+	if marshaler == nil {
 		w.WriteHeader(statusCode)
 		return
 	}
 
-	respBody, err := encoder.Encode()
+	respBody, err := marshaler.Marshal()
 	if err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while encoding response structure")
+		logging.GetLogger().WithError(err).Error("An error occurred while marshaling response structure")
 		respondError(w, errInternalServer)
 
 		return

@@ -1,8 +1,6 @@
 package domain
 
 import (
-	"encoding/json"
-	"io"
 	"time"
 )
 
@@ -16,14 +14,6 @@ type CreateUserDTO struct {
 	Department string `json:"department" validate:"max=255"`
 }
 
-func (d *CreateUserDTO) Decode(payload []byte) error {
-	return json.Unmarshal(payload, d)
-}
-
-func (d *CreateUserDTO) DecodeFrom(r io.Reader) error {
-	return json.NewDecoder(r).Decode(d)
-}
-
 type UpdateUserDTO struct {
 	ID         string `json:"-"`
 	Username   string `json:"username"   validate:"required,max=50"`
@@ -34,26 +24,10 @@ type UpdateUserDTO struct {
 	Department string `json:"department" validate:"max=255"`
 }
 
-func (d *UpdateUserDTO) Decode(payload []byte) error {
-	return json.Unmarshal(payload, d)
-}
-
-func (d *UpdateUserDTO) DecodeFrom(r io.Reader) error {
-	return json.NewDecoder(r).Decode(d)
-}
-
 type UpdateUserPasswordDTO struct {
 	UserID  string `json:"-"`
 	New     string `json:"new_password"     validate:"required,min=8,max=27"`
 	Current string `json:"current_password" validate:"required,min=8,max=27"`
-}
-
-func (d *UpdateUserPasswordDTO) Decode(payload []byte) error {
-	return json.Unmarshal(payload, d)
-}
-
-func (d *UpdateUserPasswordDTO) DecodeFrom(r io.Reader) error {
-	return json.NewDecoder(r).Decode(d)
 }
 
 type User struct {
@@ -68,8 +42,4 @@ type User struct {
 	IsDeleted  bool       `json:"-"`
 	CreatedAt  *time.Time `json:"created_at"`
 	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
-}
-
-func (u *User) Encode() ([]byte, error) {
-	return json.Marshal(u)
 }

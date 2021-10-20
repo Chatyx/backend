@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-playground/validator/v10"
@@ -22,7 +23,7 @@ type UserListResponse struct {
 	List []domain.User `json:"list"`
 }
 
-func (r UserListResponse) Encode() ([]byte, error) {
+func (r UserListResponse) Marshal() ([]byte, error) {
 	return json.Marshal(r)
 }
 
@@ -97,7 +98,7 @@ func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, &user)
+	respondSuccess(http.StatusOK, w, encoding.NewJSONUserMarshaler(user))
 }
 
 // @Summary Create user
@@ -111,7 +112,7 @@ func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
 // @Router /users [post]
 func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 	dto := domain.CreateUserDTO{}
-	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+	if err := h.decodeBody(req.Body, encoding.NewJSONCreateUserDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -133,7 +134,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondSuccess(http.StatusCreated, w, &user)
+	respondSuccess(http.StatusCreated, w, encoding.NewJSONUserMarshaler(user))
 }
 
 // @Summary Update current authenticated user
@@ -148,7 +149,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 // @Router /user [put]
 func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateUserDTO{}
-	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateUserDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -174,7 +175,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, &user)
+	respondSuccess(http.StatusOK, w, encoding.NewJSONUserMarshaler(user))
 }
 
 // @Summary Update current authenticated user's password
@@ -189,7 +190,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 // @Router /user/password [put]
 func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateUserPasswordDTO{}
-	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateUserPasswordDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}

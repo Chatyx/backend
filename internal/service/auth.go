@@ -95,7 +95,7 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 		CreatedAt:    time.Now(),
 		ExpiresAt:    time.Now().Add(s.refreshTokenTTL),
 	}
-	if err = s.sessionRepo.Set(ctx, refreshToken, session, s.refreshTokenTTL); err != nil {
+	if err = s.sessionRepo.Set(ctx, session, s.refreshTokenTTL); err != nil {
 		return domain.JWTPair{}, err
 	}
 
@@ -162,7 +162,7 @@ func (s *authService) Refresh(ctx context.Context, dto domain.RefreshSessionDTO)
 		CreatedAt:    time.Now(),
 		ExpiresAt:    time.Now().Add(s.refreshTokenTTL),
 	}
-	if err = s.sessionRepo.Set(ctx, newRefreshToken, newSession, s.refreshTokenTTL); err != nil {
+	if err = s.sessionRepo.Set(ctx, newSession, s.refreshTokenTTL); err != nil {
 		return domain.JWTPair{}, err
 	}
 

@@ -304,7 +304,7 @@ func TestUserHandler_create(t *testing.T) {
 			name:                 "Invalid JSON body",
 			requestBody:          `{"username":"john1967","password":"qwerty12345","email":"john1967@gmail.com"`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"message":"invalid json body"}`,
+			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Empty body",
@@ -446,7 +446,7 @@ func TestUserHandler_update(t *testing.T) {
 			authUserID:           "1",
 			requestBody:          `{"birth_date""1970-01-01"}`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"message":"invalid json body"}`,
+			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Invalid email address",
@@ -579,7 +579,7 @@ func TestUserHandler_updatePassword(t *testing.T) {
 			authUserID:           "1",
 			requestBody:          `{"current_password":"qwerty12345","new_password":admin55555"}`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"message":"invalid json body"}`,
+			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Empty body",

@@ -75,7 +75,7 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) <-chan e
 
 			var dto domain.CreateMessageDTO
 			if err = encoding.NewProtobufCreateDTOMessageUnmarshaler(&dto).Unmarshal(payload); err != nil {
-				s.logger.WithError(err).Debug("failed to unmarshaling the message")
+				s.logger.WithError(err).Debug("failed to unmarshalling the message")
 				errCh <- err
 
 				return
@@ -87,6 +87,9 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) <-chan e
 
 				return
 			}
+
+			dto.Action = domain.MessageSendAction
+			dto.SenderID = s.userID
 
 			inCh <- dto
 		}

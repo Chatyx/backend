@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -24,11 +26,21 @@ func NewMessageRedisRepository(redisClient *redis.Client) MessageRepository {
 	}
 }
 
-func (r *messageRedisRepository) Store(ctx context.Context, message domain.Message) error {
+func (r *messageRedisRepository) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
+	createdAt := time.Now()
+	message := domain.Message{
+		ID:        uuid.New().String(),
+		Action:    dto.Action,
+		Text:      dto.Text,
+		ChatID:    dto.ChatID,
+		SenderID:  dto.SenderID,
+		CreatedAt: &createdAt,
+	}
+
 	payload, err := encoding.NewProtobufMessageMarshaler(message).Marshal()
 	if err != nil {
 		r.logger.WithError(err).Error("An error occurred while marshaling the message")
-		return err
+		return domain.Message{}, err
 	}
 
 	key := fmt.Sprintf("chat:%s:messages", message.ChatID)
@@ -36,11 +48,11 @@ func (r *messageRedisRepository) Store(ctx context.Context, message domain.Messa
 		Score:  float64(message.CreatedAt.UnixNano()),
 		Member: payload,
 	}).Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while storing the message into the redis")
-		return err
+		r.logger.WithError(err).Error("An error occurred while creating the message into the redis")
+		return domain.Message{}, err
 	}
 
-	return nil
+	return message, nil
 }
 
 func (r *messageRedisRepository) List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error) {

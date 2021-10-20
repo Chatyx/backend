@@ -35,7 +35,7 @@ type ChatService interface {
 
 type MessageService interface {
 	NewServeSession(ctx context.Context, userID string) (inCh chan<- domain.CreateMessageDTO, outCh <-chan domain.Message, errCh <-chan error)
-	Create(ctx context.Context, senderID string, dto domain.CreateMessageDTO) (domain.Message, error)
+	Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error)
 	List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error)
 }
 

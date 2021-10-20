@@ -20,9 +20,9 @@ type UserRepository interface {
 }
 
 type SessionRepository interface {
-	Get(ctx context.Context, key string) (domain.Session, error)
-	Set(ctx context.Context, key string, session domain.Session, ttl time.Duration) error
-	Delete(ctx context.Context, key, userID string) error
+	Get(ctx context.Context, refreshToken string) (domain.Session, error)
+	Set(ctx context.Context, session domain.Session, ttl time.Duration) error
+	Delete(ctx context.Context, refreshToken, userID string) error
 	DeleteAllByUserID(ctx context.Context, userID string) error
 }
 
@@ -35,18 +35,18 @@ type ChatRepository interface {
 }
 
 type MessageRepository interface {
-	Store(ctx context.Context, message domain.Message) error
+	Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error)
 	List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error)
 }
 
 type MessagePubSub interface {
-	Publish(ctx context.Context, message domain.Message, topic string) error
-	Subscribe(ctx context.Context, topics ...string) MessageSubscriber
+	Publish(ctx context.Context, message domain.Message) error
+	Subscribe(ctx context.Context, chatIDs ...string) MessageSubscriber
 }
 
 type MessageSubscriber interface {
-	Subscribe(ctx context.Context, topics ...string) error
-	Unsubscribe(ctx context.Context, topics ...string) error
+	Subscribe(ctx context.Context, chatIDs ...string) error
+	Unsubscribe(ctx context.Context, chatIDs ...string) error
 	ReceiveMessage(ctx context.Context) (domain.Message, error)
 	MessageChannel(ctx context.Context) <-chan domain.Message
 	Close() error

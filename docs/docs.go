@@ -792,6 +792,9 @@ var doc = `{
                 "created_at": {
                     "type": "string"
                 },
+                "id": {
+                    "type": "string"
+                },
                 "sender_id": {
                     "type": "string"
                 },

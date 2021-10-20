@@ -60,6 +60,7 @@ func (m protobufMessageMarshaler) Marshal() ([]byte, error) {
 	}
 
 	msg := &protogen.Message{
+		Id:        m.message.ID,
 		Action:    protogen.Message_Action(m.message.Action),
 		Text:      m.message.Text,
 		ChatId:    m.message.ChatID,
@@ -84,6 +85,7 @@ func (um *protobufMessageUnmarshaler) Unmarshal(payload []byte) error {
 		return err
 	}
 
+	um.message.ID = msg.Id
 	um.message.Action = int(msg.Action)
 	um.message.Text = msg.Text
 	um.message.ChatID = msg.ChatId

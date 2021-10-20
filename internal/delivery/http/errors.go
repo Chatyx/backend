@@ -19,9 +19,9 @@ var (
 		StatusCode: http.StatusInternalServerError,
 		Message:    "internal server error",
 	}
-	errInvalidJSON = ResponseError{
+	errInvalidDecodeBody = ResponseError{
 		StatusCode: http.StatusBadRequest,
-		Message:    "invalid json body",
+		Message:    "invalid body to decode",
 	}
 	errInvalidAuthorizationHeader = ResponseError{
 		StatusCode: http.StatusBadRequest,

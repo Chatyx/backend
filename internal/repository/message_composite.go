@@ -22,8 +22,8 @@ func NewMessageCompositeRepository(cacheRepo, dbRepo MessageRepository) MessageR
 	}
 }
 
-func (r *messageCompositeRepository) Store(ctx context.Context, message domain.Message) error {
-	return r.cacheRepo.Store(ctx, message)
+func (r *messageCompositeRepository) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
+	return r.cacheRepo.Create(ctx, dto)
 }
 
 func (r *messageCompositeRepository) List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error) {

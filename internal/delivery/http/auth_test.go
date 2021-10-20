@@ -88,7 +88,7 @@ func TestAuthHandler_signIn(t *testing.T) {
 			fingerPrintHeaderKey:   "X-Fingerprint",
 			fingerPrintHeaderValue: "5dc49b7a-6153-4eae-9c0f-297655c45f08",
 			expectedStatusCode:     http.StatusBadRequest,
-			expectedResponseBody:   `{"message":"invalid json body"}`,
+			expectedResponseBody:   `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                   "Empty body",
@@ -243,7 +243,7 @@ func TestAuthHandler_refresh(t *testing.T) {
 			fingerPrintHeaderKey:   "X-Fingerprint",
 			fingerPrintHeaderValue: "5dc49b7a-6153-4eae-9c0f-297655c45f08",
 			expectedStatusCode:     http.StatusBadRequest,
-			expectedResponseBody:   `{"message":"invalid json body"}`,
+			expectedResponseBody:   `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                   "Empty body",

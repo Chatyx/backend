@@ -10,6 +10,7 @@ import (
 	time "time"
 
 	domain "github.com/Mort4lis/scht-backend/internal/domain"
+	repository "github.com/Mort4lis/scht-backend/internal/repository"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -163,17 +164,17 @@ func (m *MockSessionRepository) EXPECT() *MockSessionRepositoryMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockSessionRepository) Delete(ctx context.Context, key, userID string) error {
+func (m *MockSessionRepository) Delete(ctx context.Context, refreshToken, userID string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, key, userID)
+	ret := m.ctrl.Call(m, "Delete", ctx, refreshToken, userID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockSessionRepositoryMockRecorder) Delete(ctx, key, userID interface{}) *gomock.Call {
+func (mr *MockSessionRepositoryMockRecorder) Delete(ctx, refreshToken, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSessionRepository)(nil).Delete), ctx, key, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSessionRepository)(nil).Delete), ctx, refreshToken, userID)
 }
 
 // DeleteAllByUserID mocks base method.
@@ -191,32 +192,32 @@ func (mr *MockSessionRepositoryMockRecorder) DeleteAllByUserID(ctx, userID inter
 }
 
 // Get mocks base method.
-func (m *MockSessionRepository) Get(ctx context.Context, key string) (domain.Session, error) {
+func (m *MockSessionRepository) Get(ctx context.Context, refreshToken string) (domain.Session, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, key)
+	ret := m.ctrl.Call(m, "Get", ctx, refreshToken)
 	ret0, _ := ret[0].(domain.Session)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockSessionRepositoryMockRecorder) Get(ctx, key interface{}) *gomock.Call {
+func (mr *MockSessionRepositoryMockRecorder) Get(ctx, refreshToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSessionRepository)(nil).Get), ctx, key)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSessionRepository)(nil).Get), ctx, refreshToken)
 }
 
 // Set mocks base method.
-func (m *MockSessionRepository) Set(ctx context.Context, key string, session domain.Session, ttl time.Duration) error {
+func (m *MockSessionRepository) Set(ctx context.Context, session domain.Session, ttl time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Set", ctx, key, session, ttl)
+	ret := m.ctrl.Call(m, "Set", ctx, session, ttl)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Set indicates an expected call of Set.
-func (mr *MockSessionRepositoryMockRecorder) Set(ctx, key, session, ttl interface{}) *gomock.Call {
+func (mr *MockSessionRepositoryMockRecorder) Set(ctx, session, ttl interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockSessionRepository)(nil).Set), ctx, key, session, ttl)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockSessionRepository)(nil).Set), ctx, session, ttl)
 }
 
 // MockChatRepository is a mock of ChatRepository interface.
@@ -314,4 +315,217 @@ func (m *MockChatRepository) Update(ctx context.Context, dto domain.UpdateChatDT
 func (mr *MockChatRepositoryMockRecorder) Update(ctx, dto interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockChatRepository)(nil).Update), ctx, dto)
+}
+
+// MockMessageRepository is a mock of MessageRepository interface.
+type MockMessageRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessageRepositoryMockRecorder
+}
+
+// MockMessageRepositoryMockRecorder is the mock recorder for MockMessageRepository.
+type MockMessageRepositoryMockRecorder struct {
+	mock *MockMessageRepository
+}
+
+// NewMockMessageRepository creates a new mock instance.
+func NewMockMessageRepository(ctrl *gomock.Controller) *MockMessageRepository {
+	mock := &MockMessageRepository{ctrl: ctrl}
+	mock.recorder = &MockMessageRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessageRepository) EXPECT() *MockMessageRepositoryMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockMessageRepository) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, dto)
+	ret0, _ := ret[0].(domain.Message)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockMessageRepositoryMockRecorder) Create(ctx, dto interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockMessageRepository)(nil).Create), ctx, dto)
+}
+
+// List mocks base method.
+func (m *MockMessageRepository) List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, chatID, timestamp)
+	ret0, _ := ret[0].([]domain.Message)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockMessageRepositoryMockRecorder) List(ctx, chatID, timestamp interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMessageRepository)(nil).List), ctx, chatID, timestamp)
+}
+
+// MockMessagePubSub is a mock of MessagePubSub interface.
+type MockMessagePubSub struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessagePubSubMockRecorder
+}
+
+// MockMessagePubSubMockRecorder is the mock recorder for MockMessagePubSub.
+type MockMessagePubSubMockRecorder struct {
+	mock *MockMessagePubSub
+}
+
+// NewMockMessagePubSub creates a new mock instance.
+func NewMockMessagePubSub(ctrl *gomock.Controller) *MockMessagePubSub {
+	mock := &MockMessagePubSub{ctrl: ctrl}
+	mock.recorder = &MockMessagePubSubMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessagePubSub) EXPECT() *MockMessagePubSubMockRecorder {
+	return m.recorder
+}
+
+// Publish mocks base method.
+func (m *MockMessagePubSub) Publish(ctx context.Context, message domain.Message) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Publish", ctx, message)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Publish indicates an expected call of Publish.
+func (mr *MockMessagePubSubMockRecorder) Publish(ctx, message interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockMessagePubSub)(nil).Publish), ctx, message)
+}
+
+// Subscribe mocks base method.
+func (m *MockMessagePubSub) Subscribe(ctx context.Context, chatIDs ...string) repository.MessageSubscriber {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range chatIDs {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Subscribe", varargs...)
+	ret0, _ := ret[0].(repository.MessageSubscriber)
+	return ret0
+}
+
+// Subscribe indicates an expected call of Subscribe.
+func (mr *MockMessagePubSubMockRecorder) Subscribe(ctx interface{}, chatIDs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, chatIDs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockMessagePubSub)(nil).Subscribe), varargs...)
+}
+
+// MockMessageSubscriber is a mock of MessageSubscriber interface.
+type MockMessageSubscriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessageSubscriberMockRecorder
+}
+
+// MockMessageSubscriberMockRecorder is the mock recorder for MockMessageSubscriber.
+type MockMessageSubscriberMockRecorder struct {
+	mock *MockMessageSubscriber
+}
+
+// NewMockMessageSubscriber creates a new mock instance.
+func NewMockMessageSubscriber(ctrl *gomock.Controller) *MockMessageSubscriber {
+	mock := &MockMessageSubscriber{ctrl: ctrl}
+	mock.recorder = &MockMessageSubscriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessageSubscriber) EXPECT() *MockMessageSubscriberMockRecorder {
+	return m.recorder
+}
+
+// Close mocks base method.
+func (m *MockMessageSubscriber) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockMessageSubscriberMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockMessageSubscriber)(nil).Close))
+}
+
+// MessageChannel mocks base method.
+func (m *MockMessageSubscriber) MessageChannel(ctx context.Context) <-chan domain.Message {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MessageChannel", ctx)
+	ret0, _ := ret[0].(<-chan domain.Message)
+	return ret0
+}
+
+// MessageChannel indicates an expected call of MessageChannel.
+func (mr *MockMessageSubscriberMockRecorder) MessageChannel(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MessageChannel", reflect.TypeOf((*MockMessageSubscriber)(nil).MessageChannel), ctx)
+}
+
+// ReceiveMessage mocks base method.
+func (m *MockMessageSubscriber) ReceiveMessage(ctx context.Context) (domain.Message, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReceiveMessage", ctx)
+	ret0, _ := ret[0].(domain.Message)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReceiveMessage indicates an expected call of ReceiveMessage.
+func (mr *MockMessageSubscriberMockRecorder) ReceiveMessage(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReceiveMessage", reflect.TypeOf((*MockMessageSubscriber)(nil).ReceiveMessage), ctx)
+}
+
+// Subscribe mocks base method.
+func (m *MockMessageSubscriber) Subscribe(ctx context.Context, chatIDs ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range chatIDs {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Subscribe", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Subscribe indicates an expected call of Subscribe.
+func (mr *MockMessageSubscriberMockRecorder) Subscribe(ctx interface{}, chatIDs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, chatIDs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockMessageSubscriber)(nil).Subscribe), varargs...)
+}
+
+// Unsubscribe mocks base method.
+func (m *MockMessageSubscriber) Unsubscribe(ctx context.Context, chatIDs ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range chatIDs {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Unsubscribe", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Unsubscribe indicates an expected call of Unsubscribe.
+func (mr *MockMessageSubscriberMockRecorder) Unsubscribe(ctx interface{}, chatIDs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, chatIDs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unsubscribe", reflect.TypeOf((*MockMessageSubscriber)(nil).Unsubscribe), varargs...)
 }

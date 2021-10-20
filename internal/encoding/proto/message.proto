@@ -18,10 +18,10 @@ message Message {
     BLOCK = 3;
   }
 
-  Action action = 1;
-  string text = 2;
-  string chat_id = 3;
-  string sender_id = 4;
-
-  google.protobuf.Timestamp created_at = 5;
+  string id = 1;
+  Action action = 2;
+  string text = 3;
+  string chat_id = 4;
+  string sender_id = 5;
+  google.protobuf.Timestamp created_at = 6;
 }

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Mort4lis/scht-backend/internal/encoding"
+
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -61,7 +63,7 @@ func (h *authHandler) register(router *httprouter.Router) {
 // @Router /auth/sign-in [post]
 func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 	var dto domain.SignInDTO
-	if err := h.decodeJSONFromBody(req.Body, &dto); err != nil {
+	if err := h.decodeBody(req.Body, encoding.NewJSONSignInDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -100,7 +102,7 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 		HttpOnly: true,
 	})
 
-	respondSuccess(http.StatusOK, w, pair)
+	respondSuccess(http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
 }
 
 // @Summary refresh authorization token
@@ -118,7 +120,7 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 	var dto domain.RefreshSessionDTO
 	if cookie, err := req.Cookie(refreshCookieName); err == nil {
 		dto.RefreshToken = cookie.Value
-	} else if err = h.decodeJSONFromBody(req.Body, &dto); err != nil {
+	} else if err = h.decodeBody(req.Body, encoding.NewJSONRefreshSessionDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -157,5 +159,5 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 		HttpOnly: true,
 	})
 
-	respondSuccess(http.StatusOK, w, pair)
+	respondSuccess(http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
 }

@@ -22,7 +22,7 @@ type MessageListResponse struct {
 	List []domain.Message `json:"list"`
 }
 
-func (r MessageListResponse) Encode() ([]byte, error) {
+func (r MessageListResponse) Marshal() ([]byte, error) {
 	return json.Marshal(r)
 }
 

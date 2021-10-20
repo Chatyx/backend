@@ -36,10 +36,11 @@ func (s *AppTestSuite) TestSignInSuccess() {
 		Fingerprint:  fingerprintValue,
 	})
 
-	refreshTokens, err := s.redisClient.LRange(context.Background(), userID, 0, -1).Result()
+	userSessionsKey := fmt.Sprintf("user:%s:sessions", userID)
+	sessionKeys, err := s.redisClient.LRange(context.Background(), userSessionsKey, 0, -1).Result()
 	s.NoError(err, "Failed to range user's sessions from redis")
 
-	s.Require().Equal([]string{tokenPair.RefreshToken}, refreshTokens)
+	s.Require().Equal([]string{"session:" + tokenPair.RefreshToken}, sessionKeys)
 }
 
 func (s *AppTestSuite) TestSignInFailed() {
@@ -57,7 +58,8 @@ func (s *AppTestSuite) TestSignInFailed() {
 	defer resp.Body.Close()
 	s.Require().Equal(http.StatusUnauthorized, resp.StatusCode)
 
-	val, err := s.redisClient.Exists(context.Background(), userID).Result()
+	userSessionsKey := fmt.Sprintf("user:%s:sessions", userID)
+	val, err := s.redisClient.Exists(context.Background(), userSessionsKey).Result()
 	s.NoError(err, "Failed to check exist userID key")
 	s.Require().Equal(int64(0), val, "userID key must not exist")
 }
@@ -92,10 +94,11 @@ func (s *AppTestSuite) TestRefreshWithBodySuccess() {
 		Fingerprint:  fingerprintValue,
 	})
 
-	refreshTokens, err := s.redisClient.LRange(context.Background(), userID, 0, -1).Result()
+	userSessionsKey := fmt.Sprintf("user:%s:sessions", userID)
+	sessionKeys, err := s.redisClient.LRange(context.Background(), userSessionsKey, 0, -1).Result()
 	s.NoError(err, "Failed to range user's sessions from redis")
 
-	s.Require().Equal([]string{newTokenPair.RefreshToken}, refreshTokens)
+	s.Require().Equal([]string{"session:" + newTokenPair.RefreshToken}, sessionKeys)
 
 	val, err := s.redisClient.Exists(context.Background(), tokenPair.RefreshToken).Result()
 	s.NoError(err, "Failed to check exist old session")
@@ -133,10 +136,11 @@ func (s *AppTestSuite) TestRefreshWithCookieSuccess() {
 		Fingerprint:  fingerprintValue,
 	})
 
-	refreshTokens, err := s.redisClient.LRange(context.Background(), userID, 0, -1).Result()
+	userSessionsKey := fmt.Sprintf("user:%s:sessions", userID)
+	sessionKeys, err := s.redisClient.LRange(context.Background(), userSessionsKey, 0, -1).Result()
 	s.NoError(err, "Failed to range user's sessions from redis")
 
-	s.Require().Equal([]string{newTokenPair.RefreshToken}, refreshTokens)
+	s.Require().Equal([]string{"session:" + newTokenPair.RefreshToken}, sessionKeys)
 
 	val, err := s.redisClient.Exists(context.Background(), refreshCookie.Value).Result()
 	s.NoError(err, "Failed to check exist old session")
@@ -191,7 +195,7 @@ func (s *AppTestSuite) getRefreshCookie(cookies []*http.Cookie) *http.Cookie {
 }
 
 func (s *AppTestSuite) checkSession(expectedSession domain.Session) {
-	payload, err := s.redisClient.Get(context.Background(), expectedSession.RefreshToken).Result()
+	payload, err := s.redisClient.Get(context.Background(), "session:"+expectedSession.RefreshToken).Result()
 	s.NoError(err, "Failed to get session from redis")
 
 	var session domain.Session
@@ -210,7 +214,7 @@ func (s *AppTestSuite) checkSession(expectedSession domain.Session) {
 		s.Require().Equal(expectedSession.ExpiresAt, session.ExpiresAt)
 	}
 
-	sessionTTL, err := s.redisClient.TTL(context.Background(), expectedSession.RefreshToken).Result()
+	sessionTTL, err := s.redisClient.TTL(context.Background(), "session:"+expectedSession.RefreshToken).Result()
 	s.NoError(err, "Failed to get session TTL from redis")
 
 	expectedSessionTTL := s.cfg.Auth.RefreshTokenTTL
