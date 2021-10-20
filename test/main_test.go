@@ -122,14 +122,11 @@ func (s *AppTestSuite) TearDownSuite() {
 }
 
 func (s *AppTestSuite) SetupTest() {
-	s.NoError(s.fixtures.Load(), "Failed to populate database")
-}
-
-func (s *AppTestSuite) TearDownTest() {
 	s.NoError(
 		s.redisClient.FlushAll(context.Background()).Err(),
 		"Failed to remove all keys in the redis",
 	)
+	s.NoError(s.fixtures.Load(), "Failed to populate database")
 }
 
 func (s *AppTestSuite) buildURL(uri string) string {

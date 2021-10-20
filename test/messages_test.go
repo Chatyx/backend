@@ -14,6 +14,7 @@ import (
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/encoding"
+	"github.com/go-redis/redis/v8"
 	ws "github.com/gorilla/websocket"
 )
 
@@ -24,18 +25,16 @@ var messageTableColumns = []string{
 
 func (s *AppTestSuite) TestSendAndReceiveMessageInTheSameChat() {
 	const (
-		johnID      = "ba566522-3305-48df-936a-73f47611934b"
-		chatID      = "609fce45-458f-477a-b2bb-e886d75d22ab"
-		messageText = "Hello, Mick!"
+		johnID = "ba566522-3305-48df-936a-73f47611934b"
+		mickID = "7e7b1825-ef9a-42ec-b4db-6f09dffe3850"
+		chatID = "609fce45-458f-477a-b2bb-e886d75d22ab"
 	)
 
 	msgCh := make(chan domain.Message, 1)
 	johnConn := s.newWebsocketConnection("john1967", "qwerty12345", "111")
 	mickConn := s.newWebsocketConnection("mick47", "helloworld12345", "222")
 
-	go func() {
-		s.sendWebsocketMessage(johnConn, messageText, chatID)
-	}()
+	go s.sendWebsocketMessage(johnConn, "Hello, Mick!", chatID)
 	go func() {
 		msg := s.receiveWebsocketMessage(mickConn)
 		msgCh <- msg
@@ -44,8 +43,24 @@ func (s *AppTestSuite) TestSendAndReceiveMessageInTheSameChat() {
 	select {
 	case msg := <-msgCh:
 		s.Require().Equal(domain.MessageSendAction, msg.Action)
-		s.Require().Equal(messageText, msg.Text)
+		s.Require().Equal("Hello, Mick!", msg.Text)
 		s.Require().Equal(johnID, msg.SenderID)
+		s.Require().Equal(chatID, msg.ChatID)
+	case <-time.After(50 * time.Millisecond):
+		s.T().Error("timeout exceeded")
+	}
+
+	go s.sendWebsocketMessage(mickConn, "Hi, John!", chatID)
+	go func() {
+		msg := s.receiveWebsocketMessage(johnConn)
+		msgCh <- msg
+	}()
+
+	select {
+	case msg := <-msgCh:
+		s.Require().Equal(domain.MessageSendAction, msg.Action)
+		s.Require().Equal("Hi, John!", msg.Text)
+		s.Require().Equal(mickID, msg.SenderID)
 		s.Require().Equal(chatID, msg.ChatID)
 	case <-time.After(50 * time.Millisecond):
 		s.T().Error("timeout exceeded")
@@ -77,10 +92,14 @@ func (s *AppTestSuite) TestMessageList() {
 		time.Sleep(1 * time.Millisecond)
 	}
 
+	expectedCachedMessages, err := s.getChatMessagesFromCache(chatID, beginSendMessages)
+	s.NoError(err, "Failed to get chat's messages from cache")
+
 	cachedMessages := s.getRequestMessages(chatID, beginSendMessages, headers)
 
 	s.Require().Equal(sendMessageLen, len(cachedMessages))
 	s.Require().Equal(sendMessageLen, s.messageCountInCache(chatID))
+	s.Require().Equal(expectedCachedMessages, cachedMessages)
 }
 
 func (s *AppTestSuite) sendWebsocketMessage(conn *ws.Conn, text, chatID string) {
@@ -165,6 +184,32 @@ func (s *AppTestSuite) getChatMessagesFromDB(chatID string, timestamp time.Time)
 
 	if err = rows.Err(); err != nil {
 		return nil, err
+	}
+
+	return messages, nil
+}
+
+func (s *AppTestSuite) getChatMessagesFromCache(chatID string, timestamp time.Time) ([]domain.Message, error) {
+	key := fmt.Sprintf("chat:%s:messages", chatID)
+
+	payloads, err := s.redisClient.ZRangeByScore(context.Background(), key, &redis.ZRangeBy{
+		Min: strconv.FormatInt(timestamp.UnixNano(), 10),
+		Max: "+inf",
+	}).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	messages := make([]domain.Message, 0, len(payloads))
+
+	for _, payload := range payloads {
+		var message domain.Message
+
+		if err = encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(payload)); err != nil {
+			return nil, err
+		}
+
+		messages = append(messages, message)
 	}
 
 	return messages, nil
