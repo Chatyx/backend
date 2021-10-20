@@ -129,6 +129,10 @@ func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, memberID s
 	return chat, nil
 }
 
+func (r *chatPostgresRepository) IsBelongToChat(ctx context.Context, chatID, memberID string) (bool, error) {
+	panic("implement me")
+}
+
 func (r *chatPostgresRepository) Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error) {
 	if !utils.IsValidUUID(dto.ID) || !utils.IsValidUUID(dto.CreatorID) {
 		r.logger.Debugf("chat is not found with chatID = %s, creatorID = %s", dto.ID, dto.CreatorID)

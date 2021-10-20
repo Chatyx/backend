@@ -88,7 +88,19 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
-	// TODO: check if user has access to this chat
+	ok, err := s.chatService.IsBelongToChat(ctx, dto.ChatID, dto.SenderID)
+	if err != nil {
+		return domain.Message{}, err
+	}
+
+	if !ok {
+		s.logger.WithFields(logging.Fields{
+			"user_id": dto.SenderID,
+			"chat_id": dto.ChatID,
+		}).Debug("user doesn't belong to this chat")
+
+		return domain.Message{}, domain.ErrChatNotFound
+	}
 
 	message, err := s.messageRepo.Create(ctx, dto)
 	if err != nil {
@@ -103,7 +115,19 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 }
 
 func (s *messageService) List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error) {
-	// TODO: check if user has access to this chat
+	ok, err := s.chatService.IsBelongToChat(ctx, chatID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		s.logger.WithFields(logging.Fields{
+			"user_id": userID,
+			"chat_id": chatID,
+		}).Debug("user doesn't belong to this chat")
+
+		return nil, domain.ErrChatNotFound
+	}
 
 	return s.messageRepo.List(ctx, chatID, timestamp)
 }

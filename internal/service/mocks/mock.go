@@ -274,6 +274,21 @@ func (mr *MockChatServiceMockRecorder) GetByID(ctx, chatID, memberID interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockChatService)(nil).GetByID), ctx, chatID, memberID)
 }
 
+// IsBelongToChat mocks base method.
+func (m *MockChatService) IsBelongToChat(ctx context.Context, chatID, memberID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsBelongToChat", ctx, chatID, memberID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsBelongToChat indicates an expected call of IsBelongToChat.
+func (mr *MockChatServiceMockRecorder) IsBelongToChat(ctx, chatID, memberID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBelongToChat", reflect.TypeOf((*MockChatService)(nil).IsBelongToChat), ctx, chatID, memberID)
+}
+
 // List mocks base method.
 func (m *MockChatService) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
 	m.ctrl.T.Helper()
