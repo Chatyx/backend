@@ -79,9 +79,9 @@ func (s *userService) UpdatePassword(ctx context.Context, dto domain.UpdateUserP
 }
 
 func (s *userService) Delete(ctx context.Context, id string) error {
-	if err := s.sessionRepo.DeleteAllByUserID(ctx, id); err != nil {
+	if err := s.userRepo.Delete(ctx, id); err != nil {
 		return err
 	}
 
-	return s.userRepo.Delete(ctx, id)
+	return s.sessionRepo.DeleteAllByUserID(ctx, id)
 }
