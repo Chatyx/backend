@@ -75,7 +75,10 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	msgPubSub := repository.NewMessagePubSub(redisClient)
-	userRepo := repository.NewUserPostgresRepository(dbPool)
+	userRepo := repository.NewUserCacheRepositoryDecorator(
+		repository.NewUserPostgresRepository(dbPool),
+		redisClient,
+	)
 	chatRepo := repository.NewChatCacheRepositoryDecorator(
 		repository.NewChatPostgresRepository(dbPool),
 		redisClient,

@@ -139,6 +139,42 @@ func (s *AppTestSuite) TestMessagesAfterChatDelete() {
 	s.Require().Equal(1, s.messageCountInCache(chatID))
 }
 
+func (s *AppTestSuite) TestMessagesAfterUserDelete() {
+	const chatID = "609fce45-458f-477a-b2bb-e886d75d22ab"
+
+	wsConn, tokenPair := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+
+	s.sendWebsocketMessage(wsConn, "Hello, world...", chatID)
+
+	req, err := http.NewRequest(http.MethodDelete, s.buildURL("/user"), nil)
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
+
+	s.sendWebsocketMessage(wsConn, "Hello, world... (2)", chatID)
+
+	errCh := make(chan error)
+	go func() {
+		_, _, err = wsConn.ReadMessage()
+		errCh <- err
+	}()
+
+	select {
+	case err = <-errCh:
+		s.Require().IsType(&ws.CloseError{}, err)
+	case <-time.After(50 * time.Millisecond):
+		s.T().Error("timeout exceeded")
+	}
+
+	s.Require().Equal(1, s.messageCountInCache(chatID))
+}
+
 func (s *AppTestSuite) sendWebsocketMessage(conn *ws.Conn, text, chatID string) {
 	dto := domain.CreateMessageDTO{
 		Text:   text,

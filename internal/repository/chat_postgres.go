@@ -24,12 +24,14 @@ func NewChatPostgresRepository(dbPool PgxPool) ChatRepository {
 
 func (r *chatPostgresRepository) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
 	query := `SELECT 
-		id, name, description, 
-		creator_id, created_at, updated_at 
+		chats.id, chats.name, chats.description, 
+		chats.creator_id, chats.created_at, chats.updated_at 
 	FROM chats 
 	INNER JOIN users_chats 
 		ON chats.id = users_chats.chat_id
-	WHERE users_chats.user_id = $1`
+	INNER JOIN users
+		ON users_chats.user_id = users.id
+	WHERE users_chats.user_id = $1 AND users.is_deleted IS FALSE`
 
 	rows, err := r.dbPool.Query(ctx, query, memberID)
 	if err != nil {
