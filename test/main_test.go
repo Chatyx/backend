@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Mort4lis/scht-backend/internal/domain"
+
 	"github.com/Mort4lis/scht-backend/internal/app"
 	"github.com/Mort4lis/scht-backend/internal/config"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -133,7 +135,7 @@ func (s *AppTestSuite) buildURL(uri string) string {
 	return s.apiURLPrefix + uri
 }
 
-func (s *AppTestSuite) newWebsocketConnection(username, password, fingerprint string) *ws.Conn {
+func (s *AppTestSuite) newWebsocketConnection(username, password, fingerprint string) (*ws.Conn, domain.JWTPair) {
 	tokenPair := s.authenticate(username, password, fingerprint)
 
 	reqHeaders := http.Header{}
@@ -144,5 +146,5 @@ func (s *AppTestSuite) newWebsocketConnection(username, password, fingerprint st
 
 	time.Sleep(50 * time.Millisecond)
 
-	return conn
+	return conn, tokenPair
 }

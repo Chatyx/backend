@@ -79,6 +79,7 @@ func NewApp(cfg *config.Config) *App {
 	chatRepo := repository.NewChatCacheRepositoryDecorator(
 		repository.NewChatPostgresRepository(dbPool),
 		redisClient,
+		dbPool,
 	)
 	sessionRepo := repository.NewSessionRedisRepository(redisClient)
 	msgRepo := repository.NewMessageCompositeRepository(

@@ -31,8 +31,8 @@ func (s *AppTestSuite) TestSendAndReceiveMessageInTheSameChat() {
 	)
 
 	msgCh := make(chan domain.Message, 1)
-	johnConn := s.newWebsocketConnection("john1967", "qwerty12345", "111")
-	mickConn := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+	johnConn, _ := s.newWebsocketConnection("john1967", "qwerty12345", "111")
+	mickConn, _ := s.newWebsocketConnection("mick47", "helloworld12345", "222")
 
 	go s.sendWebsocketMessage(johnConn, "Hello, Mick!", chatID)
 	go func() {
@@ -84,7 +84,7 @@ func (s *AppTestSuite) TestMessageList() {
 	storedMessages := s.getRequestMessages(chatID, time.Time{}, headers)
 	s.Require().Equal(expectedStoredMessages, storedMessages)
 
-	mickConn := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+	mickConn, _ := s.newWebsocketConnection("mick47", "helloworld12345", "222")
 
 	beginSendMessages := time.Now()
 	for i := 0; i < sendMessageLen; i++ {
@@ -100,6 +100,43 @@ func (s *AppTestSuite) TestMessageList() {
 	s.Require().Equal(sendMessageLen, len(cachedMessages))
 	s.Require().Equal(sendMessageLen, s.messageCountInCache(chatID))
 	s.Require().Equal(expectedCachedMessages, cachedMessages)
+}
+
+func (s *AppTestSuite) TestMessagesAfterChatDelete() {
+	const chatID = "609fce45-458f-477a-b2bb-e886d75d22ab"
+
+	johnConn, _ := s.newWebsocketConnection("john1967", "qwerty12345", "111")
+	mickTokenPair := s.authenticate("mick47", "helloworld12345", "222")
+
+	s.sendWebsocketMessage(johnConn, "Hi, Mick!", chatID)
+
+	req, err := http.NewRequest(http.MethodDelete, s.buildURL("/chats/"+chatID), nil)
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+mickTokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
+
+	s.sendWebsocketMessage(johnConn, "Hi, Mick!", chatID)
+
+	errCh := make(chan error)
+	go func() {
+		_, _, err = johnConn.ReadMessage()
+		errCh <- err
+	}()
+
+	select {
+	case err = <-errCh:
+		s.Require().IsType(&ws.CloseError{}, err)
+	case <-time.After(50 * time.Millisecond):
+		s.T().Error("timeout exceeded")
+	}
+
+	s.Require().Equal(1, s.messageCountInCache(chatID))
 }
 
 func (s *AppTestSuite) sendWebsocketMessage(conn *ws.Conn, text, chatID string) {

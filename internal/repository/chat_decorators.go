@@ -11,13 +11,15 @@ import (
 
 type chatCacheRepositoryDecorator struct {
 	repo        ChatRepository
+	dbPool      PgxPool
 	redisClient *redis.Client
 	logger      logging.Logger
 }
 
-func NewChatCacheRepositoryDecorator(repo ChatRepository, redisClient *redis.Client) ChatRepository {
+func NewChatCacheRepositoryDecorator(repo ChatRepository, redisClient *redis.Client, dbPool PgxPool) ChatRepository {
 	return &chatCacheRepositoryDecorator{
 		repo:        repo,
+		dbPool:      dbPool,
 		redisClient: redisClient,
 		logger:      logging.GetLogger(),
 	}
@@ -89,5 +91,64 @@ func (r *chatCacheRepositoryDecorator) Update(ctx context.Context, dto domain.Up
 }
 
 func (r *chatCacheRepositoryDecorator) Delete(ctx context.Context, chatID, creatorID string) error {
-	return r.repo.Delete(ctx, chatID, creatorID)
+	userIDs, err := r.getUserIDsWhoBelongToChat(ctx, chatID)
+	if err != nil {
+		return err
+	}
+
+	if err = r.repo.Delete(ctx, chatID, creatorID); err != nil {
+		return err
+	}
+
+	pipeline := r.redisClient.Pipeline()
+
+	for _, userID := range userIDs {
+		userChatsKey := fmt.Sprintf("user:%s:chat_ids", userID)
+		if err = pipeline.SRem(ctx, userChatsKey, chatID).Err(); err != nil {
+			r.logger.WithError(err).Error("An error occurred while removing chat_id from redis")
+			return err
+		}
+	}
+
+	if _, err = pipeline.Exec(ctx); err != nil {
+		r.logger.WithError(err).Error("An error occurred while removing chat_ids from redis")
+		return err
+	}
+
+	return nil
+}
+
+func (r *chatCacheRepositoryDecorator) getUserIDsWhoBelongToChat(ctx context.Context, chatID string) ([]string, error) {
+	query := `SELECT users_chats.user_id FROM users_chats 
+	INNER JOIN users 
+		ON users_chats.user_id = users.id
+	WHERE users_chats.chat_id = $1 AND users.is_deleted IS FALSE`
+
+	rows, err := r.dbPool.Query(ctx, query, chatID)
+	if err != nil {
+		r.logger.WithError(err).Error("An error occurred while getting user_ids who belong to chat")
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	userIDs := make([]string, 0)
+
+	for rows.Next() {
+		var userID string
+
+		if err = rows.Scan(&userID); err != nil {
+			r.logger.WithError(err).Error("Unable to scan user id")
+			return nil, err
+		}
+
+		userIDs = append(userIDs, userID)
+	}
+
+	if err = rows.Err(); err != nil {
+		r.logger.WithError(err).Error("An error occurred while getting user_ids who belong to chat")
+		return nil, err
+	}
+
+	return userIDs, nil
 }

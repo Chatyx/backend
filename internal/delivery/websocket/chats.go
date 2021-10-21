@@ -27,8 +27,6 @@ func (s *chatSession) Serve() {
 	defer cancel()
 
 	inCh, outCh, errCh := s.msgService.NewServeSession(ctx, s.userID)
-	defer close(inCh)
-
 	errCh2 := s.readMessages(inCh)
 
 	for {
@@ -56,6 +54,7 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) <-chan e
 	errCh := make(chan error)
 
 	go func() {
+		defer close(inCh)
 		defer close(errCh)
 
 	LOOP:
