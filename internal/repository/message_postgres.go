@@ -35,7 +35,7 @@ func (r *messagePostgresRepository) List(ctx context.Context, chatID string, tim
 		id, action, text, 
 		sender_id, chat_id, created_at 
 	FROM messages 
-	WHERE chat_id = $1 AND created_at >= $2 
+	WHERE chat_id = $1 AND created_at > $2 
 	ORDER BY created_at`
 
 	rows, err := r.dbPool.Query(ctx, query, chatID, timestamp)

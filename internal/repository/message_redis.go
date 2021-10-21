@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -59,7 +58,7 @@ func (r *messageRedisRepository) List(ctx context.Context, chatID string, timest
 	key := fmt.Sprintf("chat:%s:messages", chatID)
 
 	payloads, err := r.redisClient.ZRangeByScore(ctx, key, &redis.ZRangeBy{
-		Min: strconv.FormatInt(timestamp.UnixNano(), 10),
+		Min: fmt.Sprintf("(%d", timestamp.UnixNano()),
 		Max: "+inf",
 	}).Result()
 	if err != nil {

@@ -91,6 +91,7 @@ func (s *AppTestSuite) TestMessageList() {
 		s.sendWebsocketMessage(mickConn, "Hi, "+strconv.Itoa(i), chatID)
 		time.Sleep(1 * time.Millisecond)
 	}
+	time.Sleep(10 * time.Millisecond)
 
 	expectedCachedMessages, err := s.getChatMessagesFromCache(chatID, beginSendMessages)
 	s.NoError(err, "Failed to get chat's messages from cache")
@@ -266,7 +267,7 @@ func (s *AppTestSuite) getChatMessagesFromCache(chatID string, timestamp time.Ti
 	key := fmt.Sprintf("chat:%s:messages", chatID)
 
 	payloads, err := s.redisClient.ZRangeByScore(context.Background(), key, &redis.ZRangeBy{
-		Min: strconv.FormatInt(timestamp.UnixNano(), 10),
+		Min: fmt.Sprintf("(%d", timestamp.UnixNano()),
 		Max: "+inf",
 	}).Result()
 	if err != nil {

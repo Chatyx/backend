@@ -23,8 +23,8 @@ var (
 )
 
 var chatTableColumns = []string{
-	"id", "name", "description",
-	"creator_id", "created_at", "updated_at",
+	"chats.id", "chats.name", "chats.description",
+	"chats.creator_id", "chats.created_at", "chats.updated_at",
 }
 
 var (
@@ -75,7 +75,9 @@ func TestChatPostgresRepository_List(t *testing.T) {
 	query := fmt.Sprintf(`SELECT %s FROM chats 
 	INNER JOIN users_chats 
 		ON chats.id = users_chats.chat_id
-	WHERE users_chats.user_id = $1`,
+	INNER JOIN users
+		ON users_chats.user_id = users.id
+	WHERE users_chats.user_id = $1 AND users.is_deleted IS FALSE`,
 		strings.Join(chatTableColumns, ", "))
 
 	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, memberID string, rowsRes []RowResult, rowsErr error) {

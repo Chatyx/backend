@@ -105,8 +105,8 @@ func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, memberID s
 	}
 
 	query := `SELECT 
-		id, name, description, 
-		creator_id, created_at, updated_at 
+		chats.id, chats.name, chats.description, 
+		chats.creator_id, chats.created_at, chats.updated_at 
 	FROM chats 
 	INNER JOIN users_chats 
 		ON chats.id = users_chats.chat_id

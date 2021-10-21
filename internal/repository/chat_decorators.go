@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -52,11 +51,6 @@ func (r *chatCacheRepositoryDecorator) List(ctx context.Context, memberID string
 
 		if err = r.redisClient.SAdd(ctx, userChatsKey, chatIDs...).Err(); err != nil {
 			r.logger.WithError(err).Errorf("An error occurred while adding chat ids into the redis")
-			return nil, err
-		}
-
-		if err = r.redisClient.Expire(ctx, userChatsKey, 5*time.Minute).Err(); err != nil {
-			r.logger.WithError(err).Errorf("An error occurred while setting ttl to key")
 			return nil, err
 		}
 	}
