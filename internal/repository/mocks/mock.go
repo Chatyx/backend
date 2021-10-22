@@ -287,21 +287,6 @@ func (mr *MockChatRepositoryMockRecorder) GetByID(ctx, chatID, memberID interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockChatRepository)(nil).GetByID), ctx, chatID, memberID)
 }
 
-// IsBelongToChat mocks base method.
-func (m *MockChatRepository) IsBelongToChat(ctx context.Context, chatID, memberID string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsBelongToChat", ctx, chatID, memberID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsBelongToChat indicates an expected call of IsBelongToChat.
-func (mr *MockChatRepositoryMockRecorder) IsBelongToChat(ctx, chatID, memberID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBelongToChat", reflect.TypeOf((*MockChatRepository)(nil).IsBelongToChat), ctx, chatID, memberID)
-}
-
 // List mocks base method.
 func (m *MockChatRepository) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
 	m.ctrl.T.Helper()
@@ -330,6 +315,59 @@ func (m *MockChatRepository) Update(ctx context.Context, dto domain.UpdateChatDT
 func (mr *MockChatRepositoryMockRecorder) Update(ctx, dto interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockChatRepository)(nil).Update), ctx, dto)
+}
+
+// MockUserChatRepository is a mock of UserChatRepository interface.
+type MockUserChatRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockUserChatRepositoryMockRecorder
+}
+
+// MockUserChatRepositoryMockRecorder is the mock recorder for MockUserChatRepository.
+type MockUserChatRepositoryMockRecorder struct {
+	mock *MockUserChatRepository
+}
+
+// NewMockUserChatRepository creates a new mock instance.
+func NewMockUserChatRepository(ctrl *gomock.Controller) *MockUserChatRepository {
+	mock := &MockUserChatRepository{ctrl: ctrl}
+	mock.recorder = &MockUserChatRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockUserChatRepository) EXPECT() *MockUserChatRepositoryMockRecorder {
+	return m.recorder
+}
+
+// IsUserBelongToChat mocks base method.
+func (m *MockUserChatRepository) IsUserBelongToChat(ctx context.Context, userID, chatID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsUserBelongToChat", ctx, userID, chatID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsUserBelongToChat indicates an expected call of IsUserBelongToChat.
+func (mr *MockUserChatRepositoryMockRecorder) IsUserBelongToChat(ctx, userID, chatID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsUserBelongToChat", reflect.TypeOf((*MockUserChatRepository)(nil).IsUserBelongToChat), ctx, userID, chatID)
+}
+
+// ListUsersWhoBelongToChat mocks base method.
+func (m *MockUserChatRepository) ListUsersWhoBelongToChat(ctx context.Context, chatID string) ([]domain.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListUsersWhoBelongToChat", ctx, chatID)
+	ret0, _ := ret[0].([]domain.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListUsersWhoBelongToChat indicates an expected call of ListUsersWhoBelongToChat.
+func (mr *MockUserChatRepositoryMockRecorder) ListUsersWhoBelongToChat(ctx, chatID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUsersWhoBelongToChat", reflect.TypeOf((*MockUserChatRepository)(nil).ListUsersWhoBelongToChat), ctx, chatID)
 }
 
 // MockMessageRepository is a mock of MessageRepository interface.

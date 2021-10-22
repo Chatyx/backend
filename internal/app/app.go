@@ -75,14 +75,14 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	msgPubSub := repository.NewMessagePubSub(redisClient)
-	userRepo := repository.NewUserCacheRepositoryDecorator(
-		repository.NewUserPostgresRepository(dbPool),
-		redisClient,
-	)
+	userRepo := repository.NewUserPostgresRepository(dbPool)
 	chatRepo := repository.NewChatCacheRepositoryDecorator(
 		repository.NewChatPostgresRepository(dbPool),
 		redisClient,
-		dbPool,
+	)
+	userChatRepo := repository.NewUserChatCacheRepository(
+		repository.NewUserChatPostgresRepository(dbPool),
+		redisClient,
 	)
 	sessionRepo := repository.NewSessionRedisRepository(redisClient)
 	msgRepo := repository.NewMessageCompositeRepository(
@@ -92,7 +92,8 @@ func NewApp(cfg *config.Config) *App {
 
 	userService := service.NewUserService(userRepo, sessionRepo, hasher)
 	chatService := service.NewChatService(chatRepo)
-	messageService := service.NewMessageService(chatService, msgRepo, msgPubSub)
+	userChatService := service.NewUserChatService(userChatRepo)
+	messageService := service.NewMessageService(chatService, userChatService, msgRepo, msgPubSub)
 	authService := service.NewAuthService(service.AuthServiceConfig{
 		UserService:     userService,
 		SessionRepo:     sessionRepo,

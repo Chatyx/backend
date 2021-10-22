@@ -10,18 +10,20 @@ import (
 )
 
 type messageService struct {
-	chatService ChatService
-	messageRepo repository.MessageRepository
-	pubSub      repository.MessagePubSub
-	logger      logging.Logger
+	chatService     ChatService
+	userChatService UserChatService
+	messageRepo     repository.MessageRepository
+	pubSub          repository.MessagePubSub
+	logger          logging.Logger
 }
 
-func NewMessageService(chatService ChatService, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
+func NewMessageService(chatService ChatService, userChatService UserChatService, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
 	return &messageService{
-		chatService: chatService,
-		messageRepo: messageRepo,
-		pubSub:      pubSub,
-		logger:      logging.GetLogger(),
+		chatService:     chatService,
+		userChatService: userChatService,
+		messageRepo:     messageRepo,
+		pubSub:          pubSub,
+		logger:          logging.GetLogger(),
 	}
 }
 
@@ -88,7 +90,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
-	ok, err := s.chatService.IsBelongToChat(ctx, dto.ChatID, dto.SenderID)
+	ok, err := s.userChatService.IsUserBelongToChat(ctx, dto.SenderID, dto.ChatID)
 	if err != nil {
 		return domain.Message{}, err
 	}
@@ -115,7 +117,7 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 }
 
 func (s *messageService) List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error) {
-	ok, err := s.chatService.IsBelongToChat(ctx, chatID, userID)
+	ok, err := s.userChatService.IsUserBelongToChat(ctx, userID, chatID)
 	if err != nil {
 		return nil, err
 	}
