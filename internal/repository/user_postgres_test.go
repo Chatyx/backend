@@ -93,10 +93,7 @@ func TestUserPostgresRepository_List(t *testing.T) {
 		},
 	)
 
-	query := fmt.Sprintf(
-		"SELECT %s FROM users WHERE is_deleted IS FALSE",
-		strings.Join(userTableColumns, ", "),
-	)
+	query := fmt.Sprintf("SELECT %s FROM users", strings.Join(userTableColumns, ", "))
 
 	var defaultMockBehavior mockBehavior = func(mockPool pgxmock.PgxPoolIface, rowsRes []RowResult, rowsErr error) {
 		expected := mockPool.ExpectQuery(query)
@@ -350,10 +347,7 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 		},
 	)
 
-	query := fmt.Sprintf(
-		"SELECT %s FROM users WHERE id = $1 AND is_deleted IS FALSE",
-		strings.Join(userTableColumns, ", "),
-	)
+	query := fmt.Sprintf("SELECT %s FROM users WHERE id = $1", strings.Join(userTableColumns, ", "))
 
 	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, id string, row Row, rowErr error) {
 		expected := mockPool.ExpectQuery(query).WithArgs(id)

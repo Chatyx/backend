@@ -3,16 +3,14 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
-
-	"github.com/jackc/pgtype"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/utils"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -29,15 +27,12 @@ func NewUserPostgresRepository(dbPool PgxPool) UserRepository {
 }
 
 func (r *userPostgresRepository) List(ctx context.Context) ([]domain.User, error) {
-	query := `
-		SELECT 
-			id, username, password, 
-			first_name, last_name, email, 
-			birth_date, department, is_deleted, 
-			created_at, updated_at
-		FROM users
-		WHERE is_deleted IS FALSE
-	`
+	query := `SELECT 
+		id, username, password, 
+		first_name, last_name, email, 
+		birth_date, department, is_deleted, 
+		created_at, updated_at
+	FROM users`
 
 	rows, err := r.dbPool.Query(ctx, query)
 	if err != nil {
@@ -132,29 +127,33 @@ func (r *userPostgresRepository) GetByID(ctx context.Context, id string) (domain
 		return domain.User{}, domain.ErrUserNotFound
 	}
 
-	return r.getBy(ctx, "id", id)
+	query := `SELECT 
+		id, username, password, 
+		first_name, last_name, email, 
+		birth_date, department, is_deleted, 
+		created_at, updated_at
+	FROM users WHERE id = $1`
+
+	return r.getBy(ctx, query, id)
 }
 
 func (r *userPostgresRepository) GetByUsername(ctx context.Context, username string) (domain.User, error) {
-	return r.getBy(ctx, "username", username)
+	query := `SELECT 
+		id, username, password, 
+		first_name, last_name, email, 
+		birth_date, department, is_deleted, 
+		created_at, updated_at
+	FROM users WHERE username = $1 AND is_deleted IS FALSE`
+
+	return r.getBy(ctx, query, username)
 }
 
-func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fieldValue interface{}) (domain.User, error) {
+func (r *userPostgresRepository) getBy(ctx context.Context, query string, args ...interface{}) (domain.User, error) {
 	var user domain.User
-
-	query := fmt.Sprintf(`
-		SELECT 
-			id, username, password, 
-			first_name, last_name, email, 
-			birth_date, department, is_deleted, 
-			created_at, updated_at
-		FROM users WHERE %s = $1 AND is_deleted IS FALSE`,
-		fieldName,
-	)
 
 	var birthDate pgtype.Date
 
-	row := r.dbPool.QueryRow(ctx, query, fieldValue)
+	row := r.dbPool.QueryRow(ctx, query, args...)
 	if err := row.Scan(
 		&user.ID, &user.Username, &user.Password,
 		&user.FirstName, &user.LastName, &user.Email,
@@ -162,11 +161,11 @@ func (r *userPostgresRepository) getBy(ctx context.Context, fieldName string, fi
 		&user.CreatedAt, &user.UpdatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			r.logger.Debugf("user is not found with %s = %s", fieldName, fieldValue)
+			r.logger.Debugf("user is not found with these args %v", args)
 			return domain.User{}, domain.ErrUserNotFound
 		}
 
-		r.logger.WithError(err).Errorf("An error occurred while getting user by %s", fieldName)
+		r.logger.WithError(err).Error("An error occurred while getting")
 
 		return domain.User{}, err
 	}
@@ -272,11 +271,7 @@ func (r *userPostgresRepository) Delete(ctx context.Context, id string) error {
 		return domain.ErrUserNotFound
 	}
 
-	query := `
-		UPDATE users SET
-			is_deleted = TRUE
-		WHERE id = $1 AND is_deleted IS FALSE
-	`
+	query := "UPDATE users SET is_deleted = TRUE WHERE id = $1 AND is_deleted IS FALSE"
 
 	cmgTag, err := r.dbPool.Exec(ctx, query, id)
 	if err != nil {
