@@ -18,3 +18,14 @@
   department: ""
   is_deleted: false
   created_at: 2021-10-05T17:12:25.224
+
+- id: 2dae270f-b02c-46ed-98f0-a458948c158a
+  username: william86
+  password: $2a$04$vsffa39xFydpLfUR6k7zeOuYpWjdxTKAE05GKJ7v1uOU.ArsETGpe # qwerty12345
+  first_name: ""
+  last_name: ""
+  email: william86@gmail.com
+  department: ""
+  is_deleted: true
+  created_at: 2021-10-23T14:22:55.228
+  updated_at: 2021-10-23T14:25:32.728

@@ -44,24 +44,42 @@ func (s *AppTestSuite) TestSignInSuccess() {
 }
 
 func (s *AppTestSuite) TestSignInFailed() {
-	userID := "ba566522-3305-48df-936a-73f47611934b"
-	bodyStr := `{"username":"john1967","password":"qwerty_qQq"}`
+	testTable := []struct {
+		name    string
+		userID  string
+		bodyStr string
+	}{
+		{
+			name:    "With wrong credentials",
+			userID:  "ba566522-3305-48df-936a-73f47611934b",
+			bodyStr: `{"username":"john1967","password":"qwerty_qQq"}`,
+		},
+		{
+			name:    "As deleted user",
+			userID:  "2dae270f-b02c-46ed-98f0-a458948c158a",
+			bodyStr: `{"username":"william86","password":"qwerty12345"}`,
+		},
+	}
 
-	req, err := http.NewRequest(http.MethodPost, s.buildURL("/auth/sign-in"), strings.NewReader(bodyStr))
-	s.NoError(err, "Failed to create request")
+	for _, testCase := range testTable {
+		s.Run(testCase.name, func() {
+			req, err := http.NewRequest(http.MethodPost, s.buildURL("/auth/sign-in"), strings.NewReader(testCase.bodyStr))
+			s.NoError(err, "Failed to create request")
 
-	req.Header.Set("X-Fingerprint", fingerprintValue)
+			req.Header.Set("X-Fingerprint", testCase.userID)
 
-	resp, err := s.httpClient.Do(req)
-	s.Require().NoError(err, "Failed to send request")
+			resp, err := s.httpClient.Do(req)
+			s.Require().NoError(err, "Failed to send request")
 
-	defer resp.Body.Close()
-	s.Require().Equal(http.StatusUnauthorized, resp.StatusCode)
+			defer resp.Body.Close()
+			s.Require().Equal(http.StatusUnauthorized, resp.StatusCode)
 
-	userSessionsKey := fmt.Sprintf("user:%s:sessions", userID)
-	val, err := s.redisClient.Exists(context.Background(), userSessionsKey).Result()
-	s.NoError(err, "Failed to check exist userID key")
-	s.Require().Equal(int64(0), val, "userID key must not exist")
+			userSessionsKey := fmt.Sprintf("user:%s:sessions", testCase.userID)
+			val, err := s.redisClient.Exists(context.Background(), userSessionsKey).Result()
+			s.NoError(err, "Failed to check exist userID key")
+			s.Require().Equal(int64(0), val, "userID key must not exist")
+		})
+	}
 }
 
 func (s *AppTestSuite) TestRefreshWithBodySuccess() {
