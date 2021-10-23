@@ -5,7 +5,6 @@ package test
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -242,8 +241,9 @@ func (s *AppTestSuite) TestDeleteUser() {
 	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
 
 	// Check if the user exists after delete
-	_, err = s.getUserFromDB(id)
-	s.Require().Equal(sql.ErrNoRows, err, "User hasn't been deleted")
+	user, err := s.getUserFromDB(id)
+	s.NoError(err, "Failed to get user from database")
+	s.Require().True(user.IsDeleted, "User hasn't been deleted")
 
 	// Check that refresh sessions don't exist after user delete
 	sessionKey := "session:" + tokenPair.RefreshToken
@@ -259,10 +259,7 @@ func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
 		birthDate pgtype.Date
 	)
 
-	query := fmt.Sprintf(
-		`SELECT %s FROM users WHERE id = $1 AND is_deleted IS FALSE`,
-		strings.Join(userTableColumns, ", "),
-	)
+	query := fmt.Sprintf("SELECT %s FROM users WHERE id = $1", strings.Join(userTableColumns, ", "))
 
 	row := s.dbConn.QueryRow(query, id)
 	if err := row.Scan(
@@ -284,10 +281,7 @@ func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
 func (s *AppTestSuite) getAllUsersFromDB() ([]domain.User, error) {
 	users := make([]domain.User, 0)
 
-	query := fmt.Sprintf(
-		`SELECT %s FROM users WHERE is_deleted IS FALSE`,
-		strings.Join(userTableColumns, ", "),
-	)
+	query := fmt.Sprintf("SELECT %s FROM users", strings.Join(userTableColumns, ", "))
 
 	rows, err := s.dbConn.Query(query)
 	if err != nil {
