@@ -33,6 +33,7 @@ func (r *chatCacheRepositoryDecorator) Delete(ctx context.Context, chatID, creat
 			"error":     err,
 			"redis_key": chatUsersKey,
 		}).Error("An error occurred while deleting the key from redis")
+
 		return err
 	}
 

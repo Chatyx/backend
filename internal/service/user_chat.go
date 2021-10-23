@@ -27,6 +27,7 @@ func (s *userChatService) ListUsersWhoBelongToChat(ctx context.Context, chatID, 
 	}
 
 	isBelong := false
+
 	for _, user := range users {
 		if user.ID == memberID {
 			isBelong = true

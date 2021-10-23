@@ -244,6 +244,13 @@ func (s *AppTestSuite) TestDeleteUser() {
 	// Check if the user exists after delete
 	_, err = s.getUserFromDB(id)
 	s.Require().Equal(sql.ErrNoRows, err, "User hasn't been deleted")
+
+	// Check that refresh sessions don't exist after user delete
+	sessionKey := "session:" + tokenPair.RefreshToken
+	userSessionsKey := fmt.Sprintf("user:%s:sessions", id)
+	val, err := s.redisClient.Exists(context.Background(), sessionKey, userSessionsKey).Result()
+	s.NoError(err, "Failed to check existence the session keys")
+	s.Require().Equal(int64(0), val)
 }
 
 func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
