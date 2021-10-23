@@ -1,10 +1,36 @@
 package encoding
 
 import (
+	"encoding/json"
+
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	protogen "github.com/Mort4lis/scht-backend/internal/encoding/proto-gen"
 	prototypes "github.com/gogo/protobuf/types"
 )
+
+type jsonCreateMessageDTOUnmarshaler struct {
+	dto *domain.CreateMessageDTO
+}
+
+func NewJSONCreateMessageDTOUnmarshaler(dto *domain.CreateMessageDTO) Unmarshaler {
+	return &jsonCreateMessageDTOUnmarshaler{dto: dto}
+}
+
+func (um *jsonCreateMessageDTOUnmarshaler) Unmarshal(payload []byte) error {
+	return json.Unmarshal(payload, um.dto)
+}
+
+type jsonMessageMarshaler struct {
+	message domain.Message
+}
+
+func NewJSONMessageMarshaler(message domain.Message) Marshaler {
+	return jsonMessageMarshaler{message: message}
+}
+
+func (m jsonMessageMarshaler) Marshal() ([]byte, error) {
+	return json.Marshal(m.message)
+}
 
 //go:generate protoc --gofast_out=Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types:. ./proto/message.proto
 

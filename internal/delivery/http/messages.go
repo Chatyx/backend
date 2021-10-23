@@ -5,17 +5,17 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-playground/validator/v10"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
-
+	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
 )
 
 const (
-	listMessageURI = "/api/chats/:id/messages"
+	listMessageURI     = "/api/messages"
+	listChatMessageURI = "/api/chats/:id/messages"
 )
 
 type MessageListResponse struct {
@@ -46,7 +46,8 @@ func newMessageHandler(ms service.MessageService, validate *validator.Validate) 
 }
 
 func (h *messageHandler) register(router *httprouter.Router, authMid Middleware) {
-	router.Handler(http.MethodGet, listMessageURI, authMid(http.HandlerFunc(h.list)))
+	router.Handler(http.MethodGet, listChatMessageURI, authMid(http.HandlerFunc(h.list)))
+	router.Handler(http.MethodPost, listMessageURI, authMid(http.HandlerFunc(h.create)))
 }
 
 // @Summary Get chat's messages
@@ -88,4 +89,44 @@ func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
 	}
 
 	respondSuccess(http.StatusOK, w, MessageListResponse{List: messages})
+}
+
+// @Summary Send message to the chat
+// @Tags Messages
+// @Security JWTTokenAuth
+// @Accept json
+// @Produce json
+// @Param input body domain.CreateMessageDTO true "Create body"
+// @Success 201 {object} domain.Message
+// @Failure 400,404 {object} ResponseError
+// @Failure 500 {object} ResponseError
+// @Router /messages [post]
+func (h *messageHandler) create(w http.ResponseWriter, req *http.Request) {
+	dto := domain.CreateMessageDTO{}
+	if err := h.decodeBody(req.Body, encoding.NewJSONCreateMessageDTOUnmarshaler(&dto)); err != nil {
+		respondError(w, err)
+		return
+	}
+
+	if err := h.validateStruct(dto); err != nil {
+		respondError(w, err)
+		return
+	}
+
+	dto.Action = domain.MessageSendAction
+	dto.SenderID = domain.UserIDFromContext(req.Context())
+
+	message, err := h.msgService.Create(req.Context(), dto)
+	if err != nil {
+		switch err {
+		case domain.ErrChatNotFound:
+			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		default:
+			respondError(w, err)
+		}
+
+		return
+	}
+
+	respondSuccess(http.StatusCreated, w, encoding.NewJSONMessageMarshaler(message))
 }

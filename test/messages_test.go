@@ -23,7 +23,7 @@ var messageTableColumns = []string{
 	"sender_id", "chat_id", "created_at",
 }
 
-func (s *AppTestSuite) TestSendAndReceiveMessageInTheSameChat() {
+func (s *AppTestSuite) TestSendMessageViaWebsocket() {
 	const (
 		johnID = "ba566522-3305-48df-936a-73f47611934b"
 		mickID = "7e7b1825-ef9a-42ec-b4db-6f09dffe3850"
@@ -65,6 +65,60 @@ func (s *AppTestSuite) TestSendAndReceiveMessageInTheSameChat() {
 	case <-time.After(50 * time.Millisecond):
 		s.T().Error("timeout exceeded")
 	}
+}
+
+func (s *AppTestSuite) TestSendMessageViaAPI() {
+	const chatID = "609fce45-458f-477a-b2bb-e886d75d22ab"
+
+	johnTokenPair := s.authenticate("john1967", "qwerty12345", "111")
+	mickConn, _ := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+
+	strBody := fmt.Sprintf(`{"text":"Hi, Mick!","chat_id":"%s"}`, chatID)
+	req, err := http.NewRequest(http.MethodPost, s.buildURL("/messages"), strings.NewReader(strBody))
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+johnTokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
+	s.Require().Equal(http.StatusCreated, resp.StatusCode)
+
+	var respMessage domain.Message
+	err = json.NewDecoder(resp.Body).Decode(&respMessage)
+	s.NoError(err, "Failed to decode response body")
+
+	s.Require().NotEqual("", respMessage.ID, "Message id can't be empty")
+
+	expectedMessage := domain.Message{
+		ID:       respMessage.ID,
+		Action:   domain.MessageSendAction,
+		Text:     "Hi, Mick!",
+		ChatID:   chatID,
+		SenderID: "ba566522-3305-48df-936a-73f47611934b",
+	}
+	s.compareMessages(expectedMessage, respMessage)
+
+	msgCh := make(chan domain.Message)
+	go func() {
+		msg := s.receiveWebsocketMessage(mickConn)
+		msgCh <- msg
+	}()
+
+	select {
+	case msg := <-msgCh:
+		s.compareMessages(expectedMessage, msg)
+	case <-time.After(50 * time.Millisecond):
+		s.T().Error("timeout exceeded")
+	}
+
+	cacheMessages, err := s.getChatMessagesFromCache(chatID, time.Time{})
+	s.NoError(err, "Failed to get messages for cache")
+
+	s.Require().Equal(1, len(cacheMessages))
+	s.Require().Equal(1, s.messageCountInCache(chatID))
+	s.compareMessages(expectedMessage, cacheMessages[0])
 }
 
 func (s *AppTestSuite) TestMessageList() {
@@ -261,4 +315,16 @@ func (s *AppTestSuite) messageCountInCache(chatID string) int {
 	s.NoError(err, "Failed to get count messages in the redis")
 
 	return int(val)
+}
+
+func (s *AppTestSuite) compareMessages(expected, actual domain.Message) {
+	s.Require().Equal(expected.ID, actual.ID)
+	s.Require().Equal(expected.Action, actual.Action)
+	s.Require().Equal(expected.Text, actual.Text)
+	s.Require().Equal(expected.ChatID, actual.ChatID)
+	s.Require().Equal(expected.SenderID, actual.SenderID)
+
+	if expected.CreatedAt != nil {
+		s.Require().Equal(expected.CreatedAt, actual.CreatedAt)
+	}
 }
