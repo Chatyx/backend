@@ -121,6 +121,43 @@ func (s *AppTestSuite) TestSendMessageViaAPI() {
 	s.compareMessages(expectedMessage, cacheMessages[0])
 }
 
+func (s *AppTestSuite) TestSendMessageNotBelongToChat() {
+	const (
+		chatID      = "92b37e8b-92e9-4c8b-a723-3a2925b62d91"
+		messageText = "Hi, John. I wrote this message, but I'm not in this chat!"
+	)
+
+	conn, tokenPair := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+	s.sendWebsocketMessage(conn, messageText, chatID)
+
+	errCh := make(chan error)
+	go func() {
+		_, _, err := conn.ReadMessage()
+		errCh <- err
+	}()
+
+	select {
+	case err := <-errCh:
+		s.Require().IsType(&ws.CloseError{}, err)
+	case <-time.After(50 * time.Millisecond):
+		s.T().Error("timeout exceeded")
+	}
+
+	strBody := fmt.Sprintf(`{"text":"%s","chat_id":"%s"}`, messageText, chatID)
+	req, err := http.NewRequest(http.MethodPost, s.buildURL("/messages"), strings.NewReader(strBody))
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+tokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+
+	s.Require().Equal(0, s.messageCountInCache(chatID))
+}
+
 func (s *AppTestSuite) TestMessageList() {
 	const (
 		sendMessageLen = 100

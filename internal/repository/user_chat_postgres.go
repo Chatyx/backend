@@ -78,7 +78,7 @@ func (r *userChatPostgresRepository) IsUserBelongToChat(ctx context.Context, use
 
 	if err := row.Scan(&isBelong); err != nil {
 		r.logger.WithError(err).Error("An error occurred while checking if user belongs to the chat")
-		return false, nil
+		return false, err
 	}
 
 	return isBelong, nil
