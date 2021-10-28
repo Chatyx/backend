@@ -27,18 +27,15 @@ func NewMessageService(chatService ChatService, userChatService UserChatService,
 	}
 }
 
-func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, <-chan error) {
-	errCh := make(chan error)
+func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message) {
 	inCh := make(chan domain.CreateMessageDTO)
 	outCh := make(chan domain.Message)
 
 	go func() {
-		defer close(errCh)
 		defer close(outCh)
 
 		userChats, err := s.chatService.List(ctx, userID)
 		if err != nil {
-			errCh <- err
 			return
 		}
 
@@ -50,7 +47,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 		subscriber := s.pubSub.Subscribe(ctx, chatIDs...)
 		defer subscriber.Close()
 
-		subCh := subscriber.MessageChannel(ctx)
+		subCh := subscriber.MessageChannel()
 
 	LOOP:
 		for {
@@ -61,7 +58,6 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 				}
 
 				if _, err = s.Create(ctx, dto); err != nil {
-					errCh <- err
 					return
 				}
 			case message, ok := <-subCh:
@@ -82,11 +78,9 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 				outCh <- message
 			}
 		}
-
-		errCh <- nil
 	}()
 
-	return inCh, outCh, errCh
+	return inCh, outCh
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {

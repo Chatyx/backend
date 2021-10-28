@@ -26,77 +26,60 @@ func (s *chatSession) Serve() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	inCh, outCh, errCh := s.msgService.NewServeSession(ctx, s.userID)
-	errCh2 := s.readMessages(inCh)
+	inCh, outCh := s.msgService.NewServeSession(ctx, s.userID)
+	go s.readMessages(inCh)
 
 	for {
-		select {
-		case <-errCh:
+		msg, ok := <-outCh
+		if !ok {
 			return
-		case <-errCh2:
-			return
-		case msg := <-outCh:
-			payload, err := encoding.NewProtobufMessageMarshaler(msg).Marshal()
-			if err != nil {
-				s.logger.WithError(err).Error("An error occurred while marshaling the message")
-				return
-			}
+		}
 
-			if err = s.conn.WriteMessage(ws.BinaryMessage, payload); err != nil {
-				s.logger.WithError(err).Error("An error occurred while writing the message to websocket")
-				return
-			}
+		payload, err := encoding.NewProtobufMessageMarshaler(msg).Marshal()
+		if err != nil {
+			s.logger.WithError(err).Error("An error occurred while marshaling the message")
+			return
+		}
+
+		if err = s.conn.WriteMessage(ws.BinaryMessage, payload); err != nil {
+			s.logger.WithError(err).Error("An error occurred while writing the message to websocket")
+			return
 		}
 	}
 }
 
-func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) <-chan error {
-	errCh := make(chan error)
+func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) {
+	defer close(inCh)
 
-	go func() {
-		defer close(inCh)
-		defer close(errCh)
-
-	LOOP:
-		for {
-			_, payload, err := s.conn.ReadMessage()
-			if err != nil {
-				if closeErr, ok := err.(*ws.CloseError); ok {
-					s.logger.Infof("User (id=%s) closed the websocket connection (%s)", s.userID, closeErr)
-					break LOOP
-				}
-
-				s.logger.WithError(err).Error("An error occurred while reading the message from websocket")
-				errCh <- err
-
+	for {
+		_, payload, err := s.conn.ReadMessage()
+		if err != nil {
+			if closeErr, ok := err.(*ws.CloseError); ok {
+				s.logger.Infof("User (id=%s) closed the websocket connection (%s)", s.userID, closeErr)
 				return
 			}
 
-			var dto domain.CreateMessageDTO
-			if err = encoding.NewProtobufCreateDTOMessageUnmarshaler(&dto).Unmarshal(payload); err != nil {
-				s.logger.WithError(err).Debug("failed to unmarshalling the message")
-				errCh <- err
+			s.logger.WithError(err).Error("An error occurred while reading the message from websocket")
 
-				return
-			}
-
-			if err = s.validate.Struct(dto); err != nil {
-				s.logger.WithError(err).Debug("message validation error")
-				errCh <- err
-
-				return
-			}
-
-			dto.Action = domain.MessageSendAction
-			dto.SenderID = s.userID
-
-			inCh <- dto
+			return
 		}
 
-		errCh <- nil
-	}()
+		var dto domain.CreateMessageDTO
+		if err = encoding.NewProtobufCreateDTOMessageUnmarshaler(&dto).Unmarshal(payload); err != nil {
+			s.logger.WithError(err).Debug("failed to unmarshalling the message")
+			return
+		}
 
-	return errCh
+		if err = s.validate.Struct(dto); err != nil {
+			s.logger.WithError(err).Debug("message validation error")
+			return
+		}
+
+		dto.Action = domain.MessageSendAction
+		dto.SenderID = s.userID
+
+		inCh <- dto
+	}
 }
 
 type chatSessionHandler struct {

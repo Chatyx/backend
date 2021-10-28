@@ -30,7 +30,7 @@ func (s *messageRedisSubscriber) ReceiveMessage(ctx context.Context) (domain.Mes
 	return message, nil
 }
 
-func (s *messageRedisSubscriber) MessageChannel(ctx context.Context) <-chan domain.Message {
+func (s *messageRedisSubscriber) MessageChannel() <-chan domain.Message {
 	ch := s.pubSub.Channel()
 	msgCh := make(chan domain.Message)
 
@@ -38,22 +38,18 @@ func (s *messageRedisSubscriber) MessageChannel(ctx context.Context) <-chan doma
 		defer close(msgCh)
 
 		for {
-			select {
-			case <-ctx.Done():
+			msg, ok := <-ch
+			if !ok {
 				return
-			case msg, ok := <-ch:
-				if !ok {
-					return
-				}
-
-				var message domain.Message
-				if err := encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(msg.Payload)); err != nil {
-					s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
-					return
-				}
-
-				msgCh <- message
 			}
+
+			var message domain.Message
+			if err := encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(msg.Payload)); err != nil {
+				s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
+				return
+			}
+
+			msgCh <- message
 		}
 	}()
 

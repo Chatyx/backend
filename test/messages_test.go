@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +34,8 @@ func (s *AppTestSuite) TestSendMessageViaWebsocket() {
 	msgCh := make(chan domain.Message, 1)
 	johnConn, _ := s.newWebsocketConnection("john1967", "qwerty12345", "111")
 	mickConn, _ := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+	defer johnConn.Close()
+	defer mickConn.Close()
 
 	go s.sendWebsocketMessage(johnConn, "Hello, Mick!", chatID)
 	go func() {
@@ -72,6 +75,7 @@ func (s *AppTestSuite) TestSendMessageViaAPI() {
 
 	johnTokenPair := s.authenticate("john1967", "qwerty12345", "111")
 	mickConn, _ := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+	defer mickConn.Close()
 
 	strBody := fmt.Sprintf(`{"text":"Hi, Mick!","chat_id":"%s"}`, chatID)
 	req, err := http.NewRequest(http.MethodPost, s.buildURL("/messages"), strings.NewReader(strBody))
@@ -128,6 +132,8 @@ func (s *AppTestSuite) TestSendMessageNotBelongToChat() {
 	)
 
 	conn, tokenPair := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+	defer conn.Close()
+
 	s.sendWebsocketMessage(conn, messageText, chatID)
 
 	errCh := make(chan error)
@@ -176,13 +182,14 @@ func (s *AppTestSuite) TestMessageList() {
 	s.Require().Equal(expectedStoredMessages, storedMessages)
 
 	mickConn, _ := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+	defer mickConn.Close()
 
 	beginSendMessages := time.Now()
 	for i := 0; i < sendMessageLen; i++ {
 		s.sendWebsocketMessage(mickConn, "Hi, "+strconv.Itoa(i), chatID)
 		time.Sleep(1 * time.Millisecond)
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	expectedCachedMessages, err := s.getChatMessagesFromCache(chatID, beginSendMessages)
 	s.NoError(err, "Failed to get chat's messages from cache")
@@ -198,6 +205,8 @@ func (s *AppTestSuite) TestMessagesAfterChatDelete() {
 	const chatID = "609fce45-458f-477a-b2bb-e886d75d22ab"
 
 	johnConn, _ := s.newWebsocketConnection("john1967", "qwerty12345", "111")
+	defer johnConn.Close()
+
 	mickTokenPair := s.authenticate("mick47", "helloworld12345", "222")
 
 	s.sendWebsocketMessage(johnConn, "Hi, Mick!", chatID)
@@ -230,6 +239,32 @@ func (s *AppTestSuite) TestMessagesAfterChatDelete() {
 	}
 
 	s.Require().Equal(1, s.messageCountInCache(chatID))
+}
+
+func (s *AppTestSuite) TestGoroutinesLeak() {
+	const numConnections = 100
+
+	beforeGoroNum := runtime.NumGoroutine()
+	connList := make([]*ws.Conn, 0, numConnections)
+
+	for i := 0; i < numConnections; i++ {
+		conn, _ := s.newWebsocketConnection("john1967", "qwerty12345", "111")
+		connList = append(connList, conn)
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	for _, conn := range connList[:numConnections/2] {
+		s.NoError(conn.Close(), "Failed to close websocket connection")
+	}
+
+	for _, conn := range connList[numConnections/2:] {
+		err := conn.WriteMessage(ws.BinaryMessage, []byte("Hello, world"))
+		s.NoError(err, "Failed to send message")
+	}
+
+	time.Sleep(20 * time.Second)
+
+	s.Require().LessOrEqualf(runtime.NumGoroutine(), beforeGoroNum, "Goroutines leak detected")
 }
 
 func (s *AppTestSuite) sendWebsocketMessage(conn *ws.Conn, text, chatID string) {
