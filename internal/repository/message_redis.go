@@ -29,7 +29,7 @@ func (r *messageRedisRepository) Create(ctx context.Context, dto domain.CreateMe
 	createdAt := time.Now()
 	message := domain.Message{
 		ID:        uuid.New().String(),
-		Action:    dto.Action,
+		ActionID:  dto.ActionID,
 		Text:      dto.Text,
 		ChatID:    dto.ChatID,
 		SenderID:  dto.SenderID,

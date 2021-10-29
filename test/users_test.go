@@ -279,15 +279,10 @@ func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
 }
 
 func (s *AppTestSuite) getAllUsersFromDB() ([]domain.User, error) {
+	users := make([]domain.User, 0)
 	query := fmt.Sprintf("SELECT %s FROM users", strings.Join(userTableColumns, ", "))
 
-	return s.queryUsers(query)
-}
-
-func (s *AppTestSuite) queryUsers(query string, args ...interface{}) ([]domain.User, error) {
-	users := make([]domain.User, 0)
-
-	rows, err := s.dbConn.Query(query, args...)
+	rows, err := s.dbConn.Query(query)
 	if err != nil {
 		return nil, err
 	}

@@ -304,57 +304,57 @@ func (mr *MockChatServiceMockRecorder) Update(ctx, dto interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockChatService)(nil).Update), ctx, dto)
 }
 
-// MockUserChatService is a mock of UserChatService interface.
-type MockUserChatService struct {
+// MockChatMemberService is a mock of ChatMemberService interface.
+type MockChatMemberService struct {
 	ctrl     *gomock.Controller
-	recorder *MockUserChatServiceMockRecorder
+	recorder *MockChatMemberServiceMockRecorder
 }
 
-// MockUserChatServiceMockRecorder is the mock recorder for MockUserChatService.
-type MockUserChatServiceMockRecorder struct {
-	mock *MockUserChatService
+// MockChatMemberServiceMockRecorder is the mock recorder for MockChatMemberService.
+type MockChatMemberServiceMockRecorder struct {
+	mock *MockChatMemberService
 }
 
-// NewMockUserChatService creates a new mock instance.
-func NewMockUserChatService(ctrl *gomock.Controller) *MockUserChatService {
-	mock := &MockUserChatService{ctrl: ctrl}
-	mock.recorder = &MockUserChatServiceMockRecorder{mock}
+// NewMockChatMemberService creates a new mock instance.
+func NewMockChatMemberService(ctrl *gomock.Controller) *MockChatMemberService {
+	mock := &MockChatMemberService{ctrl: ctrl}
+	mock.recorder = &MockChatMemberServiceMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUserChatService) EXPECT() *MockUserChatServiceMockRecorder {
+func (m *MockChatMemberService) EXPECT() *MockChatMemberServiceMockRecorder {
 	return m.recorder
 }
 
-// IsUserBelongToChat mocks base method.
-func (m *MockUserChatService) IsUserBelongToChat(ctx context.Context, userID, chatID string) (bool, error) {
+// IsMemberBelongToChat mocks base method.
+func (m *MockChatMemberService) IsMemberBelongToChat(ctx context.Context, userID, chatID string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsUserBelongToChat", ctx, userID, chatID)
+	ret := m.ctrl.Call(m, "IsMemberBelongToChat", ctx, userID, chatID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// IsUserBelongToChat indicates an expected call of IsUserBelongToChat.
-func (mr *MockUserChatServiceMockRecorder) IsUserBelongToChat(ctx, userID, chatID interface{}) *gomock.Call {
+// IsMemberBelongToChat indicates an expected call of IsMemberBelongToChat.
+func (mr *MockChatMemberServiceMockRecorder) IsMemberBelongToChat(ctx, userID, chatID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsUserBelongToChat", reflect.TypeOf((*MockUserChatService)(nil).IsUserBelongToChat), ctx, userID, chatID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMemberBelongToChat", reflect.TypeOf((*MockChatMemberService)(nil).IsMemberBelongToChat), ctx, userID, chatID)
 }
 
-// ListUsersWhoBelongToChat mocks base method.
-func (m *MockUserChatService) ListUsersWhoBelongToChat(ctx context.Context, chatID, memberID string) ([]domain.User, error) {
+// ListMembersWhoBelongToChat mocks base method.
+func (m *MockChatMemberService) ListMembersWhoBelongToChat(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListUsersWhoBelongToChat", ctx, chatID, memberID)
-	ret0, _ := ret[0].([]domain.User)
+	ret := m.ctrl.Call(m, "ListMembersWhoBelongToChat", ctx, chatID, userID)
+	ret0, _ := ret[0].([]domain.ChatMember)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListUsersWhoBelongToChat indicates an expected call of ListUsersWhoBelongToChat.
-func (mr *MockUserChatServiceMockRecorder) ListUsersWhoBelongToChat(ctx, chatID, memberID interface{}) *gomock.Call {
+// ListMembersWhoBelongToChat indicates an expected call of ListMembersWhoBelongToChat.
+func (mr *MockChatMemberServiceMockRecorder) ListMembersWhoBelongToChat(ctx, chatID, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUsersWhoBelongToChat", reflect.TypeOf((*MockUserChatService)(nil).ListUsersWhoBelongToChat), ctx, chatID, memberID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMembersWhoBelongToChat", reflect.TypeOf((*MockChatMemberService)(nil).ListMembersWhoBelongToChat), ctx, chatID, userID)
 }
 
 // MockMessageService is a mock of MessageService interface.
@@ -411,13 +411,12 @@ func (mr *MockMessageServiceMockRecorder) List(ctx, chatID, userID, timestamp in
 }
 
 // NewServeSession mocks base method.
-func (m *MockMessageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, <-chan error) {
+func (m *MockMessageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewServeSession", ctx, userID)
 	ret0, _ := ret[0].(chan<- domain.CreateMessageDTO)
 	ret1, _ := ret[1].(<-chan domain.Message)
-	ret2, _ := ret[2].(<-chan error)
-	return ret0, ret1, ret2
+	return ret0, ret1
 }
 
 // NewServeSession indicates an expected call of NewServeSession.

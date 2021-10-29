@@ -80,8 +80,8 @@ func NewApp(cfg *config.Config) *App {
 		repository.NewChatPostgresRepository(dbPool),
 		redisClient,
 	)
-	userChatRepo := repository.NewUserChatCacheRepository(
-		repository.NewUserChatPostgresRepository(dbPool),
+	chatMemberRepo := repository.NewChatMemberCacheRepository(
+		repository.NewChatMemberPostgresRepository(dbPool),
 		redisClient,
 	)
 	sessionRepo := repository.NewSessionRedisRepository(redisClient)
@@ -92,8 +92,8 @@ func NewApp(cfg *config.Config) *App {
 
 	userService := service.NewUserService(userRepo, sessionRepo, hasher)
 	chatService := service.NewChatService(chatRepo)
-	userChatService := service.NewUserChatService(userChatRepo)
-	messageService := service.NewMessageService(chatService, userChatService, msgRepo, msgPubSub)
+	chatMemberService := service.NewChatMemberService(chatMemberRepo)
+	messageService := service.NewMessageService(chatService, chatMemberService, msgRepo, msgPubSub)
 	authService := service.NewAuthService(service.AuthServiceConfig{
 		UserService:     userService,
 		SessionRepo:     sessionRepo,
@@ -104,11 +104,11 @@ func NewApp(cfg *config.Config) *App {
 	})
 
 	container := service.ServiceContainer{
-		User:     userService,
-		Chat:     chatService,
-		UserChat: userChatService,
-		Message:  messageService,
-		Auth:     authService,
+		User:       userService,
+		Chat:       chatService,
+		ChatMember: chatMemberService,
+		Message:    messageService,
+		Auth:       authService,
 	}
 
 	apiListenCfg := cfg.Listen.API

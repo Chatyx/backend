@@ -34,9 +34,9 @@ type ChatRepository interface {
 	Delete(ctx context.Context, chatID, creatorID string) error
 }
 
-type UserChatRepository interface {
-	ListUsersWhoBelongToChat(ctx context.Context, chatID string) ([]domain.User, error)
-	IsUserBelongToChat(ctx context.Context, userID, chatID string) (bool, error)
+type ChatMemberRepository interface {
+	ListMembersWhoBelongToChat(ctx context.Context, chatID string) ([]domain.ChatMember, error)
+	IsMemberBelongToChat(ctx context.Context, userID, chatID string) (bool, error)
 }
 
 type MessageRepository interface {

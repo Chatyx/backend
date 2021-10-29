@@ -32,7 +32,7 @@ func (r *messagePostgresRepository) List(ctx context.Context, chatID string, tim
 	}
 
 	query := `SELECT 
-		id, action, text, 
+		id, action_id, text, 
 		sender_id, chat_id, created_at 
 	FROM messages 
 	WHERE chat_id = $1 AND created_at > $2 
@@ -51,7 +51,7 @@ func (r *messagePostgresRepository) List(ctx context.Context, chatID string, tim
 		var message domain.Message
 
 		if err = rows.Scan(
-			&message.ID, &message.Action, &message.Text,
+			&message.ID, &message.ActionID, &message.Text,
 			&message.SenderID, &message.ChatID, &message.CreatedAt,
 		); err != nil {
 			r.logger.WithError(err).Error("Unable to scan message")

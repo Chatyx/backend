@@ -33,9 +33,9 @@ type ChatService interface {
 	Delete(ctx context.Context, chatID, creatorID string) error
 }
 
-type UserChatService interface {
-	ListUsersWhoBelongToChat(ctx context.Context, chatID, memberID string) ([]domain.User, error)
-	IsUserBelongToChat(ctx context.Context, userID, chatID string) (bool, error)
+type ChatMemberService interface {
+	ListMembersWhoBelongToChat(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error)
+	IsMemberBelongToChat(ctx context.Context, userID, chatID string) (bool, error)
 }
 
 type MessageService interface {
@@ -45,9 +45,9 @@ type MessageService interface {
 }
 
 type ServiceContainer struct {
-	User     UserService
-	Chat     ChatService
-	UserChat UserChatService
-	Message  MessageService
-	Auth     AuthService
+	User       UserService
+	Chat       ChatService
+	ChatMember ChatMemberService
+	Message    MessageService
+	Auth       AuthService
 }

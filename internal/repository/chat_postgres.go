@@ -27,11 +27,11 @@ func (r *chatPostgresRepository) List(ctx context.Context, memberID string) ([]d
 		chats.id, chats.name, chats.description, 
 		chats.creator_id, chats.created_at, chats.updated_at 
 	FROM chats 
-	INNER JOIN users_chats 
-		ON chats.id = users_chats.chat_id
+	INNER JOIN chat_members 
+		ON chats.id = chat_members.chat_id
 	INNER JOIN users
-		ON users_chats.user_id = users.id
-	WHERE users_chats.user_id = $1 AND users.is_deleted IS FALSE`
+		ON chat_members.user_id = users.id
+	WHERE chat_members.user_id = $1 AND users.is_deleted IS FALSE`
 
 	rows, err := r.dbPool.Query(ctx, query, memberID)
 	if err != nil {
@@ -78,10 +78,10 @@ func (r *chatPostgresRepository) Create(ctx context.Context, dto domain.CreateCh
 			return err
 		}
 
-		query = "INSERT INTO users_chats (user_id, chat_id) VALUES ($1, $2)"
+		query = "INSERT INTO chat_members (user_id, chat_id) VALUES ($1, $2)"
 
 		if _, err := r.dbPool.Exec(ctx, query, dto.CreatorID, chat.ID); err != nil {
-			r.logger.WithError(err).Error("An error occurred while inserting into users_chats table")
+			r.logger.WithError(err).Error("An error occurred while inserting into chat_members table")
 			return err
 		}
 
@@ -108,9 +108,9 @@ func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, memberID s
 		chats.id, chats.name, chats.description, 
 		chats.creator_id, chats.created_at, chats.updated_at 
 	FROM chats 
-	INNER JOIN users_chats 
-		ON chats.id = users_chats.chat_id
-	WHERE chats.id = $1 AND users_chats.user_id = $2`
+	INNER JOIN chat_members 
+		ON chats.id = chat_members.chat_id
+	WHERE chats.id = $1 AND chat_members.user_id = $2`
 
 	var chat domain.Chat
 

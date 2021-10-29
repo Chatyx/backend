@@ -10,20 +10,20 @@ import (
 )
 
 type messageService struct {
-	chatService     ChatService
-	userChatService UserChatService
-	messageRepo     repository.MessageRepository
-	pubSub          repository.MessagePubSub
-	logger          logging.Logger
+	chatService       ChatService
+	chatMemberService ChatMemberService
+	messageRepo       repository.MessageRepository
+	pubSub            repository.MessagePubSub
+	logger            logging.Logger
 }
 
-func NewMessageService(chatService ChatService, userChatService UserChatService, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
+func NewMessageService(chatService ChatService, chatMemberService ChatMemberService, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
 	return &messageService{
-		chatService:     chatService,
-		userChatService: userChatService,
-		messageRepo:     messageRepo,
-		pubSub:          pubSub,
-		logger:          logging.GetLogger(),
+		chatService:       chatService,
+		chatMemberService: chatMemberService,
+		messageRepo:       messageRepo,
+		pubSub:            pubSub,
+		logger:            logging.GetLogger(),
 	}
 }
 
@@ -65,7 +65,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 					break LOOP
 				}
 
-				switch message.Action {
+				switch message.ActionID {
 				case domain.MessageSendAction:
 					if message.SenderID == userID {
 						continue
@@ -84,7 +84,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
-	ok, err := s.userChatService.IsUserBelongToChat(ctx, dto.SenderID, dto.ChatID)
+	ok, err := s.chatMemberService.IsMemberBelongToChat(ctx, dto.SenderID, dto.ChatID)
 	if err != nil {
 		return domain.Message{}, err
 	}
@@ -111,7 +111,7 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 }
 
 func (s *messageService) List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error) {
-	ok, err := s.userChatService.IsUserBelongToChat(ctx, userID, chatID)
+	ok, err := s.chatMemberService.IsMemberBelongToChat(ctx, userID, chatID)
 	if err != nil {
 		return nil, err
 	}

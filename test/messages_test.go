@@ -20,7 +20,7 @@ import (
 )
 
 var messageTableColumns = []string{
-	"id", "action", "text",
+	"id", "action_id", "text",
 	"sender_id", "chat_id", "created_at",
 }
 
@@ -45,7 +45,7 @@ func (s *AppTestSuite) TestSendMessageViaWebsocket() {
 
 	select {
 	case msg := <-msgCh:
-		s.Require().Equal(domain.MessageSendAction, msg.Action)
+		s.Require().Equal(domain.MessageSendAction, msg.ActionID)
 		s.Require().Equal("Hello, Mick!", msg.Text)
 		s.Require().Equal(johnID, msg.SenderID)
 		s.Require().Equal(chatID, msg.ChatID)
@@ -61,7 +61,7 @@ func (s *AppTestSuite) TestSendMessageViaWebsocket() {
 
 	select {
 	case msg := <-msgCh:
-		s.Require().Equal(domain.MessageSendAction, msg.Action)
+		s.Require().Equal(domain.MessageSendAction, msg.ActionID)
 		s.Require().Equal("Hi, John!", msg.Text)
 		s.Require().Equal(mickID, msg.SenderID)
 		s.Require().Equal(chatID, msg.ChatID)
@@ -97,7 +97,7 @@ func (s *AppTestSuite) TestSendMessageViaAPI() {
 
 	expectedMessage := domain.Message{
 		ID:       respMessage.ID,
-		Action:   domain.MessageSendAction,
+		ActionID: domain.MessageSendAction,
 		Text:     "Hi, Mick!",
 		ChatID:   chatID,
 		SenderID: "ba566522-3305-48df-936a-73f47611934b",
@@ -338,7 +338,7 @@ func (s *AppTestSuite) getChatMessagesFromDB(chatID string, timestamp time.Time)
 		var message domain.Message
 
 		if err = rows.Scan(
-			&message.ID, &message.Action, &message.Text,
+			&message.ID, &message.ActionID, &message.Text,
 			&message.SenderID, &message.ChatID, &message.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -391,7 +391,7 @@ func (s *AppTestSuite) messageCountInCache(chatID string) int {
 
 func (s *AppTestSuite) compareMessages(expected, actual domain.Message) {
 	s.Require().Equal(expected.ID, actual.ID)
-	s.Require().Equal(expected.Action, actual.Action)
+	s.Require().Equal(expected.ActionID, actual.ActionID)
 	s.Require().Equal(expected.Text, actual.Text)
 	s.Require().Equal(expected.ChatID, actual.ChatID)
 	s.Require().Equal(expected.SenderID, actual.SenderID)

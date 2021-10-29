@@ -15,6 +15,15 @@ definitions:
       updated_at:
         type: string
     type: object
+  domain.ChatMember:
+    properties:
+      chat_id:
+        type: string
+      user_id:
+        type: string
+      username:
+        type: string
+    type: object
   domain.CreateChatDTO:
     properties:
       description:
@@ -64,7 +73,7 @@ definitions:
     type: object
   domain.Message:
     properties:
-      action:
+      action_id:
         type: integer
       chat_id:
         type: string
@@ -162,6 +171,13 @@ definitions:
   http.ErrorFields:
     additionalProperties:
       type: string
+    type: object
+  http.MemberListResponse:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/domain.ChatMember'
+        type: array
     type: object
   http.MessageListResponse:
     properties:
@@ -413,6 +429,36 @@ paths:
       summary: Update chat where user is creator
       tags:
       - Chats
+  /chats/{chat_id}/members:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chat id
+        in: path
+        name: chat_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.MemberListResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ResponseError'
+      security:
+      - JWTTokenAuth: []
+      summary: Get list of chat members
+      tags:
+      - Chat Members
   /chats/{chat_id}/messages:
     get:
       consumes:
@@ -452,36 +498,6 @@ paths:
       summary: Get chat's messages
       tags:
       - Messages
-  /chats/{chat_id}/users:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: Chat id
-        in: path
-        name: chat_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.UserListResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/http.ResponseError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/http.ResponseError'
-      security:
-      - JWTTokenAuth: []
-      summary: Get list of users who belong to chat
-      tags:
-      - Users_Chats
   /messages:
     post:
       consumes:

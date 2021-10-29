@@ -12,14 +12,15 @@ message CreateMessageDTO {
 
 message Message {
   enum Action {
-    SEND = 0;
-    JOIN = 1;
-    LEAVE = 2;
-    BLOCK = 3;
+    UNKNOWN = 0;
+    SEND = 1;
+    JOIN = 2;
+    LEAVE = 3;
+    BLOCK = 4;
   }
 
   string id = 1;
-  Action action = 2;
+  Action action_id = 2;
   string text = 3;
   string chat_id = 4;
   string sender_id = 5;

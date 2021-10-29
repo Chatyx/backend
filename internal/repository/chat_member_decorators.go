@@ -9,21 +9,21 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-type userChatCacheRepositoryDecorator struct {
-	UserChatRepository
+type chatMemberCacheRepositoryDecorator struct {
+	ChatMemberRepository
 	redisClient *redis.Client
 	logger      logging.Logger
 }
 
-func NewUserChatCacheRepository(repo UserChatRepository, redisClient *redis.Client) UserChatRepository {
-	return &userChatCacheRepositoryDecorator{
-		UserChatRepository: repo,
-		redisClient:        redisClient,
-		logger:             logging.GetLogger(),
+func NewChatMemberCacheRepository(repo ChatMemberRepository, redisClient *redis.Client) ChatMemberRepository {
+	return &chatMemberCacheRepositoryDecorator{
+		ChatMemberRepository: repo,
+		redisClient:          redisClient,
+		logger:               logging.GetLogger(),
 	}
 }
 
-func (r *userChatCacheRepositoryDecorator) IsUserBelongToChat(ctx context.Context, userID, chatID string) (bool, error) {
+func (r *chatMemberCacheRepositoryDecorator) IsMemberBelongToChat(ctx context.Context, userID, chatID string) (bool, error) {
 	chatUsersKey := fmt.Sprintf("chat:%s:user_ids", chatID)
 	logger := r.logger.WithFields(logging.Fields{
 		"user_id":   userID,
@@ -45,31 +45,31 @@ func (r *userChatCacheRepositoryDecorator) IsUserBelongToChat(ctx context.Contex
 
 	isBelong, err := r.redisClient.SIsMember(ctx, chatUsersKey, userID).Result()
 	if err != nil {
-		logger.WithError(err).Error("An error occurred while checking if user belongs to the chat")
+		logger.WithError(err).Error("An error occurred while checking if member belongs to the chat")
 		return false, err
 	}
 
 	return isBelong, nil
 }
 
-func (r *userChatCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Context, chatID string) error {
+func (r *chatMemberCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Context, chatID string) error {
 	chatUsersKey := fmt.Sprintf("chat:%s:user_ids", chatID)
 	logger := r.logger.WithFields(logging.Fields{
 		"redis_key": chatUsersKey,
 	})
 
-	users, err := r.ListUsersWhoBelongToChat(ctx, chatID)
+	members, err := r.ListMembersWhoBelongToChat(ctx, chatID)
 	if err != nil {
 		return err
 	}
 
-	if len(users) == 0 {
+	if len(members) == 0 {
 		return nil
 	}
 
-	userIDs := make([]interface{}, 0, len(users))
-	for _, user := range users {
-		userIDs = append(userIDs, user.ID)
+	userIDs := make([]interface{}, 0, len(members))
+	for _, member := range members {
+		userIDs = append(userIDs, member.UserID)
 	}
 
 	if err = r.redisClient.SAdd(ctx, chatUsersKey, userIDs...).Err(); err != nil {

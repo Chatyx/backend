@@ -252,9 +252,9 @@ func (s *AppTestSuite) getUserChatFromDB(chatID, userID string) (domain.Chat, er
 
 	query := fmt.Sprintf(`SELECT %s 
 	FROM chats 
-	INNER JOIN users_chats 
-		ON chats.id = users_chats.chat_id
-	WHERE chats.id = $1 AND users_chats.user_id = $2`,
+	INNER JOIN chat_members 
+		ON chats.id = chat_members.chat_id
+	WHERE chats.id = $1 AND chat_members.user_id = $2`,
 		strings.Join(chatTableColumns, ", "),
 	)
 
@@ -274,9 +274,9 @@ func (s *AppTestSuite) getUserChatsFromDB(userID string) ([]domain.Chat, error) 
 
 	query := fmt.Sprintf(`SELECT %s 
 	FROM chats 
-	INNER JOIN users_chats 
-		ON chats.id = users_chats.chat_id
-	WHERE users_chats.user_id = $1`,
+	INNER JOIN chat_members 
+		ON chats.id = chat_members.chat_id
+	WHERE chat_members.user_id = $1`,
 		strings.Join(chatTableColumns, ", "),
 	)
 

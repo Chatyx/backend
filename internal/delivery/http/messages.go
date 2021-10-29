@@ -113,7 +113,7 @@ func (h *messageHandler) create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	dto.Action = domain.MessageSendAction
+	dto.ActionID = domain.MessageSendAction
 	dto.SenderID = domain.UserIDFromContext(req.Context())
 
 	message, err := h.msgService.Create(req.Context(), dto)

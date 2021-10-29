@@ -75,7 +75,7 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) {
 			return
 		}
 
-		dto.Action = domain.MessageSendAction
+		dto.ActionID = domain.MessageSendAction
 		dto.SenderID = s.userID
 
 		inCh <- dto

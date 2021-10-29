@@ -73,11 +73,11 @@ func TestChatPostgresRepository_List(t *testing.T) {
 	)
 
 	query := fmt.Sprintf(`SELECT %s FROM chats 
-	INNER JOIN users_chats 
-		ON chats.id = users_chats.chat_id
+	INNER JOIN chat_members 
+		ON chats.id = chat_members.chat_id
 	INNER JOIN users
-		ON users_chats.user_id = users.id
-	WHERE users_chats.user_id = $1 AND users.is_deleted IS FALSE`,
+		ON chat_members.user_id = users.id
+	WHERE chat_members.user_id = $1 AND users.is_deleted IS FALSE`,
 		strings.Join(chatTableColumns, ", "))
 
 	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, memberID string, rowsRes []RowResult, rowsErr error) {
@@ -197,7 +197,7 @@ func TestChatPostgresRepository_Create(t *testing.T) {
 	)
 
 	chatInsertQuery := `INSERT INTO chats (name, description, creator_id) VALUES ($1, $2, $3) RETURNING id, created_at`
-	usersChatsInsertQuery := `INSERT INTO users_chats (user_id, chat_id) VALUES ($1, $2)`
+	usersChatsInsertQuery := `INSERT INTO chat_members (user_id, chat_id) VALUES ($1, $2)`
 
 	testTable := []struct {
 		name          string
@@ -257,7 +257,7 @@ func TestChatPostgresRepository_Create(t *testing.T) {
 			expectedErr: errUnexpected,
 		},
 		{
-			name: "Unexpected error after inserting users_chats table",
+			name: "Unexpected error after inserting chat_members table",
 			createChatDTO: domain.CreateChatDTO{
 				Name:      "Test chat_1 name",
 				CreatorID: "6be043ca-3005-4b1c-b847-eb677897c618",
@@ -324,9 +324,9 @@ func TestChatPostgresRepository_GetByID(t *testing.T) {
 	)
 
 	query := fmt.Sprintf(`SELECT %s FROM chats 
-	INNER JOIN users_chats 
-		ON chats.id = users_chats.chat_id
-	WHERE chats.id = $1 AND users_chats.user_id = $2`,
+	INNER JOIN chat_members 
+		ON chats.id = chat_members.chat_id
+	WHERE chats.id = $1 AND chat_members.user_id = $2`,
 		strings.Join(chatTableColumns, ", "))
 
 	var defaultMockBehavior mockBehavior = func(mockPool pgxmock.PgxPoolIface, chatID, memberID string, returnRow Row, rowErr error) {

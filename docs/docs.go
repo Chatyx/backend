@@ -371,6 +371,54 @@ var doc = `{
                 }
             }
         },
+        "/chats/{chat_id}/members": {
+            "get": {
+                "security": [
+                    {
+                        "JWTTokenAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat Members"
+                ],
+                "summary": "Get list of chat members",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chat id",
+                        "name": "chat_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.MemberListResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
         "/chats/{chat_id}/messages": {
             "get": {
                 "security": [
@@ -415,54 +463,6 @@ var doc = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/http.ResponseError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/http.ResponseError"
-                        }
-                    }
-                }
-            }
-        },
-        "/chats/{chat_id}/users": {
-            "get": {
-                "security": [
-                    {
-                        "JWTTokenAuth": []
-                    }
-                ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Users_Chats"
-                ],
-                "summary": "Get list of users who belong to chat",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Chat id",
-                        "name": "chat_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.UserListResponse"
                         }
                     },
                     "404": {
@@ -828,6 +828,20 @@ var doc = `{
                 }
             }
         },
+        "domain.ChatMember": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.CreateChatDTO": {
             "type": "object",
             "required": [
@@ -902,7 +916,7 @@ var doc = `{
         "domain.Message": {
             "type": "object",
             "properties": {
-                "action": {
+                "action_id": {
                     "type": "integer"
                 },
                 "chat_id": {
@@ -1051,6 +1065,17 @@ var doc = `{
             "type": "object",
             "additionalProperties": {
                 "type": "string"
+            }
+        },
+        "http.MemberListResponse": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.ChatMember"
+                    }
+                }
             }
         },
         "http.MessageListResponse": {

@@ -2,6 +2,18 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+CREATE TABLE IF NOT EXISTS chat_member_status_list
+(
+    id   SMALLINT PRIMARY KEY NOT NULL,
+    name VARCHAR(50)          NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS message_action_list
+(
+    id   SMALLINT PRIMARY KEY NOT NULL,
+    name VARCHAR(50)          NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS users
 (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,27 +41,42 @@ CREATE TABLE IF NOT EXISTS chats
     CONSTRAINT creator_fk FOREIGN KEY (creator_id) REFERENCES users (id)
 );
 
-CREATE TABLE IF NOT EXISTS users_chats
+CREATE TABLE IF NOT EXISTS chat_members
 (
-    user_id UUID NOT NULL,
-    chat_id UUID NOT NULL,
+    user_id   UUID     NOT NULL,
+    chat_id   UUID     NOT NULL,
+    status_id SMALLINT NOT NULL DEFAULT 1,
 
     PRIMARY KEY (user_id, chat_id),
     CONSTRAINT user_fk FOREIGN KEY (user_id) REFERENCES users (id),
-    CONSTRAINT chat_fk FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
+    CONSTRAINT chat_fk FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE,
+    CONSTRAINT status_fk FOREIGN KEY (status_id) REFERENCES chat_member_status_list (id)
 );
 
 CREATE TABLE IF NOT EXISTS messages
 (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    action     SMALLINT NOT NULL,
+    action_id  SMALLINT NOT NULL,
     text       TEXT     NOT NULL,
     sender_id  UUID     NOT NULL,
     chat_id    UUID     NOT NULL,
     created_at TIMESTAMPTZ      DEFAULT current_timestamp,
 
     CONSTRAINT author_fk FOREIGN KEY (sender_id) REFERENCES users (id),
-    CONSTRAINT chat_fk FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
+    CONSTRAINT chat_fk FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE,
+    CONSTRAINT action_fk FOREIGN KEY (action_id) REFERENCES message_action_list (id)
 );
+
+INSERT INTO chat_member_status_list (id, name)
+VALUES (1, 'In chat'),
+       (2, 'Leave'),
+       (3, 'Blocked by user'),
+       (4, 'Blocked by admin');
+
+INSERT INTO message_action_list (id, name)
+VALUES (1, 'Send message to chat'),
+       (2, 'User joined to chat'),
+       (3, 'User left from chat'),
+       (4, 'Admin blocked this user');
 
 COMMIT;
