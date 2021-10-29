@@ -17,10 +17,10 @@ import (
 )
 
 var userTableColumns = []string{
-	"id", "username", "password",
-	"first_name", "last_name", "email",
-	"birth_date", "department", "is_deleted",
-	"created_at", "updated_at",
+	"users.id", "users.username", "users.password",
+	"users.first_name", "users.last_name", "users.email",
+	"users.birth_date", "users.department", "users.is_deleted",
+	"users.created_at", "users.updated_at",
 }
 
 func (s *AppTestSuite) TestUserList() {
@@ -259,7 +259,7 @@ func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
 		birthDate pgtype.Date
 	)
 
-	query := fmt.Sprintf("SELECT %s FROM users WHERE id = $1", strings.Join(userTableColumns, ", "))
+	query := fmt.Sprintf("SELECT %s FROM users WHERE users.id = $1", strings.Join(userTableColumns, ", "))
 
 	row := s.dbConn.QueryRow(query, id)
 	if err := row.Scan(
@@ -279,11 +279,15 @@ func (s *AppTestSuite) getUserFromDB(id string) (domain.User, error) {
 }
 
 func (s *AppTestSuite) getAllUsersFromDB() ([]domain.User, error) {
-	users := make([]domain.User, 0)
-
 	query := fmt.Sprintf("SELECT %s FROM users", strings.Join(userTableColumns, ", "))
 
-	rows, err := s.dbConn.Query(query)
+	return s.queryUsers(query)
+}
+
+func (s *AppTestSuite) queryUsers(query string, args ...interface{}) ([]domain.User, error) {
+	users := make([]domain.User, 0)
+
+	rows, err := s.dbConn.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

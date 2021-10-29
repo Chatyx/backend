@@ -141,10 +141,13 @@ func Init(container service.ServiceContainer, cfg *config.Config, validate *vali
 
 	newUserHandler(container.User, validate).register(router, authMid)
 	newChatHandler(container.Chat, validate).register(router, authMid)
+	newUserChatHandler(container.UserChat, validate).register(router, authMid)
 	newMessageHandler(container.Message, validate).register(router, authMid)
 	newAuthHandler(container.Auth, validate, cfg.Domain, cfg.Auth.RefreshTokenTTL).register(router)
 
 	router.HandlerFunc(http.MethodGet, "/docs/:any", httpSwagger.WrapHandler)
+	router.Handler(http.MethodGet, "/", http.RedirectHandler("/docs/index.html", http.StatusMovedPermanently))
+	router.Handler(http.MethodGet, "/docs", http.RedirectHandler("/docs/index.html", http.StatusMovedPermanently))
 
 	router.PanicHandler = func(w http.ResponseWriter, req *http.Request, i interface{}) {
 		logging.GetLogger().Errorf("There was a panic: %v", i)

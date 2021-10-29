@@ -104,10 +104,11 @@ func NewApp(cfg *config.Config) *App {
 	})
 
 	container := service.ServiceContainer{
-		User:    userService,
-		Chat:    chatService,
-		Message: messageService,
-		Auth:    authService,
+		User:     userService,
+		Chat:     chatService,
+		UserChat: userChatService,
+		Message:  messageService,
+		Auth:     authService,
 	}
 
 	apiListenCfg := cfg.Listen.API
