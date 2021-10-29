@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	listChatUsersURI = "/api/chats/:id/users"
+	listChatUsersURI = "/api/chats/:chat_id/users"
 )
 
 type userChatHandler struct {
@@ -42,16 +42,16 @@ func (h *userChatHandler) register(router *httprouter.Router, authMid Middleware
 // @Security JWTTokenAuth
 // @Accept json
 // @Produce json
-// @Param id path string true "Chat id"
+// @Param chat_id path string true "Chat id"
 // @Success 200 {object} UserListResponse
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /chats/{id}/users [get]
+// @Router /chats/{chat_id}/users [get]
 func (h *userChatHandler) listMembers(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	ps := httprouter.ParamsFromContext(ctx)
 
-	chatID := ps.ByName("id")
+	chatID := ps.ByName("chat_id")
 	userID := domain.UserIDFromContext(ctx)
 
 	users, err := h.userChatService.ListUsersWhoBelongToChat(ctx, chatID, userID)

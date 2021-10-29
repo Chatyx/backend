@@ -205,7 +205,7 @@
                 }
             }
         },
-        "/chats/{id}": {
+        "/chats/{chat_id}": {
             "get": {
                 "security": [
                     {
@@ -226,7 +226,7 @@
                     {
                         "type": "string",
                         "description": "Chat id",
-                        "name": "id",
+                        "name": "chat_id",
                         "in": "path",
                         "required": true
                     }
@@ -272,7 +272,7 @@
                     {
                         "type": "string",
                         "description": "Chat id",
-                        "name": "id",
+                        "name": "chat_id",
                         "in": "path",
                         "required": true
                     },
@@ -333,7 +333,7 @@
                     {
                         "type": "string",
                         "description": "Chat id",
-                        "name": "id",
+                        "name": "chat_id",
                         "in": "path",
                         "required": true
                     }
@@ -357,7 +357,7 @@
                 }
             }
         },
-        "/chats/{id}/messages": {
+        "/chats/{chat_id}/messages": {
             "get": {
                 "security": [
                     {
@@ -378,7 +378,7 @@
                     {
                         "type": "string",
                         "description": "Chat id",
-                        "name": "id",
+                        "name": "chat_id",
                         "in": "path",
                         "required": true
                     },
@@ -418,7 +418,7 @@
                 }
             }
         },
-        "/chats/{id}/users": {
+        "/chats/{chat_id}/users": {
             "get": {
                 "security": [
                     {
@@ -439,7 +439,7 @@
                     {
                         "type": "string",
                         "description": "Chat id",
-                        "name": "id",
+                        "name": "chat_id",
                         "in": "path",
                         "required": true
                     }
@@ -741,7 +741,7 @@
                 }
             }
         },
-        "/users/{id}": {
+        "/users/{user_id}": {
             "get": {
                 "security": [
                     {
@@ -762,7 +762,7 @@
                     {
                         "type": "string",
                         "description": "User id",
-                        "name": "id",
+                        "name": "user_id",
                         "in": "path",
                         "required": true
                     }

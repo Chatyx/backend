@@ -16,7 +16,7 @@ const (
 	currentUserURL  = "/api/user"
 	userPasswordURI = "/api/user/password"
 	listUserURL     = "/api/users"
-	detailUserURI   = "/api/users/:id"
+	detailUserURI   = "/api/users/:user_id"
 )
 
 type UserListResponse struct {
@@ -78,15 +78,15 @@ func (h *userHandler) list(w http.ResponseWriter, req *http.Request) {
 // @Security JWTTokenAuth
 // @Accept json
 // @Produce json
-// @Param id path string true "User id"
+// @Param user_id path string true "User id"
 // @Success 200 {object} domain.User
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /users/{id} [get]
+// @Router /users/{user_id} [get]
 func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
 	ps := httprouter.ParamsFromContext(req.Context())
 
-	user, err := h.userService.GetByID(req.Context(), ps.ByName("id"))
+	user, err := h.userService.GetByID(req.Context(), ps.ByName("user_id"))
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:

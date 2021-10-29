@@ -14,7 +14,7 @@ import (
 
 const (
 	listChatURI   = "/api/chats"
-	detailChatURI = "/api/chats/:id"
+	detailChatURI = "/api/chats/:chat_id"
 )
 
 type ChatListResponse struct {
@@ -110,14 +110,14 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 // @Security JWTTokenAuth
 // @Accept json
 // @Produce json
-// @Param id path string true "Chat id"
+// @Param chat_id path string true "Chat id"
 // @Success 200 {object} domain.Chat
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /chats/{id} [get]
+// @Router /chats/{chat_id} [get]
 func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 	ps := httprouter.ParamsFromContext(req.Context())
-	chatID, memberID := ps.ByName("id"), domain.UserIDFromContext(req.Context())
+	chatID, memberID := ps.ByName("chat_id"), domain.UserIDFromContext(req.Context())
 
 	chat, err := h.chatService.GetByID(req.Context(), chatID, memberID)
 	if err != nil {
@@ -139,12 +139,12 @@ func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 // @Security JWTTokenAuth
 // @Accept json
 // @Produce json
-// @Param id path string true "Chat id"
+// @Param chat_id path string true "Chat id"
 // @Param input body domain.UpdateChatDTO true "Update body"
 // @Success 200 {object} domain.Chat
 // @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /chats/{id} [put]
+// @Router /chats/{chat_id} [put]
 func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateChatDTO{}
 	ps := httprouter.ParamsFromContext(req.Context())
@@ -154,7 +154,7 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	dto.ID = ps.ByName("id")
+	dto.ID = ps.ByName("chat_id")
 	dto.CreatorID = domain.UserIDFromContext(req.Context())
 
 	if err := h.validateStruct(dto); err != nil {
@@ -182,14 +182,14 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 // @Security JWTTokenAuth
 // @Accept json
 // @Produce json
-// @Param id path string true "Chat id"
+// @Param chat_id path string true "Chat id"
 // @Success 204 "No Content"
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /chats/{id} [delete]
+// @Router /chats/{chat_id} [delete]
 func (h *chatHandler) delete(w http.ResponseWriter, req *http.Request) {
 	ps := httprouter.ParamsFromContext(req.Context())
-	chatID, creatorID := ps.ByName("id"), domain.UserIDFromContext(req.Context())
+	chatID, creatorID := ps.ByName("chat_id"), domain.UserIDFromContext(req.Context())
 
 	err := h.chatService.Delete(req.Context(), chatID, creatorID)
 	if err != nil {

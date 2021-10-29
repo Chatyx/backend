@@ -213,7 +213,7 @@ func TestChatHandler_detail(t *testing.T) {
 			ctx := context.WithValue(
 				req.Context(),
 				httprouter.ParamsKey,
-				httprouter.Params{{Key: "id", Value: testCase.chatID}},
+				httprouter.Params{{Key: "chat_id", Value: testCase.chatID}},
 			)
 
 			req = req.WithContext(ctx)
@@ -492,7 +492,7 @@ func TestChatHandler_update(t *testing.T) {
 			ctx := context.WithValue(
 				req.Context(),
 				httprouter.ParamsKey,
-				httprouter.Params{{Key: "id", Value: testCase.chatID}},
+				httprouter.Params{{Key: "chat_id", Value: testCase.chatID}},
 			)
 
 			ctx = domain.NewContextFromUserID(ctx, testCase.creatorID)
@@ -579,7 +579,7 @@ func TestChatHandler_delete(t *testing.T) {
 			ctx := context.WithValue(
 				req.Context(),
 				httprouter.ParamsKey,
-				httprouter.Params{{Key: "id", Value: testCase.chatID}},
+				httprouter.Params{{Key: "chat_id", Value: testCase.chatID}},
 			)
 
 			ctx = domain.NewContextFromUserID(ctx, testCase.creatorID)

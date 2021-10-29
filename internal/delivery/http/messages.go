@@ -15,7 +15,7 @@ import (
 
 const (
 	listMessageURI     = "/api/messages"
-	listChatMessageURI = "/api/chats/:id/messages"
+	listChatMessageURI = "/api/chats/:chat_id/messages"
 )
 
 type MessageListResponse struct {
@@ -55,12 +55,12 @@ func (h *messageHandler) register(router *httprouter.Router, authMid Middleware)
 // @Security JWTTokenAuth
 // @Accept json
 // @Produce json
-// @Param id path string true "Chat id"
+// @Param chat_id path string true "Chat id"
 // @Param timestamp query string true "Last timestamp of received message"
 // @Success 200 {object} MessageListResponse
 // @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
-// @Router /chats/{id}/messages [get]
+// @Router /chats/{chat_id}/messages [get]
 func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
 	tsRaw := req.URL.Query().Get("timestamp")
 
@@ -74,7 +74,7 @@ func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
 
 	ps := httprouter.ParamsFromContext(req.Context())
 	userID := domain.UserIDFromContext(req.Context())
-	chatID := ps.ByName("id")
+	chatID := ps.ByName("chat_id")
 
 	messages, err := h.msgService.List(req.Context(), chatID, userID, ts)
 	if err != nil {

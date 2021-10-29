@@ -317,14 +317,14 @@ paths:
       summary: Create chat
       tags:
       - Chats
-  /chats/{id}:
+  /chats/{chat_id}:
     delete:
       consumes:
       - application/json
       parameters:
       - description: Chat id
         in: path
-        name: id
+        name: chat_id
         required: true
         type: string
       produces:
@@ -351,7 +351,7 @@ paths:
       parameters:
       - description: Chat id
         in: path
-        name: id
+        name: chat_id
         required: true
         type: string
       produces:
@@ -380,7 +380,7 @@ paths:
       parameters:
       - description: Chat id
         in: path
-        name: id
+        name: chat_id
         required: true
         type: string
       - description: Update body
@@ -413,14 +413,14 @@ paths:
       summary: Update chat where user is creator
       tags:
       - Chats
-  /chats/{id}/messages:
+  /chats/{chat_id}/messages:
     get:
       consumes:
       - application/json
       parameters:
       - description: Chat id
         in: path
-        name: id
+        name: chat_id
         required: true
         type: string
       - description: Last timestamp of received message
@@ -452,14 +452,14 @@ paths:
       summary: Get chat's messages
       tags:
       - Messages
-  /chats/{id}/users:
+  /chats/{chat_id}/users:
     get:
       consumes:
       - application/json
       parameters:
       - description: Chat id
         in: path
-        name: id
+        name: chat_id
         required: true
         type: string
       produces:
@@ -654,14 +654,14 @@ paths:
       summary: Create user
       tags:
       - Users
-  /users/{id}:
+  /users/{user_id}:
     get:
       consumes:
       - application/json
       parameters:
       - description: User id
         in: path
-        name: id
+        name: user_id
         required: true
         type: string
       produces:

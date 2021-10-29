@@ -210,7 +210,7 @@ func TestUserHandler_detail(t *testing.T) {
 			ctx := context.WithValue(
 				req.Context(),
 				httprouter.ParamsKey,
-				httprouter.Params{{Key: "id", Value: testCase.userID}},
+				httprouter.Params{{Key: "user_id", Value: testCase.userID}},
 			)
 
 			req = req.WithContext(ctx)
