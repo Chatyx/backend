@@ -287,6 +287,21 @@ func (mr *MockChatRepositoryMockRecorder) GetByID(ctx, chatID, memberID interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockChatRepository)(nil).GetByID), ctx, chatID, memberID)
 }
 
+// GetOwnByID mocks base method.
+func (m *MockChatRepository) GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOwnByID", ctx, chatID, creatorID)
+	ret0, _ := ret[0].(domain.Chat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOwnByID indicates an expected call of GetOwnByID.
+func (mr *MockChatRepositoryMockRecorder) GetOwnByID(ctx, chatID, creatorID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnByID", reflect.TypeOf((*MockChatRepository)(nil).GetOwnByID), ctx, chatID, creatorID)
+}
+
 // List mocks base method.
 func (m *MockChatRepository) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
 	m.ctrl.T.Helper()
@@ -338,6 +353,20 @@ func NewMockChatMemberRepository(ctrl *gomock.Controller) *MockChatMemberReposit
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockChatMemberRepository) EXPECT() *MockChatMemberRepositoryMockRecorder {
 	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockChatMemberRepository) Create(ctx context.Context, userID, chatID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, userID, chatID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockChatMemberRepositoryMockRecorder) Create(ctx, userID, chatID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockChatMemberRepository)(nil).Create), ctx, userID, chatID)
 }
 
 // IsMemberInChat mocks base method.

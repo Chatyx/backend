@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/repository"
@@ -9,19 +10,35 @@ import (
 )
 
 type chatMemberService struct {
-	repo   repository.ChatMemberRepository
-	logger logging.Logger
+	userService    UserService
+	chatService    ChatService
+	chatMemberRepo repository.ChatMemberRepository
+	messageRepo    repository.MessageRepository
+	messagePubSub  repository.MessagePubSub
+	logger         logging.Logger
 }
 
-func NewChatMemberService(repo repository.ChatMemberRepository) ChatMemberService {
+type ChatMemberConfig struct {
+	UserService    UserService
+	ChatService    ChatService
+	ChatMemberRepo repository.ChatMemberRepository
+	MessageRepo    repository.MessageRepository
+	MessagePubSub  repository.MessagePubSub
+}
+
+func NewChatMemberService(cfg ChatMemberConfig) ChatMemberService {
 	return &chatMemberService{
-		repo:   repo,
-		logger: logging.GetLogger(),
+		userService:    cfg.UserService,
+		chatService:    cfg.ChatService,
+		chatMemberRepo: cfg.ChatMemberRepo,
+		messageRepo:    cfg.MessageRepo,
+		messagePubSub:  cfg.MessagePubSub,
+		logger:         logging.GetLogger(),
 	}
 }
 
 func (s *chatMemberService) ListMembersInChat(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error) {
-	members, err := s.repo.ListMembersInChat(ctx, chatID)
+	members, err := s.chatMemberRepo.ListMembersInChat(ctx, chatID)
 	if err != nil {
 		return nil, err
 	}
@@ -48,5 +65,38 @@ func (s *chatMemberService) ListMembersInChat(ctx context.Context, chatID, userI
 }
 
 func (s *chatMemberService) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
-	return s.repo.IsMemberInChat(ctx, userID, chatID)
+	return s.chatMemberRepo.IsMemberInChat(ctx, userID, chatID)
+}
+
+func (s *chatMemberService) JoinMemberToChat(ctx context.Context, chatID, creatorID, userID string) error {
+	if _, err := s.chatService.GetOwnByID(ctx, chatID, creatorID); err != nil {
+		return err
+	}
+
+	user, err := s.userService.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if err = s.chatMemberRepo.Create(ctx, userID, chatID); err != nil {
+		return err
+	}
+
+	dto := domain.CreateMessageDTO{
+		ActionID: domain.MessageJoinAction,
+		Text:     fmt.Sprintf("%s successfully joined to the chat", user.Username),
+		ChatID:   chatID,
+		SenderID: userID,
+	}
+
+	message, err := s.messageRepo.Create(ctx, dto)
+	if err != nil {
+		return err
+	}
+
+	if err = s.messagePubSub.Publish(ctx, message); err != nil {
+		return err
+	}
+
+	return nil
 }

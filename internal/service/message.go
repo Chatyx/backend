@@ -49,12 +49,11 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 
 		subCh := subscriber.MessageChannel()
 
-	LOOP:
 		for {
 			select {
 			case dto, ok := <-inCh:
 				if !ok {
-					break LOOP
+					return
 				}
 
 				if _, err = s.Create(ctx, dto); err != nil {
@@ -62,7 +61,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 				}
 			case message, ok := <-subCh:
 				if !ok {
-					break LOOP
+					return
 				}
 
 				switch message.ActionID {
@@ -71,8 +70,32 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 						continue
 					}
 				case domain.MessageJoinAction:
-				case domain.MessageLeaveAction:
-				case domain.MessageBlockAction:
+					ok, err = s.chatMemberService.IsMemberInChat(ctx, userID, message.ChatID)
+					if err != nil {
+						return
+					}
+
+					if !ok {
+						continue
+					}
+
+					if message.SenderID == userID {
+						if err = subscriber.Subscribe(ctx, message.ChatID); err != nil {
+							return
+						}
+					}
+				case domain.MessageLeaveAction, domain.MessageBlockAction:
+					if message.SenderID == userID {
+						if err = subscriber.Unsubscribe(ctx, message.ChatID); err != nil {
+							return
+						}
+					}
+				default:
+					s.logger.WithFields(logging.Fields{
+						"action_id": message.ActionID,
+					}).Error("Unknown action_id for handling the message")
+
+					return
 				}
 
 				outCh <- message

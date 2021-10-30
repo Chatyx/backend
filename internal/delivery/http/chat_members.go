@@ -43,7 +43,8 @@ func newChatMemberHandler(cms service.ChatMemberService, validate *validator.Val
 }
 
 func (h *chatMemberHandler) register(router *httprouter.Router, authMid Middleware) {
-	router.Handler(http.MethodGet, listChatMembersURI, authMid(http.HandlerFunc(h.listMembers)))
+	router.Handler(http.MethodGet, listChatMembersURI, authMid(http.HandlerFunc(h.list)))
+	router.Handler(http.MethodPost, listChatMembersURI, authMid(http.HandlerFunc(h.join)))
 }
 
 // @Summary Get list of chat members
@@ -56,7 +57,7 @@ func (h *chatMemberHandler) register(router *httprouter.Router, authMid Middlewa
 // @Failure 404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/members [get]
-func (h *chatMemberHandler) listMembers(w http.ResponseWriter, req *http.Request) {
+func (h *chatMemberHandler) list(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	ps := httprouter.ParamsFromContext(ctx)
 
@@ -76,4 +77,49 @@ func (h *chatMemberHandler) listMembers(w http.ResponseWriter, req *http.Request
 	}
 
 	respondSuccess(http.StatusOK, w, MemberListResponse{List: members})
+}
+
+// @Summary Join member to the chat
+// @Tags Chat Members
+// @Security JWTTokenAuth
+// @Accept json
+// @Produce json
+// @Param chat_id path string true "Chat id"
+// @Param user_id query string true "User id"
+// @Success 204 "No Content"
+// @Failure 400,404 {object} ResponseError
+// @Failure 500 {object} ResponseError
+// @Router /chats/{chat_id}/members [post]
+func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
+	userID := req.URL.Query().Get("user_id")
+	if userID == "" {
+		respondError(w, ResponseError{
+			StatusCode: http.StatusBadRequest,
+			Message:    "validation error",
+			Fields:     ErrorFields{"user_id": "must be required"},
+		})
+
+		return
+	}
+
+	ctx := req.Context()
+	ps := httprouter.ParamsFromContext(ctx)
+
+	chatID := ps.ByName("chat_id")
+	creatorID := domain.UserIDFromContext(ctx)
+
+	if err := h.chatMemberService.JoinMemberToChat(ctx, chatID, creatorID, userID); err != nil {
+		switch err {
+		case domain.ErrChatNotFound, domain.ErrUserNotFound:
+			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		case domain.ErrChatMemberUniqueViolation:
+			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+		default:
+			respondError(w, err)
+		}
+
+		return
+	}
+
+	respondSuccess(http.StatusNoContent, w, nil)
 }

@@ -84,3 +84,35 @@ func (r *chatMemberCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Contex
 
 	return nil
 }
+
+func (r *chatMemberCacheRepositoryDecorator) Create(ctx context.Context, userID string, chatID string) error {
+	if err := r.ChatMemberRepository.Create(ctx, userID, chatID); err != nil {
+		return err
+	}
+
+	chatUsersKey := fmt.Sprintf("chat:%s:user_ids", chatID)
+	logger := r.logger.WithFields(logging.Fields{
+		"user_id":   userID,
+		"chat_id":   chatID,
+		"redis_key": chatUsersKey,
+	})
+
+	val, err := r.redisClient.Exists(ctx, chatUsersKey).Result()
+	if err != nil {
+		logger.WithError(err).Errorf("An error occurred while checking existence the key")
+		return err
+	}
+
+	if val == 0 {
+		if err = r.cacheChatUserIDs(ctx, chatID); err != nil {
+			return err
+		}
+	}
+
+	if err = r.redisClient.SAdd(ctx, chatUsersKey, userID).Err(); err != nil {
+		logger.WithError(err).Error("An error occurred while setting user ids")
+		return err
+	}
+
+	return nil
+}

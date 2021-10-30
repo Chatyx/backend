@@ -3,6 +3,9 @@ package repository
 import (
 	"context"
 
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
+
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
@@ -70,4 +73,21 @@ func (r *chatMemberPostgresRepository) IsMemberInChat(ctx context.Context, userI
 	}
 
 	return isIn, nil
+}
+
+func (r *chatMemberPostgresRepository) Create(ctx context.Context, userID, chatID string) error {
+	query := "INSERT INTO chat_members (user_id, chat_id) VALUES ($1, $2)"
+
+	if _, err := r.dbPool.Exec(ctx, query, userID, chatID); err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			r.logger.WithError(err).Debug("chat member with such fields is already associated with this chat")
+			return domain.ErrChatMemberUniqueViolation
+		}
+
+		r.logger.WithError(err).Error("An error occurred while inserting into chat_members table")
+
+		return err
+	}
+
+	return nil
 }

@@ -274,6 +274,21 @@ func (mr *MockChatServiceMockRecorder) GetByID(ctx, chatID, memberID interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockChatService)(nil).GetByID), ctx, chatID, memberID)
 }
 
+// GetOwnByID mocks base method.
+func (m *MockChatService) GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOwnByID", ctx, chatID, creatorID)
+	ret0, _ := ret[0].(domain.Chat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOwnByID indicates an expected call of GetOwnByID.
+func (mr *MockChatServiceMockRecorder) GetOwnByID(ctx, chatID, creatorID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnByID", reflect.TypeOf((*MockChatService)(nil).GetOwnByID), ctx, chatID, creatorID)
+}
+
 // List mocks base method.
 func (m *MockChatService) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
 	m.ctrl.T.Helper()
@@ -340,6 +355,20 @@ func (m *MockChatMemberService) IsMemberInChat(ctx context.Context, userID, chat
 func (mr *MockChatMemberServiceMockRecorder) IsMemberInChat(ctx, userID, chatID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMemberInChat", reflect.TypeOf((*MockChatMemberService)(nil).IsMemberInChat), ctx, userID, chatID)
+}
+
+// JoinMemberToChat mocks base method.
+func (m *MockChatMemberService) JoinMemberToChat(ctx context.Context, chatID, creatorID, userID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "JoinMemberToChat", ctx, chatID, creatorID, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// JoinMemberToChat indicates an expected call of JoinMemberToChat.
+func (mr *MockChatMemberServiceMockRecorder) JoinMemberToChat(ctx, chatID, creatorID, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JoinMemberToChat", reflect.TypeOf((*MockChatMemberService)(nil).JoinMemberToChat), ctx, chatID, creatorID, userID)
 }
 
 // ListMembersInChat mocks base method.

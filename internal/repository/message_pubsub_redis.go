@@ -9,6 +9,8 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+const broadcastTopic = "broadcast"
+
 type messageRedisSubscriber struct {
 	pubSub *redis.PubSub
 	logger logging.Logger
@@ -106,7 +108,12 @@ func (ps *messageRedisPubSub) Publish(ctx context.Context, message domain.Messag
 		return err
 	}
 
-	topic := getPubSubTopicFromChatID(message.ChatID)
+	var topic string
+	if message.ActionID == domain.MessageJoinAction {
+		topic = broadcastTopic
+	} else {
+		topic = getPubSubTopicFromChatID(message.ChatID)
+	}
 
 	if err = ps.redisClient.Publish(ctx, topic, payload).Err(); err != nil {
 		ps.logger.WithError(err).Error("An error occurred while publishing the message")
@@ -118,6 +125,7 @@ func (ps *messageRedisPubSub) Publish(ctx context.Context, message domain.Messag
 
 func (ps *messageRedisPubSub) Subscribe(ctx context.Context, chatIDs ...string) MessageSubscriber {
 	topics := getPubSubTopicsFromChatIDs(chatIDs...)
+	topics = append(topics, broadcastTopic)
 
 	return &messageRedisSubscriber{
 		logger: ps.logger,
@@ -126,7 +134,7 @@ func (ps *messageRedisPubSub) Subscribe(ctx context.Context, chatIDs ...string) 
 }
 
 func getPubSubTopicsFromChatIDs(chatIDs ...string) []string {
-	topics := make([]string, 0, len(chatIDs))
+	topics := make([]string, 0, len(chatIDs)+1)
 	for _, chatID := range chatIDs {
 		topics = append(topics, getPubSubTopicFromChatID(chatID))
 	}

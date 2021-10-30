@@ -29,6 +29,7 @@ type ChatService interface {
 	List(ctx context.Context, memberID string) ([]domain.Chat, error)
 	Create(ctx context.Context, dto domain.CreateChatDTO) (domain.Chat, error)
 	GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error)
+	GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error)
 	Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error)
 	Delete(ctx context.Context, chatID, creatorID string) error
 }
@@ -36,6 +37,7 @@ type ChatService interface {
 type ChatMemberService interface {
 	ListMembersInChat(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error)
 	IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error)
+	JoinMemberToChat(ctx context.Context, chatID, creatorID, userID string) error
 }
 
 type MessageService interface {

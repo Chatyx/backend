@@ -32,6 +32,10 @@ func (s *chatService) GetByID(ctx context.Context, chatID, memberID string) (dom
 	return s.repo.GetByID(ctx, chatID, memberID)
 }
 
+func (s *chatService) GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error) {
+	return s.repo.GetOwnByID(ctx, chatID, creatorID)
+}
+
 func (s *chatService) Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error) {
 	return s.repo.Update(ctx, dto)
 }

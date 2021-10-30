@@ -92,7 +92,13 @@ func NewApp(cfg *config.Config) *App {
 
 	userService := service.NewUserService(userRepo, sessionRepo, hasher)
 	chatService := service.NewChatService(chatRepo)
-	chatMemberService := service.NewChatMemberService(chatMemberRepo)
+	chatMemberService := service.NewChatMemberService(service.ChatMemberConfig{
+		UserService:    userService,
+		ChatService:    chatService,
+		ChatMemberRepo: chatMemberRepo,
+		MessageRepo:    msgRepo,
+		MessagePubSub:  msgPubSub,
+	})
 	messageService := service.NewMessageService(chatService, chatMemberService, msgRepo, msgPubSub)
 	authService := service.NewAuthService(service.AuthServiceConfig{
 		UserService:     userService,

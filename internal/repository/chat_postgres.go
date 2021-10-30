@@ -99,8 +99,13 @@ func (r *chatPostgresRepository) Create(ctx context.Context, dto domain.CreateCh
 }
 
 func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error) {
+	logger := r.logger.WithFields(logging.Fields{
+		"chat_id": chatID,
+		"user_id": memberID,
+	})
+
 	if !utils.IsValidUUID(chatID) || !utils.IsValidUUID(memberID) {
-		r.logger.Debugf("chat is not found with chatID = %s, memberID = %s", chatID, memberID)
+		logger.Debug("chat is not found")
 		return domain.Chat{}, domain.ErrChatNotFound
 	}
 
@@ -112,18 +117,41 @@ func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, memberID s
 		ON chats.id = chat_members.chat_id
 	WHERE chats.id = $1 AND chat_members.user_id = $2`
 
+	return r.getOne(ctx, logger, query, chatID, memberID)
+}
+
+func (r *chatPostgresRepository) GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error) {
+	logger := r.logger.WithFields(logging.Fields{
+		"chat_id":    chatID,
+		"creator_id": creatorID,
+	})
+
+	if !utils.IsValidUUID(chatID) || !utils.IsValidUUID(creatorID) {
+		logger.Debug("chat is not found")
+		return domain.Chat{}, domain.ErrChatNotFound
+	}
+
+	query := `SELECT 
+		chats.id, chats.name, chats.description, 
+		chats.creator_id, chats.created_at, chats.updated_at
+	FROM chats WHERE chats.id = $1 AND chats.creator_id = $2`
+
+	return r.getOne(ctx, logger, query, chatID, creatorID)
+}
+
+func (r *chatPostgresRepository) getOne(ctx context.Context, logger logging.Logger, query string, args ...interface{}) (domain.Chat, error) {
 	var chat domain.Chat
 
-	if err := r.dbPool.QueryRow(ctx, query, chatID, memberID).Scan(
+	if err := r.dbPool.QueryRow(ctx, query, args...).Scan(
 		&chat.ID, &chat.Name, &chat.Description,
 		&chat.CreatorID, &chat.CreatedAt, &chat.UpdatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			r.logger.Debugf("chat is not found with chatID = %s, memberID = %s", chatID, memberID)
+			logger.Debug("chat is not found")
 			return domain.Chat{}, domain.ErrChatNotFound
 		}
 
-		r.logger.WithError(err).Error("An error occurred while getting chat by id")
+		logger.WithError(err).Error("An error occurred while getting chat")
 
 		return domain.Chat{}, err
 	}
