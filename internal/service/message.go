@@ -84,7 +84,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
-	ok, err := s.chatMemberService.IsMemberBelongToChat(ctx, dto.SenderID, dto.ChatID)
+	ok, err := s.chatMemberService.IsMemberInChat(ctx, dto.SenderID, dto.ChatID)
 	if err != nil {
 		return domain.Message{}, err
 	}
@@ -93,7 +93,7 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 		s.logger.WithFields(logging.Fields{
 			"user_id": dto.SenderID,
 			"chat_id": dto.ChatID,
-		}).Debug("user doesn't belong to this chat")
+		}).Debug("member isn't in this chat")
 
 		return domain.Message{}, domain.ErrChatNotFound
 	}
@@ -111,7 +111,7 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 }
 
 func (s *messageService) List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error) {
-	ok, err := s.chatMemberService.IsMemberBelongToChat(ctx, userID, chatID)
+	ok, err := s.chatMemberService.IsMemberInChat(ctx, userID, chatID)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (s *messageService) List(ctx context.Context, chatID, userID string, timest
 		s.logger.WithFields(logging.Fields{
 			"user_id": userID,
 			"chat_id": chatID,
-		}).Debug("user doesn't belong to this chat")
+		}).Debug("member isn't in this chat")
 
 		return nil, domain.ErrChatNotFound
 	}

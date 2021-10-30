@@ -35,8 +35,8 @@ type ChatRepository interface {
 }
 
 type ChatMemberRepository interface {
-	ListMembersWhoBelongToChat(ctx context.Context, chatID string) ([]domain.ChatMember, error)
-	IsMemberBelongToChat(ctx context.Context, userID, chatID string) (bool, error)
+	ListMembersInChat(ctx context.Context, chatID string) ([]domain.ChatMember, error)
+	IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error)
 }
 
 type MessageRepository interface {

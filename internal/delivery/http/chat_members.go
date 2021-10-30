@@ -63,7 +63,7 @@ func (h *chatMemberHandler) listMembers(w http.ResponseWriter, req *http.Request
 	chatID := ps.ByName("chat_id")
 	userID := domain.UserIDFromContext(ctx)
 
-	members, err := h.chatMemberService.ListMembersWhoBelongToChat(ctx, chatID, userID)
+	members, err := h.chatMemberService.ListMembersInChat(ctx, chatID, userID)
 	if err != nil {
 		switch err {
 		case domain.ErrChatNotFound:

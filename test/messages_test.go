@@ -125,7 +125,7 @@ func (s *AppTestSuite) TestSendMessageViaAPI() {
 	s.compareMessages(expectedMessage, cacheMessages[0])
 }
 
-func (s *AppTestSuite) TestSendMessageNotBelongToChat() {
+func (s *AppTestSuite) TestSendMessageNotInChat() {
 	const (
 		chatID      = "92b37e8b-92e9-4c8b-a723-3a2925b62d91"
 		messageText = "Hi, John. I wrote this message, but I'm not in this chat!"

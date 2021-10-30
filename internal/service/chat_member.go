@@ -20,26 +20,26 @@ func NewChatMemberService(repo repository.ChatMemberRepository) ChatMemberServic
 	}
 }
 
-func (s *chatMemberService) ListMembersWhoBelongToChat(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error) {
-	members, err := s.repo.ListMembersWhoBelongToChat(ctx, chatID)
+func (s *chatMemberService) ListMembersInChat(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error) {
+	members, err := s.repo.ListMembersInChat(ctx, chatID)
 	if err != nil {
 		return nil, err
 	}
 
-	isBelong := false
+	isIn := false
 
 	for _, member := range members {
 		if member.UserID == userID {
-			isBelong = true
+			isIn = true
 			break
 		}
 	}
 
-	if !isBelong {
+	if !isIn {
 		s.logger.WithFields(logging.Fields{
 			"user_id": userID,
 			"chat_id": chatID,
-		}).Debug("user doesn't belong to this chat")
+		}).Debug("member isn't in this chat")
 
 		return nil, domain.ErrChatNotFound
 	}
@@ -47,6 +47,6 @@ func (s *chatMemberService) ListMembersWhoBelongToChat(ctx context.Context, chat
 	return members, nil
 }
 
-func (s *chatMemberService) IsMemberBelongToChat(ctx context.Context, userID, chatID string) (bool, error) {
-	return s.repo.IsMemberBelongToChat(ctx, userID, chatID)
+func (s *chatMemberService) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
+	return s.repo.IsMemberInChat(ctx, userID, chatID)
 }

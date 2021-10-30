@@ -19,7 +19,7 @@ func NewChatMemberPostgresRepository(dbPool PgxPool) ChatMemberRepository {
 	}
 }
 
-func (r *chatMemberPostgresRepository) ListMembersWhoBelongToChat(ctx context.Context, chatID string) ([]domain.ChatMember, error) {
+func (r *chatMemberPostgresRepository) ListMembersInChat(ctx context.Context, chatID string) ([]domain.ChatMember, error) {
 	query := `SELECT users.username, chat_members.status_id, 
 		chat_members.user_id, chat_members.chat_id
 	FROM users 
@@ -29,7 +29,7 @@ func (r *chatMemberPostgresRepository) ListMembersWhoBelongToChat(ctx context.Co
 
 	rows, err := r.dbPool.Query(ctx, query, chatID)
 	if err != nil {
-		r.logger.WithError(err).Error("Unable to list users from database")
+		r.logger.WithError(err).Error("Unable to list chat members from database")
 		return nil, err
 	}
 	defer rows.Close()
@@ -58,16 +58,16 @@ func (r *chatMemberPostgresRepository) ListMembersWhoBelongToChat(ctx context.Co
 	return members, nil
 }
 
-func (r *chatMemberPostgresRepository) IsMemberBelongToChat(ctx context.Context, userID, chatID string) (bool, error) {
-	query := "SELECT EXISTS(SELECT 1 FROM chat_members WHERE user_id = $1 AND chat_id = $2)"
+func (r *chatMemberPostgresRepository) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
+	query := "SELECT EXISTS(SELECT 1 FROM chat_members WHERE user_id = $1 AND chat_id = $2 AND status_id = 1)"
 
-	isBelong := false
+	isIn := false
 	row := r.dbPool.QueryRow(ctx, query, userID, chatID)
 
-	if err := row.Scan(&isBelong); err != nil {
-		r.logger.WithError(err).Error("An error occurred while checking if member belongs to the chat")
+	if err := row.Scan(&isIn); err != nil {
+		r.logger.WithError(err).Error("An error occurred while checking if member is in the chat")
 		return false, err
 	}
 
-	return isBelong, nil
+	return isIn, nil
 }

@@ -23,7 +23,7 @@ func NewChatMemberCacheRepository(repo ChatMemberRepository, redisClient *redis.
 	}
 }
 
-func (r *chatMemberCacheRepositoryDecorator) IsMemberBelongToChat(ctx context.Context, userID, chatID string) (bool, error) {
+func (r *chatMemberCacheRepositoryDecorator) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
 	chatUsersKey := fmt.Sprintf("chat:%s:user_ids", chatID)
 	logger := r.logger.WithFields(logging.Fields{
 		"user_id":   userID,
@@ -43,13 +43,13 @@ func (r *chatMemberCacheRepositoryDecorator) IsMemberBelongToChat(ctx context.Co
 		}
 	}
 
-	isBelong, err := r.redisClient.SIsMember(ctx, chatUsersKey, userID).Result()
+	isIn, err := r.redisClient.SIsMember(ctx, chatUsersKey, userID).Result()
 	if err != nil {
-		logger.WithError(err).Error("An error occurred while checking if member belongs to the chat")
+		logger.WithError(err).Error("An error occurred while checking if member is in the chat")
 		return false, err
 	}
 
-	return isBelong, nil
+	return isIn, nil
 }
 
 func (r *chatMemberCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Context, chatID string) error {
@@ -58,7 +58,7 @@ func (r *chatMemberCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Contex
 		"redis_key": chatUsersKey,
 	})
 
-	members, err := r.ListMembersWhoBelongToChat(ctx, chatID)
+	members, err := r.ListMembersInChat(ctx, chatID)
 	if err != nil {
 		return err
 	}
