@@ -3,8 +3,7 @@ package domain
 const (
 	InChat = iota + 1
 	Left
-	BlockedByMember
-	BlockedByCreator
+	Kicked
 )
 
 type ChatMember struct {

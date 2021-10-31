@@ -16,7 +16,7 @@ message Message {
     SEND = 1;
     JOIN = 2;
     LEAVE = 3;
-    BLOCK = 4;
+    KICK = 4;
   }
 
   string id = 1;

@@ -8,7 +8,7 @@ const (
 	MessageSendAction = iota + 1
 	MessageJoinAction
 	MessageLeaveAction
-	MessageBlockAction
+	MessageKickAction
 )
 
 type CreateMessageDTO struct {

@@ -84,7 +84,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 							return
 						}
 					}
-				case domain.MessageLeaveAction, domain.MessageBlockAction:
+				case domain.MessageLeaveAction, domain.MessageKickAction:
 					if message.SenderID == userID {
 						if err = subscriber.Unsubscribe(ctx, message.ChatID); err != nil {
 							return

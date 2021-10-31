@@ -69,14 +69,13 @@ CREATE TABLE IF NOT EXISTS messages
 
 INSERT INTO chat_member_status_list (id, name)
 VALUES (1, 'In chat'),
-       (2, 'Leave'),
-       (3, 'Blocked by user'),
-       (4, 'Blocked by admin');
+       (2, 'Left'),
+       (3, 'Kicked');
 
 INSERT INTO message_action_list (id, name)
 VALUES (1, 'Send message to chat'),
        (2, 'User joined to chat'),
        (3, 'User left from chat'),
-       (4, 'Admin blocked this user');
+       (4, 'Admin kicked this user');
 
 COMMIT;
