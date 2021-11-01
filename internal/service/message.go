@@ -34,14 +34,16 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 	go func() {
 		defer close(outCh)
 
-		userChats, err := s.chatService.List(ctx, userID)
+		members, err := s.chatMemberService.ListByUserID(ctx, userID)
 		if err != nil {
 			return
 		}
 
-		chatIDs := make([]string, 0, len(userChats))
-		for _, userChat := range userChats {
-			chatIDs = append(chatIDs, userChat.ID)
+		chatIDs := make([]string, 0, len(members))
+		for _, member := range members {
+			if member.IsInChat() {
+				chatIDs = append(chatIDs, member.ChatID)
+			}
 		}
 
 		subscriber := s.pubSub.Subscribe(ctx, chatIDs...)
@@ -70,7 +72,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 						continue
 					}
 				case domain.MessageJoinAction:
-					ok, err = s.chatMemberService.IsMemberInChat(ctx, userID, message.ChatID)
+					ok, err = s.chatMemberService.IsInChat(ctx, userID, message.ChatID)
 					if err != nil {
 						return
 					}
@@ -107,7 +109,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
-	ok, err := s.chatMemberService.IsMemberInChat(ctx, dto.SenderID, dto.ChatID)
+	ok, err := s.chatMemberService.IsInChat(ctx, dto.SenderID, dto.ChatID)
 	if err != nil {
 		return domain.Message{}, err
 	}
@@ -134,7 +136,7 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 }
 
 func (s *messageService) List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error) {
-	ok, err := s.chatMemberService.IsMemberInChat(ctx, userID, chatID)
+	ok, err := s.chatMemberService.IsInChat(ctx, userID, chatID)
 	if err != nil {
 		return nil, err
 	}

@@ -128,18 +128,20 @@ func (r *chatMemberCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Contex
 		"redis_key": chatUsersKey,
 	})
 
-	members, err := r.ListMembersInChat(ctx, chatID)
+	members, err := r.ListByChatID(ctx, chatID)
 	if err != nil {
 		return err
 	}
 
-	if len(members) == 0 {
-		return nil
-	}
-
 	userIDs := make([]interface{}, 0, len(members))
 	for _, member := range members {
-		userIDs = append(userIDs, member.UserID)
+		if member.IsInChat() {
+			userIDs = append(userIDs, member.UserID)
+		}
+	}
+
+	if len(userIDs) == 0 {
+		return nil
 	}
 
 	if err = r.redisClient.SAdd(ctx, chatUsersKey, userIDs...).Err(); err != nil {

@@ -954,6 +954,9 @@ var doc = `{
                 "is_creator": {
                     "type": "boolean"
                 },
+                "status_id": {
+                    "type": "integer"
+                },
                 "user_id": {
                     "type": "string"
                 },

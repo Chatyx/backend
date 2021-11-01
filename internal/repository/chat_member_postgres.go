@@ -24,15 +24,34 @@ func NewChatMemberPostgresRepository(dbPool PgxPool) ChatMemberRepository {
 	}
 }
 
-func (r *chatMemberPostgresRepository) ListMembersInChat(ctx context.Context, chatID string) ([]domain.ChatMember, error) {
+func (r *chatMemberPostgresRepository) ListByChatID(ctx context.Context, chatID string) ([]domain.ChatMember, error) {
 	query := `SELECT users.username, chat_members.status_id, 
-		chat_members.user_id, chat_members.chat_id
-	FROM users 
-	INNER JOIN chat_members 
+		chat_members.user_id = chats.creator_id, chat_members.user_id, chat_members.chat_id
+	FROM chat_members 
+	INNER JOIN users 
 		ON users.id = chat_members.user_id
-	WHERE chat_members.chat_id = $1 AND chat_members.status_id = 1`
+	INNER JOIN chats
+		ON chats.id = chat_members.chat_id
+	WHERE chat_members.chat_id = $1`
 
-	rows, err := r.dbPool.Query(ctx, query, chatID)
+	return r.list(ctx, query, chatID)
+}
+
+func (r *chatMemberPostgresRepository) ListByUserID(ctx context.Context, userID string) ([]domain.ChatMember, error) {
+	query := `SELECT users.username, chat_members.status_id, 
+		chat_members.user_id = chats.creator_id, chat_members.user_id, chat_members.chat_id
+	FROM chat_members 
+	INNER JOIN users 
+		ON users.id = chat_members.user_id
+	INNER JOIN chats
+		ON chats.id = chat_members.chat_id
+	WHERE chat_members.user_id = $1`
+
+	return r.list(ctx, query, userID)
+}
+
+func (r *chatMemberPostgresRepository) list(ctx context.Context, query string, args ...interface{}) ([]domain.ChatMember, error) {
+	rows, err := r.dbPool.Query(ctx, query, args...)
 	if err != nil {
 		r.logger.WithError(err).Error("Unable to list chat members from database")
 		return nil, err
@@ -46,7 +65,7 @@ func (r *chatMemberPostgresRepository) ListMembersInChat(ctx context.Context, ch
 
 		if err = rows.Scan(
 			&member.Username, &member.StatusID,
-			&member.UserID, &member.ChatID,
+			&member.IsCreator, &member.UserID, &member.ChatID,
 		); err != nil {
 			r.logger.WithError(err).Error("Unable to scan chat member")
 			return nil, err

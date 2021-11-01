@@ -18,6 +18,7 @@ import (
 
 var chatMembersTableColumns = []string{
 	"users.username", "chat_members.status_id",
+	"chat_members.user_id = chats.creator_id",
 	"chat_members.user_id", "chat_members.chat_id",
 }
 
@@ -291,10 +292,12 @@ func (s *AppTestSuite) TestChatMemberComeBackFromLeft() {
 
 func (s *AppTestSuite) getChatMembersFromDB(chatID string) ([]domain.ChatMember, error) {
 	members := make([]domain.ChatMember, 0)
-	query := fmt.Sprintf(`SELECT %s FROM users 
-	INNER JOIN chat_members 
+	query := fmt.Sprintf(`SELECT %s FROM chat_members 
+	INNER JOIN users
 		ON users.id = chat_members.user_id
-	WHERE chat_members.chat_id = $1 AND chat_members.status_id = 1`,
+	INNER JOIN chats
+		ON chats.id = chat_members.chat_id
+	WHERE chat_members.chat_id = $1`,
 		strings.Join(chatMembersTableColumns, ", "))
 
 	rows, err := s.dbConn.Query(query, chatID)
@@ -309,7 +312,7 @@ func (s *AppTestSuite) getChatMembersFromDB(chatID string) ([]domain.ChatMember,
 
 		if err = rows.Scan(
 			&member.Username, &member.StatusID,
-			&member.UserID, &member.ChatID,
+			&member.IsCreator, &member.UserID, &member.ChatID,
 		); err != nil {
 			return nil, err
 		}
@@ -328,6 +331,8 @@ func (s *AppTestSuite) getChatMemberFromDB(userID, chatID string) (domain.ChatMe
 	query := fmt.Sprintf(`SELECT %s FROM chat_members 
 	INNER JOIN users
 		ON users.id = chat_members.user_id
+	INNER JOIN chats
+		ON chats.id = chat_members.chat_id
 	WHERE chat_members.user_id = $1 AND chat_members.chat_id = $2`,
 		strings.Join(chatMembersTableColumns, ", "))
 
@@ -336,7 +341,7 @@ func (s *AppTestSuite) getChatMemberFromDB(userID, chatID string) (domain.ChatMe
 	var member domain.ChatMember
 	if err := row.Scan(
 		&member.Username, &member.StatusID,
-		&member.UserID, &member.ChatID,
+		&member.IsCreator, &member.UserID, &member.ChatID,
 	); err != nil {
 		return domain.ChatMember{}, err
 	}
@@ -357,6 +362,8 @@ func (s *AppTestSuite) checkExistChatMemberInCache(userID, chatID string) (bool,
 
 func (s *AppTestSuite) compareChatMembers(expected, actual domain.ChatMember) {
 	s.Require().Equal(expected.Username, actual.Username)
+	s.Require().Equal(expected.IsCreator, actual.IsCreator)
+	s.Require().Equal(expected.StatusID, actual.StatusID)
 	s.Require().Equal(expected.UserID, actual.UserID)
 	s.Require().Equal(expected.ChatID, actual.ChatID)
 }

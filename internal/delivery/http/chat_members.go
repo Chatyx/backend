@@ -68,7 +68,7 @@ func (h *chatMemberHandler) list(w http.ResponseWriter, req *http.Request) {
 	chatID := ps.ByName("chat_id")
 	userID := domain.UserIDFromContext(ctx)
 
-	members, err := h.chatMemberService.ListMembersInChat(ctx, chatID, userID)
+	members, err := h.chatMemberService.ListByChatID(ctx, chatID, userID)
 	if err != nil {
 		switch err {
 		case domain.ErrChatNotFound:
@@ -112,7 +112,7 @@ func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
 	chatID := ps.ByName("chat_id")
 	creatorID := domain.UserIDFromContext(ctx)
 
-	if err := h.chatMemberService.JoinMemberToChat(ctx, chatID, creatorID, userID); err != nil {
+	if err := h.chatMemberService.JoinToChat(ctx, chatID, creatorID, userID); err != nil {
 		switch err {
 		case domain.ErrChatNotFound, domain.ErrUserNotFound:
 			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})

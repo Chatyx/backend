@@ -29,9 +29,7 @@ func (r *chatPostgresRepository) List(ctx context.Context, memberID string) ([]d
 	FROM chats 
 	INNER JOIN chat_members 
 		ON chats.id = chat_members.chat_id
-	INNER JOIN users
-		ON chat_members.user_id = users.id
-	WHERE chat_members.user_id = $1 AND users.is_deleted IS FALSE`
+	WHERE chat_members.user_id = $1`
 
 	rows, err := r.dbPool.Query(ctx, query, memberID)
 	if err != nil {

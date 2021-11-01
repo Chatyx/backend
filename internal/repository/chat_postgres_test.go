@@ -75,9 +75,7 @@ func TestChatPostgresRepository_List(t *testing.T) {
 	query := fmt.Sprintf(`SELECT %s FROM chats 
 	INNER JOIN chat_members 
 		ON chats.id = chat_members.chat_id
-	INNER JOIN users
-		ON chat_members.user_id = users.id
-	WHERE chat_members.user_id = $1 AND users.is_deleted IS FALSE`,
+	WHERE chat_members.user_id = $1`,
 		strings.Join(chatTableColumns, ", "))
 
 	var defaultMockBehaviour mockBehavior = func(mockPool pgxmock.PgxPoolIface, memberID string, rowsRes []RowResult, rowsErr error) {

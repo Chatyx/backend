@@ -399,19 +399,34 @@ func (mr *MockChatMemberRepositoryMockRecorder) IsMemberInChat(ctx, userID, chat
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMemberInChat", reflect.TypeOf((*MockChatMemberRepository)(nil).IsMemberInChat), ctx, userID, chatID)
 }
 
-// ListMembersInChat mocks base method.
-func (m *MockChatMemberRepository) ListMembersInChat(ctx context.Context, chatID string) ([]domain.ChatMember, error) {
+// ListByChatID mocks base method.
+func (m *MockChatMemberRepository) ListByChatID(ctx context.Context, chatID string) ([]domain.ChatMember, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListMembersInChat", ctx, chatID)
+	ret := m.ctrl.Call(m, "ListByChatID", ctx, chatID)
 	ret0, _ := ret[0].([]domain.ChatMember)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListMembersInChat indicates an expected call of ListMembersInChat.
-func (mr *MockChatMemberRepositoryMockRecorder) ListMembersInChat(ctx, chatID interface{}) *gomock.Call {
+// ListByChatID indicates an expected call of ListByChatID.
+func (mr *MockChatMemberRepositoryMockRecorder) ListByChatID(ctx, chatID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMembersInChat", reflect.TypeOf((*MockChatMemberRepository)(nil).ListMembersInChat), ctx, chatID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByChatID", reflect.TypeOf((*MockChatMemberRepository)(nil).ListByChatID), ctx, chatID)
+}
+
+// ListByUserID mocks base method.
+func (m *MockChatMemberRepository) ListByUserID(ctx context.Context, userID string) ([]domain.ChatMember, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByUserID", ctx, userID)
+	ret0, _ := ret[0].([]domain.ChatMember)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListByUserID indicates an expected call of ListByUserID.
+func (mr *MockChatMemberRepositoryMockRecorder) ListByUserID(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUserID", reflect.TypeOf((*MockChatMemberRepository)(nil).ListByUserID), ctx, userID)
 }
 
 // Update mocks base method.

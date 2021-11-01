@@ -49,8 +49,8 @@ func NewChatMemberService(cfg ChatMemberConfig) ChatMemberService {
 	}
 }
 
-func (s *chatMemberService) ListMembersInChat(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error) {
-	members, err := s.chatMemberRepo.ListMembersInChat(ctx, chatID)
+func (s *chatMemberService) ListByChatID(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error) {
+	members, err := s.chatMemberRepo.ListByChatID(ctx, chatID)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (s *chatMemberService) ListMembersInChat(ctx context.Context, chatID, userI
 	isIn := false
 
 	for _, member := range members {
-		if member.UserID == userID {
+		if member.UserID == userID && member.IsInChat() {
 			isIn = true
 			break
 		}
@@ -76,11 +76,15 @@ func (s *chatMemberService) ListMembersInChat(ctx context.Context, chatID, userI
 	return members, nil
 }
 
-func (s *chatMemberService) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
+func (s *chatMemberService) ListByUserID(ctx context.Context, userID string) ([]domain.ChatMember, error) {
+	return s.chatMemberRepo.ListByUserID(ctx, userID)
+}
+
+func (s *chatMemberService) IsInChat(ctx context.Context, userID, chatID string) (bool, error) {
 	return s.chatMemberRepo.IsMemberInChat(ctx, userID, chatID)
 }
 
-func (s *chatMemberService) JoinMemberToChat(ctx context.Context, chatID, creatorID, userID string) error {
+func (s *chatMemberService) JoinToChat(ctx context.Context, chatID, creatorID, userID string) error {
 	if _, err := s.chatService.GetOwnByID(ctx, chatID, creatorID); err != nil {
 		return err
 	}

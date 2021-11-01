@@ -36,7 +36,8 @@ type ChatRepository interface {
 }
 
 type ChatMemberRepository interface {
-	ListMembersInChat(ctx context.Context, chatID string) ([]domain.ChatMember, error)
+	ListByChatID(ctx context.Context, chatID string) ([]domain.ChatMember, error)
+	ListByUserID(ctx context.Context, userID string) ([]domain.ChatMember, error)
 	IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error)
 	Create(ctx context.Context, userID, chatID string) error
 	Get(ctx context.Context, userID, chatID string) (domain.ChatMember, error)
