@@ -9,3 +9,7 @@
 - user_id: 7e7b1825-ef9a-42ec-b4db-6f09dffe3850
   chat_id: 609fce45-458f-477a-b2bb-e886d75d22ab
   status_id: 1
+
+- user_id: a22c2110-d0f8-4654-b1de-6d10c4f7a922
+  chat_id: 609fce45-458f-477a-b2bb-e886d75d22ab
+  status_id: 2

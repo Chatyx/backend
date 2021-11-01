@@ -4,18 +4,22 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Mort4lis/scht-backend/internal/utils"
+
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/repository"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 type chatMemberService struct {
-	userService    UserService
-	chatService    ChatService
-	chatMemberRepo repository.ChatMemberRepository
-	messageRepo    repository.MessageRepository
-	messagePubSub  repository.MessagePubSub
-	logger         logging.Logger
+	userService         UserService
+	chatService         ChatService
+	chatMemberRepo      repository.ChatMemberRepository
+	messageRepo         repository.MessageRepository
+	messagePubSub       repository.MessagePubSub
+	memberStatusMatrix  utils.StatusMatrix
+	creatorStatusMatrix utils.StatusMatrix
+	logger              logging.Logger
 }
 
 type ChatMemberConfig struct {
@@ -33,7 +37,15 @@ func NewChatMemberService(cfg ChatMemberConfig) ChatMemberService {
 		chatMemberRepo: cfg.ChatMemberRepo,
 		messageRepo:    cfg.MessageRepo,
 		messagePubSub:  cfg.MessagePubSub,
-		logger:         logging.GetLogger(),
+		memberStatusMatrix: utils.StatusMatrix{
+			domain.InChat: utils.NewStatusSet(domain.Left),
+			domain.Left:   utils.NewStatusSet(domain.InChat),
+		},
+		creatorStatusMatrix: utils.StatusMatrix{
+			domain.InChat: utils.NewStatusSet(domain.Kicked),
+			domain.Kicked: utils.NewStatusSet(domain.InChat),
+		},
+		logger: logging.GetLogger(),
 	}
 }
 
@@ -94,9 +106,73 @@ func (s *chatMemberService) JoinMemberToChat(ctx context.Context, chatID, creato
 		return err
 	}
 
-	if err = s.messagePubSub.Publish(ctx, message); err != nil {
+	return s.messagePubSub.Publish(ctx, message)
+}
+
+func (s *chatMemberService) UpdateStatus(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
+	return s.updateStatus(ctx, s.memberStatusMatrix, dto)
+}
+
+func (s *chatMemberService) UpdateStatusByCreator(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
+	return s.updateStatus(ctx, s.creatorStatusMatrix, dto)
+}
+
+func (s *chatMemberService) updateStatus(ctx context.Context, mx utils.StatusMatrix, dto domain.UpdateChatMemberDTO) error {
+	member, err := s.chatMemberRepo.Get(ctx, dto.UserID, dto.ChatID)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	logger := s.logger.WithFields(logging.Fields{
+		"user_id": dto.UserID,
+		"chat_id": dto.ChatID,
+	})
+
+	if member.IsCreator {
+		logger.Debug("can't update chat member status if he's a chat creator")
+		return domain.ErrChatCreatorInvalidUpdateStatus
+	}
+
+	if !mx.IsCorrectTransit(member.StatusID, dto.StatusID) {
+		logger.WithFields(logging.Fields{
+			"from_status_id": member.StatusID,
+			"to_status_id":   dto.StatusID,
+		}).Debug("wrong chat member transition")
+
+		return domain.ErrChatMemberWrongStatusTransit
+	}
+
+	if err = s.chatMemberRepo.Update(ctx, dto); err != nil {
+		return err
+	}
+
+	msgDTO := domain.CreateMessageDTO{
+		ChatID:   dto.ChatID,
+		SenderID: dto.UserID,
+	}
+
+	switch dto.StatusID {
+	case domain.InChat:
+		msgDTO.ActionID = domain.MessageJoinAction
+		msgDTO.Text = fmt.Sprintf("%s successfully joined to the chat", member.Username)
+	case domain.Left:
+		msgDTO.ActionID = domain.MessageLeaveAction
+		msgDTO.Text = fmt.Sprintf("%s has left from the chat", member.Username)
+	case domain.Kicked:
+		msgDTO.ActionID = domain.MessageKickAction
+		msgDTO.Text = fmt.Sprintf("%s has been kicked from the chat", member.Username)
+	default:
+		logger.WithFields(logging.Fields{
+			"status_id": dto.StatusID,
+		}).Error("unknown chat member status")
+
+		return domain.ErrChatMemberUnknownStatus
+	}
+
+	message, err := s.messageRepo.Create(ctx, msgDTO)
+	if err != nil {
+		return err
+	}
+
+	return s.messagePubSub.Publish(ctx, message)
 }

@@ -369,6 +369,21 @@ func (mr *MockChatMemberRepositoryMockRecorder) Create(ctx, userID, chatID inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockChatMemberRepository)(nil).Create), ctx, userID, chatID)
 }
 
+// Get mocks base method.
+func (m *MockChatMemberRepository) Get(ctx context.Context, userID, chatID string) (domain.ChatMember, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, userID, chatID)
+	ret0, _ := ret[0].(domain.ChatMember)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockChatMemberRepositoryMockRecorder) Get(ctx, userID, chatID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockChatMemberRepository)(nil).Get), ctx, userID, chatID)
+}
+
 // IsMemberInChat mocks base method.
 func (m *MockChatMemberRepository) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -397,6 +412,20 @@ func (m *MockChatMemberRepository) ListMembersInChat(ctx context.Context, chatID
 func (mr *MockChatMemberRepositoryMockRecorder) ListMembersInChat(ctx, chatID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMembersInChat", reflect.TypeOf((*MockChatMemberRepository)(nil).ListMembersInChat), ctx, chatID)
+}
+
+// Update mocks base method.
+func (m *MockChatMemberRepository) Update(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, dto)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockChatMemberRepositoryMockRecorder) Update(ctx, dto interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockChatMemberRepository)(nil).Update), ctx, dto)
 }
 
 // MockMessageRepository is a mock of MessageRepository interface.

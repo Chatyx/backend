@@ -38,6 +38,8 @@ type ChatMemberService interface {
 	ListMembersInChat(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error)
 	IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error)
 	JoinMemberToChat(ctx context.Context, chatID, creatorID, userID string) error
+	UpdateStatus(ctx context.Context, dto domain.UpdateChatMemberDTO) error
+	UpdateStatusByCreator(ctx context.Context, dto domain.UpdateChatMemberDTO) error
 }
 
 type MessageService interface {

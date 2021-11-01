@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Mort4lis/scht-backend/internal/domain"
+
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-redis/redis/v8"
 )
@@ -24,24 +26,15 @@ func NewChatMemberCacheRepository(repo ChatMemberRepository, redisClient *redis.
 }
 
 func (r *chatMemberCacheRepositoryDecorator) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
-	chatUsersKey := fmt.Sprintf("chat:%s:user_ids", chatID)
-	logger := r.logger.WithFields(logging.Fields{
-		"user_id":   userID,
-		"chat_id":   chatID,
-		"redis_key": chatUsersKey,
-	})
-
-	val, err := r.redisClient.Exists(ctx, chatUsersKey).Result()
-	if err != nil {
-		logger.WithError(err).Errorf("An error occurred while checking existence the key")
+	if err := r.populateCacheIfNotExist(ctx, chatID); err != nil {
 		return false, err
 	}
 
-	if val == 0 {
-		if err = r.cacheChatUserIDs(ctx, chatID); err != nil {
-			return false, err
-		}
-	}
+	chatUsersKey := r.getChatUsersKey(chatID)
+	logger := r.logger.WithFields(logging.Fields{
+		"user_id":   userID,
+		"redis_key": chatUsersKey,
+	})
 
 	isIn, err := r.redisClient.SIsMember(ctx, chatUsersKey, userID).Result()
 	if err != nil {
@@ -52,8 +45,85 @@ func (r *chatMemberCacheRepositoryDecorator) IsMemberInChat(ctx context.Context,
 	return isIn, nil
 }
 
+func (r *chatMemberCacheRepositoryDecorator) Create(ctx context.Context, userID string, chatID string) error {
+	if err := r.ChatMemberRepository.Create(ctx, userID, chatID); err != nil {
+		return err
+	}
+
+	if err := r.populateCacheIfNotExist(ctx, chatID); err != nil {
+		return err
+	}
+
+	chatUsersKey := r.getChatUsersKey(chatID)
+	logger := r.logger.WithFields(logging.Fields{
+		"user_id":   userID,
+		"redis_key": chatUsersKey,
+	})
+
+	if err := r.redisClient.SAdd(ctx, chatUsersKey, userID).Err(); err != nil {
+		logger.WithError(err).Error("An error occurred while setting user ids")
+		return err
+	}
+
+	return nil
+}
+
+func (r *chatMemberCacheRepositoryDecorator) Update(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
+	if err := r.ChatMemberRepository.Update(ctx, dto); err != nil {
+		return err
+	}
+
+	if err := r.populateCacheIfNotExist(ctx, dto.ChatID); err != nil {
+		return err
+	}
+
+	chatUsersKey := r.getChatUsersKey(dto.ChatID)
+	logger := r.logger.WithFields(logging.Fields{
+		"user_id":   dto.UserID,
+		"redis_key": chatUsersKey,
+	})
+
+	switch dto.StatusID {
+	case domain.InChat:
+		if err := r.redisClient.SAdd(ctx, chatUsersKey, dto.UserID).Err(); err != nil {
+			logger.WithError(err).Error("An error occurred while setting user ids")
+			return err
+		}
+	case domain.Left, domain.Kicked:
+		if err := r.redisClient.SRem(ctx, chatUsersKey, dto.UserID).Err(); err != nil {
+			logger.WithError(err).Error("An error occurred while removing user ids")
+			return err
+		}
+	default:
+		return domain.ErrChatMemberUnknownStatus
+	}
+
+	return nil
+}
+
+func (r *chatMemberCacheRepositoryDecorator) populateCacheIfNotExist(ctx context.Context, chatID string) error {
+	chatUsersKey := r.getChatUsersKey(chatID)
+	logger := r.logger.WithFields(logging.Fields{
+		"redis_key": chatUsersKey,
+	})
+
+	val, err := r.redisClient.Exists(ctx, chatUsersKey).Result()
+	if err != nil {
+		logger.WithError(err).Error("An error occurred while checking existence the key")
+		return err
+	}
+
+	if val == 0 {
+		if err = r.cacheChatUserIDs(ctx, chatID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *chatMemberCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Context, chatID string) error {
-	chatUsersKey := fmt.Sprintf("chat:%s:user_ids", chatID)
+	chatUsersKey := r.getChatUsersKey(chatID)
 	logger := r.logger.WithFields(logging.Fields{
 		"redis_key": chatUsersKey,
 	})
@@ -73,7 +143,11 @@ func (r *chatMemberCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Contex
 	}
 
 	if err = r.redisClient.SAdd(ctx, chatUsersKey, userIDs...).Err(); err != nil {
-		logger.WithError(err).Error("An error occurred while setting user ids")
+		logger.WithFields(logging.Fields{
+			"error":    err,
+			"user_ids": userIDs,
+		}).Error("An error occurred while setting user ids")
+
 		return err
 	}
 
@@ -85,34 +159,6 @@ func (r *chatMemberCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Contex
 	return nil
 }
 
-func (r *chatMemberCacheRepositoryDecorator) Create(ctx context.Context, userID string, chatID string) error {
-	if err := r.ChatMemberRepository.Create(ctx, userID, chatID); err != nil {
-		return err
-	}
-
-	chatUsersKey := fmt.Sprintf("chat:%s:user_ids", chatID)
-	logger := r.logger.WithFields(logging.Fields{
-		"user_id":   userID,
-		"chat_id":   chatID,
-		"redis_key": chatUsersKey,
-	})
-
-	val, err := r.redisClient.Exists(ctx, chatUsersKey).Result()
-	if err != nil {
-		logger.WithError(err).Errorf("An error occurred while checking existence the key")
-		return err
-	}
-
-	if val == 0 {
-		if err = r.cacheChatUserIDs(ctx, chatID); err != nil {
-			return err
-		}
-	}
-
-	if err = r.redisClient.SAdd(ctx, chatUsersKey, userID).Err(); err != nil {
-		logger.WithError(err).Error("An error occurred while setting user ids")
-		return err
-	}
-
-	return nil
+func (r *chatMemberCacheRepositoryDecorator) getChatUsersKey(chatID string) string {
+	return fmt.Sprintf("chat:%s:user_ids", chatID)
 }

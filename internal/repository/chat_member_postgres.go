@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v4"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -87,6 +89,60 @@ func (r *chatMemberPostgresRepository) Create(ctx context.Context, userID, chatI
 		r.logger.WithError(err).Error("An error occurred while inserting into chat_members table")
 
 		return err
+	}
+
+	return nil
+}
+
+func (r *chatMemberPostgresRepository) Get(ctx context.Context, userID, chatID string) (domain.ChatMember, error) {
+	logger := r.logger.WithFields(logging.Fields{
+		"user_id": userID,
+		"chat_id": chatID,
+	})
+	query := `SELECT users.username, chat_members.status_id, 
+		chat_members.user_id = chats.creator_id, chat_members.user_id, chat_members.chat_id
+	FROM chat_members 
+	INNER JOIN users 
+		ON users.id = chat_members.user_id
+	INNER JOIN chats
+		ON chats.id = chat_members.chat_id
+	WHERE chat_members.user_id = $1 AND chat_members.chat_id = $2`
+
+	var member domain.ChatMember
+
+	if err := r.dbPool.QueryRow(ctx, query, userID, chatID).Scan(
+		&member.Username, &member.StatusID,
+		&member.IsCreator, &member.UserID, &member.ChatID,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			logger.Debug("member is not found")
+			return domain.ChatMember{}, domain.ErrChatMemberNotFound
+		}
+
+		logger.WithError(err).Error("An error occurred while getting chat member")
+
+		return domain.ChatMember{}, err
+	}
+
+	return member, nil
+}
+
+func (r *chatMemberPostgresRepository) Update(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
+	logger := r.logger.WithFields(logging.Fields{
+		"user_id": dto.UserID,
+		"chat_id": dto.ChatID,
+	})
+	query := "UPDATE chat_members SET status_id = $1 WHERE user_id = $2 AND chat_id = $3"
+
+	cmgTag, err := r.dbPool.Exec(ctx, query, dto.StatusID, dto.UserID, dto.ChatID)
+	if err != nil {
+		logger.WithError(err).Error("An error occurred while updating member")
+		return err
+	}
+
+	if cmgTag.RowsAffected() == 0 {
+		logger.Debugf("member is not found")
+		return domain.ErrChatMemberNotFound
 	}
 
 	return nil

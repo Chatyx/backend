@@ -386,6 +386,34 @@ func (mr *MockChatMemberServiceMockRecorder) ListMembersInChat(ctx, chatID, user
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMembersInChat", reflect.TypeOf((*MockChatMemberService)(nil).ListMembersInChat), ctx, chatID, userID)
 }
 
+// UpdateStatus mocks base method.
+func (m *MockChatMemberService) UpdateStatus(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, dto)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateStatus indicates an expected call of UpdateStatus.
+func (mr *MockChatMemberServiceMockRecorder) UpdateStatus(ctx, dto interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockChatMemberService)(nil).UpdateStatus), ctx, dto)
+}
+
+// UpdateStatusByCreator mocks base method.
+func (m *MockChatMemberService) UpdateStatusByCreator(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStatusByCreator", ctx, dto)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateStatusByCreator indicates an expected call of UpdateStatusByCreator.
+func (mr *MockChatMemberServiceMockRecorder) UpdateStatusByCreator(ctx, dto interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatusByCreator", reflect.TypeOf((*MockChatMemberService)(nil).UpdateStatusByCreator), ctx, dto)
+}
+
 // MockMessageService is a mock of MessageService interface.
 type MockMessageService struct {
 	ctrl     *gomock.Controller

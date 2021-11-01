@@ -357,6 +357,67 @@
                 }
             }
         },
+        "/chats/{chat_id}/member": {
+            "patch": {
+                "security": [
+                    {
+                        "JWTTokenAuth": []
+                    }
+                ],
+                "description": "Use this endpoint to leave current member from chat (status id=2) or come back to chat (status id=1)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat Members"
+                ],
+                "summary": "Update current authenticated member status in chat",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chat id",
+                        "name": "chat_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update body",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateChatMemberDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
         "/chats/{chat_id}/members": {
             "get": {
                 "security": [
@@ -876,6 +937,9 @@
                 "chat_id": {
                     "type": "string"
                 },
+                "is_creator": {
+                    "type": "boolean"
+                },
                 "user_id": {
                     "type": "string"
                 },
@@ -1015,6 +1079,17 @@
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.UpdateChatMemberDTO": {
+            "type": "object",
+            "required": [
+                "status_id"
+            ],
+            "properties": {
+                "status_id": {
+                    "type": "integer"
                 }
             }
         },
