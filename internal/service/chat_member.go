@@ -117,7 +117,11 @@ func (s *chatMemberService) UpdateStatus(ctx context.Context, dto domain.UpdateC
 	return s.updateStatus(ctx, s.memberStatusMatrix, dto)
 }
 
-func (s *chatMemberService) UpdateStatusByCreator(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
+func (s *chatMemberService) UpdateStatusByCreator(ctx context.Context, creatorID string, dto domain.UpdateChatMemberDTO) error {
+	if _, err := s.chatService.GetOwnByID(ctx, dto.ChatID, creatorID); err != nil {
+		return err
+	}
+
 	return s.updateStatus(ctx, s.creatorStatusMatrix, dto)
 }
 

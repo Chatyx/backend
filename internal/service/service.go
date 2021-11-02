@@ -40,7 +40,7 @@ type ChatMemberService interface {
 	IsInChat(ctx context.Context, userID, chatID string) (bool, error)
 	JoinToChat(ctx context.Context, chatID, creatorID, userID string) error
 	UpdateStatus(ctx context.Context, dto domain.UpdateChatMemberDTO) error
-	UpdateStatusByCreator(ctx context.Context, dto domain.UpdateChatMemberDTO) error
+	UpdateStatusByCreator(ctx context.Context, creatorID string, dto domain.UpdateChatMemberDTO) error
 }
 
 type MessageService interface {

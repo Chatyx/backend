@@ -16,6 +16,7 @@ import (
 const (
 	currentChatMemberURI = "/api/chats/:chat_id/member"
 	listChatMembersURI   = "/api/chats/:chat_id/members"
+	detailChatMemberURI  = "/api/chats/:chat_id/members/:user_id"
 )
 
 type MemberListResponse struct {
@@ -49,6 +50,7 @@ func (h *chatMemberHandler) register(router *httprouter.Router, authMid Middlewa
 	router.Handler(http.MethodGet, listChatMembersURI, authMid(http.HandlerFunc(h.list)))
 	router.Handler(http.MethodPost, listChatMembersURI, authMid(http.HandlerFunc(h.join)))
 	router.Handler(http.MethodPatch, currentChatMemberURI, authMid(http.HandlerFunc(h.updateStatus)))
+	router.Handler(http.MethodPatch, detailChatMemberURI, authMid(http.HandlerFunc(h.updateStatusByCreator)))
 }
 
 // @Summary Get list of chat members
@@ -161,6 +163,54 @@ func (h *chatMemberHandler) updateStatus(w http.ResponseWriter, req *http.Reques
 	if err := h.chatMemberService.UpdateStatus(ctx, dto); err != nil {
 		switch err {
 		case domain.ErrChatMemberNotFound:
+			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		case domain.ErrChatMemberWrongStatusTransit, domain.ErrChatCreatorInvalidUpdateStatus:
+			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+		default:
+			respondError(w, err)
+		}
+
+		return
+	}
+
+	respondSuccess(http.StatusNoContent, w, nil)
+}
+
+// @Summary Update member status in chat by creator
+// @Description Use this endpoint to kick member from chat (status id=3) or come back him to chat (status id=1)
+// @Tags Chat Members
+// @Security JWTTokenAuth
+// @Accept json
+// @Produce json
+// @Param chat_id path string true "Chat id"
+// @Param user_id path string true "User id"
+// @Param input body domain.UpdateChatMemberDTO true "Update body"
+// @Success 204 "No Content"
+// @Failure 400,404 {object} ResponseError
+// @Failure 500 {object} ResponseError
+// @Router /chats/{chat_id}/members/{user_id} [patch]
+func (h *chatMemberHandler) updateStatusByCreator(w http.ResponseWriter, req *http.Request) {
+	dto := domain.UpdateChatMemberDTO{}
+	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChaMemberDTOUnmarshaler(&dto)); err != nil {
+		respondError(w, err)
+		return
+	}
+
+	if err := h.validateStruct(dto); err != nil {
+		respondError(w, err)
+		return
+	}
+
+	ctx := req.Context()
+	ps := httprouter.ParamsFromContext(ctx)
+
+	dto.ChatID = ps.ByName("chat_id")
+	dto.UserID = ps.ByName("user_id")
+	creatorID := domain.UserIDFromContext(ctx)
+
+	if err := h.chatMemberService.UpdateStatusByCreator(ctx, creatorID, dto); err != nil {
+		switch err {
+		case domain.ErrChatMemberNotFound, domain.ErrChatNotFound:
 			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
 		case domain.ErrChatMemberWrongStatusTransit, domain.ErrChatCreatorInvalidUpdateStatus:
 			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})

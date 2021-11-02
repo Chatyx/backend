@@ -416,17 +416,17 @@ func (mr *MockChatMemberServiceMockRecorder) UpdateStatus(ctx, dto interface{}) 
 }
 
 // UpdateStatusByCreator mocks base method.
-func (m *MockChatMemberService) UpdateStatusByCreator(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
+func (m *MockChatMemberService) UpdateStatusByCreator(ctx context.Context, creatorID string, dto domain.UpdateChatMemberDTO) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateStatusByCreator", ctx, dto)
+	ret := m.ctrl.Call(m, "UpdateStatusByCreator", ctx, creatorID, dto)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateStatusByCreator indicates an expected call of UpdateStatusByCreator.
-func (mr *MockChatMemberServiceMockRecorder) UpdateStatusByCreator(ctx, dto interface{}) *gomock.Call {
+func (mr *MockChatMemberServiceMockRecorder) UpdateStatusByCreator(ctx, creatorID, dto interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatusByCreator", reflect.TypeOf((*MockChatMemberService)(nil).UpdateStatusByCreator), ctx, dto)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatusByCreator", reflect.TypeOf((*MockChatMemberService)(nil).UpdateStatusByCreator), ctx, creatorID, dto)
 }
 
 // MockMessageService is a mock of MessageService interface.

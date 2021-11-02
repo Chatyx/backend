@@ -210,6 +210,77 @@ func (s *AppTestSuite) TestChatMemberLeave() {
 	s.Require().Equal(domain.Left, member.StatusID)
 }
 
+func (s *AppTestSuite) TestChatMemberKick() {
+	const (
+		chatID       = "609fce45-458f-477a-b2bb-e886d75d22ab"
+		johnUserID   = "ba566522-3305-48df-936a-73f47611934b"
+		johnUsername = "john1967"
+	)
+
+	mickTokenPair := s.authenticate("mick47", "helloworld12345", "111")
+	johnConn, _ := s.newWebsocketConnection("john1967", "qwerty12345", "222")
+	defer johnConn.Close()
+
+	strBody := `{"status_id":3}`
+	uri := fmt.Sprintf("/chats/%s/members/%s", chatID, johnUserID)
+
+	req, err := http.NewRequest(http.MethodPatch, s.buildURL(uri), strings.NewReader(strBody))
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+mickTokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
+
+	time.Sleep(50 * time.Millisecond)
+
+	msgCh := make(chan domain.Message)
+	go func() {
+		msgCh <- s.receiveWebsocketMessage(johnConn)
+	}()
+
+	expectedReceivedMessage := domain.Message{
+		ActionID: domain.MessageKickAction,
+		Text:     fmt.Sprintf("%s has been kicked from the chat", johnUsername),
+		ChatID:   chatID,
+		SenderID: johnUserID,
+	}
+
+	select {
+	case msg := <-msgCh:
+		expectedReceivedMessage.ID = msg.ID
+		s.compareMessages(expectedReceivedMessage, msg)
+	case <-time.After(50 * time.Millisecond):
+		s.T().Error("timeout exceeded")
+	}
+
+	s.sendWebsocketMessage(johnConn, "Hello, I haven't kicked yet.", chatID)
+
+	errCh := make(chan error)
+	go func() {
+		_, _, err = johnConn.ReadMessage()
+		errCh <- err
+	}()
+
+	select {
+	case err = <-errCh:
+		s.Require().IsType(&ws.CloseError{}, err)
+	case <-time.After(50 * time.Millisecond):
+		s.T().Error("timeout exceeded")
+	}
+
+	inCache, err := s.checkExistChatMemberInCache(johnUserID, chatID)
+	s.NoError(err, "Failed to check if exist chat member in cache")
+	s.Require().False(inCache)
+
+	member, err := s.getChatMemberFromDB(johnUserID, chatID)
+	s.NoError(err, "Failed to get chat member from database")
+	s.Require().Equal(domain.Kicked, member.StatusID)
+}
+
 func (s *AppTestSuite) TestChatMemberComeBackFromLeft() {
 	const (
 		chatID        = "609fce45-458f-477a-b2bb-e886d75d22ab"
@@ -231,6 +302,86 @@ func (s *AppTestSuite) TestChatMemberComeBackFromLeft() {
 	s.NoError(err, "Failed to create request")
 
 	req.Header.Add("Authorization", "Bearer "+jacobTokenPair.AccessToken)
+
+	resp, err := s.httpClient.Do(req)
+	s.Require().NoError(err, "Failed to send request")
+
+	defer resp.Body.Close()
+	s.Require().Equal(http.StatusNoContent, resp.StatusCode)
+
+	time.Sleep(50 * time.Millisecond)
+
+	msgCh := make(chan domain.Message)
+	go func() {
+		msgCh <- s.receiveWebsocketMessage(jacobConn)
+	}()
+
+	expectedReceivedMessage := domain.Message{
+		ActionID: domain.MessageJoinAction,
+		Text:     fmt.Sprintf("%s successfully joined to the chat", jacobUsername),
+		ChatID:   chatID,
+		SenderID: jacobUserID,
+	}
+
+	select {
+	case msg := <-msgCh:
+		expectedReceivedMessage.ID = msg.ID
+		s.compareMessages(expectedReceivedMessage, msg)
+	case <-time.After(50 * time.Millisecond):
+		s.T().Error("timeout exceeded")
+	}
+
+	s.sendWebsocketMessage(johnConn, "Hello, Jacob!", chatID)
+
+	go func() {
+		msgCh <- s.receiveWebsocketMessage(jacobConn)
+	}()
+
+	expectedReceivedMessage = domain.Message{
+		ActionID: domain.MessageSendAction,
+		Text:     "Hello, Jacob!",
+		ChatID:   chatID,
+		SenderID: johnUserID,
+	}
+
+	select {
+	case msg := <-msgCh:
+		expectedReceivedMessage.ID = msg.ID
+		s.compareMessages(expectedReceivedMessage, msg)
+	case <-time.After(50 * time.Millisecond):
+		s.T().Error("timeout exceeded")
+	}
+
+	inCache, err := s.checkExistChatMemberInCache(jacobUserID, chatID)
+	s.NoError(err, "Failed to check if exist chat member in cache")
+	s.Require().True(inCache)
+
+	member, err := s.getChatMemberFromDB(jacobUserID, chatID)
+	s.NoError(err, "Failed to get chat member from database")
+	s.Require().Equal(domain.InChat, member.StatusID)
+}
+
+func (s *AppTestSuite) TestChatMemberComeBackFromKicked() {
+	const (
+		chatID        = "92b37e8b-92e9-4c8b-a723-3a2925b62d91"
+		johnUserID    = "ba566522-3305-48df-936a-73f47611934b"
+		jacobUserID   = "a22c2110-d0f8-4654-b1de-6d10c4f7a922"
+		jacobUsername = "jacob86"
+	)
+
+	johnConn, johnTokenPair := s.newWebsocketConnection("john1967", "qwerty12345", "111")
+	defer johnConn.Close()
+
+	jacobConn, _ := s.newWebsocketConnection("jacob86", "qwerty12345", "444")
+	defer jacobConn.Close()
+
+	strBody := `{"status_id":1}`
+	uri := fmt.Sprintf("/chats/%s/members/%s", chatID, jacobUserID)
+
+	req, err := http.NewRequest(http.MethodPatch, s.buildURL(uri), strings.NewReader(strBody))
+	s.NoError(err, "Failed to create request")
+
+	req.Header.Add("Authorization", "Bearer "+johnTokenPair.AccessToken)
 
 	resp, err := s.httpClient.Do(req)
 	s.Require().NoError(err, "Failed to send request")
