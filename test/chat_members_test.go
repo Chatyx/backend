@@ -81,8 +81,9 @@ func (s *AppTestSuite) TestChatMemberJoin() {
 	msgCh := make(chan domain.Message)
 
 	johnConn, johnTokenPair := s.newWebsocketConnection("john1967", "qwerty12345", "111")
-	mickConn, _ := s.newWebsocketConnection(mickUsername, "helloworld12345", "222")
 	defer johnConn.Close()
+
+	mickConn, _ := s.newWebsocketConnection(mickUsername, "helloworld12345", "222")
 	defer mickConn.Close()
 
 	time.Sleep(50 * time.Millisecond)

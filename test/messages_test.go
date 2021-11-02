@@ -33,8 +33,9 @@ func (s *AppTestSuite) TestSendMessageViaWebsocket() {
 
 	msgCh := make(chan domain.Message, 1)
 	johnConn, _ := s.newWebsocketConnection("john1967", "qwerty12345", "111")
-	mickConn, _ := s.newWebsocketConnection("mick47", "helloworld12345", "222")
 	defer johnConn.Close()
+
+	mickConn, _ := s.newWebsocketConnection("mick47", "helloworld12345", "222")
 	defer mickConn.Close()
 
 	go s.sendWebsocketMessage(johnConn, "Hello, Mick!", chatID)
