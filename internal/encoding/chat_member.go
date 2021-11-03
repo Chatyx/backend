@@ -17,3 +17,15 @@ func NewJSONUpdateChaMemberDTOUnmarshaler(dto *domain.UpdateChatMemberDTO) Unmar
 func (um *jsonUpdateChatMemberDTOUnmarshaler) Unmarshal(payload []byte) error {
 	return json.Unmarshal(payload, um.dto)
 }
+
+type jsonChatMemberMarshaler struct {
+	member domain.ChatMember
+}
+
+func NewJSONChatMemberMarshaler(member domain.ChatMember) Marshaler {
+	return jsonChatMemberMarshaler{member: member}
+}
+
+func (m jsonChatMemberMarshaler) Marshal() ([]byte, error) {
+	return json.Marshal(m.member)
+}

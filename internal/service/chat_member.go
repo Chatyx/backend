@@ -84,6 +84,28 @@ func (s *chatMemberService) IsInChat(ctx context.Context, userID, chatID string)
 	return s.chatMemberRepo.IsMemberInChat(ctx, userID, chatID)
 }
 
+func (s *chatMemberService) Get(ctx context.Context, chatID, userID string) (domain.ChatMember, error) {
+	return s.chatMemberRepo.Get(ctx, userID, chatID)
+}
+
+func (s *chatMemberService) GetAnother(ctx context.Context, authUserID, chatID, userID string) (domain.ChatMember, error) {
+	ok, err := s.IsInChat(ctx, authUserID, chatID)
+	if err != nil {
+		return domain.ChatMember{}, err
+	}
+
+	if !ok {
+		s.logger.WithFields(logging.Fields{
+			"user_id": authUserID,
+			"chat_id": chatID,
+		}).Debug("member isn't in this chat")
+
+		return domain.ChatMember{}, domain.ErrChatNotFound
+	}
+
+	return s.Get(ctx, chatID, userID)
+}
+
 func (s *chatMemberService) JoinToChat(ctx context.Context, chatID, creatorID, userID string) error {
 	if _, err := s.chatService.GetOwnByID(ctx, chatID, creatorID); err != nil {
 		return err

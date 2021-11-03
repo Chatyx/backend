@@ -342,6 +342,36 @@ func (m *MockChatMemberService) EXPECT() *MockChatMemberServiceMockRecorder {
 	return m.recorder
 }
 
+// Get mocks base method.
+func (m *MockChatMemberService) Get(ctx context.Context, chatID, userID string) (domain.ChatMember, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, chatID, userID)
+	ret0, _ := ret[0].(domain.ChatMember)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockChatMemberServiceMockRecorder) Get(ctx, chatID, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockChatMemberService)(nil).Get), ctx, chatID, userID)
+}
+
+// GetAnother mocks base method.
+func (m *MockChatMemberService) GetAnother(ctx context.Context, authUserID, chatID, userID string) (domain.ChatMember, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnother", ctx, authUserID, chatID, userID)
+	ret0, _ := ret[0].(domain.ChatMember)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnother indicates an expected call of GetAnother.
+func (mr *MockChatMemberServiceMockRecorder) GetAnother(ctx, authUserID, chatID, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnother", reflect.TypeOf((*MockChatMemberService)(nil).GetAnother), ctx, authUserID, chatID, userID)
+}
+
 // IsInChat mocks base method.
 func (m *MockChatMemberService) IsInChat(ctx context.Context, userID, chatID string) (bool, error) {
 	m.ctrl.T.Helper()

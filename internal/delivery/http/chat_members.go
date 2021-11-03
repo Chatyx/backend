@@ -49,6 +49,8 @@ func newChatMemberHandler(cms service.ChatMemberService, validate *validator.Val
 func (h *chatMemberHandler) register(router *httprouter.Router, authMid Middleware) {
 	router.Handler(http.MethodGet, listChatMembersURI, authMid(http.HandlerFunc(h.list)))
 	router.Handler(http.MethodPost, listChatMembersURI, authMid(http.HandlerFunc(h.join)))
+	router.Handler(http.MethodGet, currentChatMemberURI, authMid(http.HandlerFunc(h.detailCurrent)))
+	router.Handler(http.MethodGet, detailChatMemberURI, authMid(http.HandlerFunc(h.detail)))
 	router.Handler(http.MethodPatch, currentChatMemberURI, authMid(http.HandlerFunc(h.updateStatus)))
 	router.Handler(http.MethodPatch, detailChatMemberURI, authMid(http.HandlerFunc(h.updateStatusByCreator)))
 }
@@ -128,6 +130,72 @@ func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
 	}
 
 	respondSuccess(http.StatusNoContent, w, nil)
+}
+
+// @Summary Get chat member info
+// @Tags Chat Members
+// @Security JWTTokenAuth
+// @Accept json
+// @Produce json
+// @Param chat_id path string true "Chat id"
+// @Param user_id path string true "User id"
+// @Success 200 {object} domain.ChatMember
+// @Failure 404 {object} ResponseError
+// @Failure 500 {object} ResponseError
+// @Router /chats/{chat_id}/members/{user_id} [get]
+func (h *chatMemberHandler) detail(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	ps := httprouter.ParamsFromContext(ctx)
+
+	chatID := ps.ByName("chat_id")
+	userID := ps.ByName("user_id")
+	authUserID := domain.UserIDFromContext(ctx)
+
+	member, err := h.chatMemberService.GetAnother(ctx, authUserID, chatID, userID)
+	if err != nil {
+		switch err {
+		case domain.ErrChatNotFound, domain.ErrChatMemberNotFound:
+			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		default:
+			respondError(w, err)
+		}
+
+		return
+	}
+
+	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
+}
+
+// @Summary Get current authenticated chat member info
+// @Tags Chat Members
+// @Security JWTTokenAuth
+// @Accept json
+// @Produce json
+// @Param chat_id path string true "Chat id"
+// @Success 200 {object} domain.ChatMember
+// @Failure 404 {object} ResponseError
+// @Failure 500 {object} ResponseError
+// @Router /chats/{chat_id}/member [get]
+func (h *chatMemberHandler) detailCurrent(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	ps := httprouter.ParamsFromContext(ctx)
+
+	chatID := ps.ByName("chat_id")
+	userID := domain.UserIDFromContext(ctx)
+
+	member, err := h.chatMemberService.Get(ctx, chatID, userID)
+	if err != nil {
+		switch err {
+		case domain.ErrChatMemberNotFound:
+			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		default:
+			respondError(w, err)
+		}
+
+		return
+	}
+
+	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
 }
 
 // @Summary Update current authenticated member status in chat
