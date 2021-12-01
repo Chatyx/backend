@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package test
@@ -188,9 +189,7 @@ func (s *AppTestSuite) TestMessageList() {
 	beginSendMessages := time.Now()
 	for i := 0; i < sendMessageLen; i++ {
 		s.sendWebsocketMessage(mickConn, "Hi, "+strconv.Itoa(i), chatID)
-		time.Sleep(1 * time.Millisecond)
 	}
-	time.Sleep(20 * time.Millisecond)
 
 	expectedCachedMessages, err := s.getChatMessagesFromCache(chatID, beginSendMessages)
 	s.NoError(err, "Failed to get chat's messages from cache")
@@ -211,7 +210,6 @@ func (s *AppTestSuite) TestMessagesAfterChatDelete() {
 	mickTokenPair := s.authenticate("mick47", "helloworld12345", "222")
 
 	s.sendWebsocketMessage(johnConn, "Hi, Mick!", chatID)
-	time.Sleep(50 * time.Millisecond)
 
 	req, err := http.NewRequest(http.MethodDelete, s.buildURL("/chats/"+chatID), nil)
 	s.NoError(err, "Failed to create request")
@@ -279,6 +277,8 @@ func (s *AppTestSuite) sendWebsocketMessage(conn *ws.Conn, text, chatID string) 
 
 	err = conn.WriteMessage(ws.BinaryMessage, payload)
 	s.NoError(err, "Failed to send websocket message")
+
+	time.Sleep(50 * time.Millisecond)
 }
 
 func (s *AppTestSuite) receiveWebsocketMessage(conn *ws.Conn) domain.Message {
