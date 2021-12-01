@@ -134,6 +134,7 @@ func (r *chatMemberCacheRepositoryDecorator) cacheChatUserIDs(ctx context.Contex
 	}
 
 	userIDs := make([]interface{}, 0, len(members))
+
 	for _, member := range members {
 		if member.IsInChat() {
 			userIDs = append(userIDs, member.UserID)

@@ -45,8 +45,13 @@ type ChatMemberService interface {
 	UpdateStatusByCreator(ctx context.Context, creatorID string, dto domain.UpdateChatMemberDTO) error
 }
 
+type MessageServeSession interface {
+	InChannel() chan<- domain.CreateMessageDTO
+	OutChannel() <-chan domain.Message
+}
+
 type MessageService interface {
-	NewServeSession(ctx context.Context, userID string) (inCh chan<- domain.CreateMessageDTO, outCh <-chan domain.Message)
+	NewServeSession(ctx context.Context, userID string) (MessageServeSession, error)
 	Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error)
 	List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error)
 }

@@ -27,85 +27,32 @@ func NewMessageService(chatService ChatService, chatMemberService ChatMemberServ
 	}
 }
 
-func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message) {
-	inCh := make(chan domain.CreateMessageDTO)
-	outCh := make(chan domain.Message)
+func (s *messageService) NewServeSession(ctx context.Context, userID string) (MessageServeSession, error) {
+	members, err := s.chatMemberService.ListByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 
-	go func() {
-		defer close(outCh)
+	chatIDs := make([]string, 0, len(members))
 
-		members, err := s.chatMemberService.ListByUserID(ctx, userID)
-		if err != nil {
-			return
+	for _, member := range members {
+		if member.IsInChat() {
+			chatIDs = append(chatIDs, member.ChatID)
 		}
+	}
 
-		chatIDs := make([]string, 0, len(members))
-		for _, member := range members {
-			if member.IsInChat() {
-				chatIDs = append(chatIDs, member.ChatID)
-			}
-		}
+	session := &messageServeSession{
+		userID:            userID,
+		messageService:    s,
+		chatMemberService: s.chatMemberService,
+		subscriber:        s.pubSub.Subscribe(ctx, chatIDs...),
+		inCh:              make(chan domain.CreateMessageDTO),
+		outCh:             make(chan domain.Message),
+		logger:            s.logger,
+	}
+	go session.serve(ctx)
 
-		subscriber := s.pubSub.Subscribe(ctx, chatIDs...)
-		defer subscriber.Close()
-
-		subCh := subscriber.MessageChannel()
-
-		for {
-			select {
-			case dto, ok := <-inCh:
-				if !ok {
-					return
-				}
-
-				if _, err = s.Create(ctx, dto); err != nil {
-					return
-				}
-			case message, ok := <-subCh:
-				if !ok {
-					return
-				}
-
-				switch message.ActionID {
-				case domain.MessageSendAction:
-					if message.SenderID == userID {
-						continue
-					}
-				case domain.MessageJoinAction:
-					ok, err = s.chatMemberService.IsInChat(ctx, userID, message.ChatID)
-					if err != nil {
-						return
-					}
-
-					if !ok {
-						continue
-					}
-
-					if message.SenderID == userID {
-						if err = subscriber.Subscribe(ctx, message.ChatID); err != nil {
-							return
-						}
-					}
-				case domain.MessageLeaveAction, domain.MessageKickAction:
-					if message.SenderID == userID {
-						if err = subscriber.Unsubscribe(ctx, message.ChatID); err != nil {
-							return
-						}
-					}
-				default:
-					s.logger.WithFields(logging.Fields{
-						"action_id": message.ActionID,
-					}).Error("Unknown action_id for handling the message")
-
-					return
-				}
-
-				outCh <- message
-			}
-		}
-	}()
-
-	return inCh, outCh
+	return session, nil
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
@@ -151,4 +98,96 @@ func (s *messageService) List(ctx context.Context, chatID, userID string, timest
 	}
 
 	return s.messageRepo.List(ctx, chatID, timestamp)
+}
+
+type messageServeSession struct {
+	userID            string
+	messageService    MessageService
+	chatMemberService ChatMemberService
+	subscriber        repository.MessageSubscriber
+	logger            logging.Logger
+
+	inCh  chan domain.CreateMessageDTO
+	outCh chan domain.Message
+}
+
+func (s *messageServeSession) InChannel() chan<- domain.CreateMessageDTO {
+	return s.inCh
+}
+
+func (s *messageServeSession) OutChannel() <-chan domain.Message {
+	return s.outCh
+}
+
+func (s *messageServeSession) serve(ctx context.Context) {
+	defer close(s.outCh)
+	defer s.subscriber.Close()
+
+	subCh := s.subscriber.MessageChannel()
+
+	for {
+		select {
+		case dto, ok := <-s.inCh:
+			if !ok {
+				return
+			}
+
+			if _, err := s.messageService.Create(ctx, dto); err != nil {
+				return
+			}
+		case message, ok := <-subCh:
+			if !ok {
+				return
+			}
+
+			ok, err := s.handleMessage(ctx, message)
+			if err != nil {
+				return
+			}
+
+			if !ok {
+				continue
+			}
+
+			s.outCh <- message
+		}
+	}
+}
+
+func (s *messageServeSession) handleMessage(ctx context.Context, message domain.Message) (ok bool, err error) {
+	switch message.ActionID {
+	case domain.MessageSendAction:
+		if message.SenderID == s.userID {
+			return false, nil
+		}
+	case domain.MessageJoinAction:
+		ok, err = s.chatMemberService.IsInChat(ctx, s.userID, message.ChatID)
+		if err != nil {
+			return false, err
+		}
+
+		if !ok {
+			return false, nil
+		}
+
+		if message.SenderID == s.userID {
+			if err = s.subscriber.Subscribe(ctx, message.ChatID); err != nil {
+				return false, err
+			}
+		}
+	case domain.MessageLeaveAction, domain.MessageKickAction:
+		if message.SenderID == s.userID {
+			if err = s.subscriber.Unsubscribe(ctx, message.ChatID); err != nil {
+				return false, err
+			}
+		}
+	default:
+		s.logger.WithFields(logging.Fields{
+			"action_id": message.ActionID,
+		}).Error("Unknown action_id for handling the message")
+
+		return false, nil
+	}
+
+	return true, nil
 }

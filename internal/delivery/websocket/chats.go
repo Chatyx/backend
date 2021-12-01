@@ -26,11 +26,15 @@ func (s *chatSession) Serve() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	inCh, outCh := s.msgService.NewServeSession(ctx, s.userID)
-	go s.readMessages(inCh)
+	session, err := s.msgService.NewServeSession(ctx, s.userID)
+	if err != nil {
+		return
+	}
+
+	go s.readMessages(session.InChannel())
 
 	for {
-		msg, ok := <-outCh
+		msg, ok := <-session.OutChannel()
 		if !ok {
 			return
 		}
