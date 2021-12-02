@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package http
@@ -28,7 +29,7 @@ var (
 )
 
 func TestChatHandler_list(t *testing.T) {
-	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, memberID string, returnedChats []domain.Chat)
+	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, authUser domain.AuthUser, returnedChats []domain.Chat)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -38,7 +39,7 @@ func TestChatHandler_list(t *testing.T) {
 
 	testTable := []struct {
 		name                 string
-		memberID             string
+		authUser             domain.AuthUser
 		returnedChats        []domain.Chat
 		mockBehaviour        mockBehaviour
 		expectedStatusCode   int
@@ -46,7 +47,7 @@ func TestChatHandler_list(t *testing.T) {
 	}{
 		{
 			name:     "Success",
-			memberID: "1",
+			authUser: domain.AuthUser{UserID: "1"},
 			returnedChats: []domain.Chat{
 				{
 					ID:          "1",
@@ -63,27 +64,27 @@ func TestChatHandler_list(t *testing.T) {
 					CreatedAt: &chatCreatedAt,
 				},
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberID string, returnedChats []domain.Chat) {
-				chs.EXPECT().List(ctx, memberID).Return(returnedChats, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, authUser domain.AuthUser, returnedChats []domain.Chat) {
+				chs.EXPECT().List(ctx, authUser).Return(returnedChats, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"list":[{"id":"1","name":"Test chat name","description":"Test chat description","creator_id":"1","created_at":"2021-10-25T18:05:00+03:00","updated_at":"2021-11-17T23:00:42.000000142+03:00"},{"id":"2","name":"Another test chat name","creator_id":"1","created_at":"2021-10-25T18:05:00+03:00"}]}`,
 		},
 		{
 			name:          "Empty list",
-			memberID:      "1",
+			authUser:      domain.AuthUser{UserID: "1"},
 			returnedChats: make([]domain.Chat, 0),
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberID string, returnedChats []domain.Chat) {
-				chs.EXPECT().List(ctx, memberID).Return(returnedChats, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, authUser domain.AuthUser, returnedChats []domain.Chat) {
+				chs.EXPECT().List(ctx, authUser).Return(returnedChats, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"list":[]}`,
 		},
 		{
 			name:     "Unexpected error",
-			memberID: "1",
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberID string, returnedChats []domain.Chat) {
-				chs.EXPECT().List(ctx, memberID).Return(nil, errors.New("unexpected error"))
+			authUser: domain.AuthUser{UserID: "1"},
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, authUser domain.AuthUser, returnedChats []domain.Chat) {
+				chs.EXPECT().List(ctx, authUser).Return(nil, errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -103,10 +104,10 @@ func TestChatHandler_list(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/chats", nil)
-			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.memberID))
+			req = req.WithContext(domain.NewContextFromAuthUser(context.Background(), testCase.authUser))
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(chs, req.Context(), testCase.memberID, testCase.returnedChats)
+				testCase.mockBehaviour(chs, req.Context(), testCase.authUser, testCase.returnedChats)
 			}
 
 			chh.list(rec, req)
@@ -123,7 +124,7 @@ func TestChatHandler_list(t *testing.T) {
 }
 
 func TestChatHandler_detail(t *testing.T) {
-	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, chatID, memberID string, returnedChat domain.Chat)
+	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, chatID string, authUser domain.AuthUser, returnedChat domain.Chat)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -134,7 +135,7 @@ func TestChatHandler_detail(t *testing.T) {
 	testTable := []struct {
 		name                 string
 		chatID               string
-		memberID             string
+		authUser             domain.AuthUser
 		returnedChat         domain.Chat
 		mockBehaviour        mockBehaviour
 		expectedStatusCode   int
@@ -143,7 +144,7 @@ func TestChatHandler_detail(t *testing.T) {
 		{
 			name:     "Success with full fields",
 			chatID:   "1",
-			memberID: "123",
+			authUser: domain.AuthUser{UserID: "123"},
 			returnedChat: domain.Chat{
 				ID:          "1",
 				Name:        "Test chat name",
@@ -152,8 +153,8 @@ func TestChatHandler_detail(t *testing.T) {
 				CreatedAt:   &chatCreatedAt,
 				UpdatedAt:   &chatUpdatedAt,
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID, memberID string, returnedChat domain.Chat) {
-				chs.EXPECT().GetByID(ctx, chatID, memberID).Return(returnedChat, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID string, authUser domain.AuthUser, returnedChat domain.Chat) {
+				chs.EXPECT().GetByID(ctx, chatID, authUser).Return(returnedChat, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"id":"1","name":"Test chat name","description":"Test chat description","creator_id":"1","created_at":"2021-10-25T18:05:00+03:00","updated_at":"2021-11-17T23:00:42.000000142+03:00"}`,
@@ -161,15 +162,15 @@ func TestChatHandler_detail(t *testing.T) {
 		{
 			name:     "Success with required fields",
 			chatID:   "2",
-			memberID: "123",
+			authUser: domain.AuthUser{UserID: "123"},
 			returnedChat: domain.Chat{
 				ID:        "2",
 				Name:      "Another test chat name",
 				CreatorID: "1",
 				CreatedAt: &chatCreatedAt,
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID, memberID string, returnedChat domain.Chat) {
-				chs.EXPECT().GetByID(ctx, chatID, memberID).Return(returnedChat, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID string, authUser domain.AuthUser, returnedChat domain.Chat) {
+				chs.EXPECT().GetByID(ctx, chatID, authUser).Return(returnedChat, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"id":"2","name":"Another test chat name","creator_id":"1","created_at":"2021-10-25T18:05:00+03:00"}`,
@@ -177,9 +178,9 @@ func TestChatHandler_detail(t *testing.T) {
 		{
 			name:     "Not found",
 			chatID:   "1",
-			memberID: "123",
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID, memberID string, returnedChat domain.Chat) {
-				chs.EXPECT().GetByID(ctx, chatID, memberID).Return(domain.Chat{}, domain.ErrChatNotFound)
+			authUser: domain.AuthUser{UserID: "123"},
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID string, authUser domain.AuthUser, returnedChat domain.Chat) {
+				chs.EXPECT().GetByID(ctx, chatID, authUser).Return(domain.Chat{}, domain.ErrChatNotFound)
 			},
 			expectedStatusCode:   http.StatusNotFound,
 			expectedResponseBody: `{"message":"chat is not found"}`,
@@ -187,9 +188,9 @@ func TestChatHandler_detail(t *testing.T) {
 		{
 			name:     "Unexpected error",
 			chatID:   "1",
-			memberID: "123",
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID, memberID string, returnedChat domain.Chat) {
-				chs.EXPECT().GetByID(ctx, chatID, memberID).Return(domain.Chat{}, errors.New("unexpected error"))
+			authUser: domain.AuthUser{UserID: "123"},
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID string, authUser domain.AuthUser, returnedChat domain.Chat) {
+				chs.EXPECT().GetByID(ctx, chatID, authUser).Return(domain.Chat{}, errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -209,7 +210,7 @@ func TestChatHandler_detail(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/chats/"+testCase.chatID, nil)
-			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.memberID))
+			req = req.WithContext(domain.NewContextFromAuthUser(context.Background(), testCase.authUser))
 			ctx := context.WithValue(
 				req.Context(),
 				httprouter.ParamsKey,
@@ -219,7 +220,7 @@ func TestChatHandler_detail(t *testing.T) {
 			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(chs, req.Context(), testCase.chatID, testCase.memberID, testCase.returnedChat)
+				testCase.mockBehaviour(chs, req.Context(), testCase.chatID, testCase.authUser, testCase.returnedChat)
 			}
 
 			chh.detail(rec, req)
@@ -246,7 +247,7 @@ func TestChatHandler_create(t *testing.T) {
 
 	testTable := []struct {
 		name                 string
-		creatorID            string
+		authUser             domain.AuthUser
 		requestBody          string
 		createChatDTO        domain.CreateChatDTO
 		createdChat          domain.Chat
@@ -256,7 +257,7 @@ func TestChatHandler_create(t *testing.T) {
 	}{
 		{
 			name:        "Success with required fields",
-			creatorID:   "123",
+			authUser:    domain.AuthUser{UserID: "123"},
 			requestBody: `{"name":"Test chat name"}`,
 			createChatDTO: domain.CreateChatDTO{
 				Name:      "Test chat name",
@@ -276,7 +277,7 @@ func TestChatHandler_create(t *testing.T) {
 		},
 		{
 			name:        "Success with full fields",
-			creatorID:   "123",
+			authUser:    domain.AuthUser{UserID: "123"},
 			requestBody: `{"name":"Test chat name","description":"Test chat description"}`,
 			createChatDTO: domain.CreateChatDTO{
 				Name:        "Test chat name",
@@ -298,21 +299,21 @@ func TestChatHandler_create(t *testing.T) {
 		},
 		{
 			name:                 "Invalid JSON body",
-			creatorID:            "123",
+			authUser:             domain.AuthUser{UserID: "123"},
 			requestBody:          `{"name":"Test chat"`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Empty body",
-			creatorID:            "123",
+			authUser:             domain.AuthUser{UserID: "123"},
 			requestBody:          `{}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"name":"field validation for 'name' failed on the 'required' tag"}}`,
 		},
 		{
 			name:        "Unexpected error",
-			creatorID:   "123",
+			authUser:    domain.AuthUser{UserID: "123"},
 			requestBody: `{"name":"Test chat name"}`,
 			createChatDTO: domain.CreateChatDTO{
 				Name:      "Test chat name",
@@ -339,7 +340,7 @@ func TestChatHandler_create(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/chats", strings.NewReader(testCase.requestBody))
-			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.creatorID))
+			req = req.WithContext(domain.NewContextFromAuthUser(context.Background(), testCase.authUser))
 
 			if testCase.mockBehaviour != nil {
 				testCase.mockBehaviour(chs, req.Context(), testCase.createChatDTO, testCase.createdChat)
@@ -370,7 +371,7 @@ func TestChatHandler_update(t *testing.T) {
 	testTable := []struct {
 		name                 string
 		chatID               string
-		creatorID            string
+		authUser             domain.AuthUser
 		requestBody          string
 		updateChatDTO        domain.UpdateChatDTO
 		updatedChat          domain.Chat
@@ -381,7 +382,7 @@ func TestChatHandler_update(t *testing.T) {
 		{
 			name:        "Success with required fields",
 			chatID:      "1",
-			creatorID:   "123",
+			authUser:    domain.AuthUser{UserID: "123"},
 			requestBody: `{"name":"Test chat name"}`,
 			updateChatDTO: domain.UpdateChatDTO{
 				ID:        "1",
@@ -404,7 +405,7 @@ func TestChatHandler_update(t *testing.T) {
 		{
 			name:        "Success with full fields",
 			chatID:      "2",
-			creatorID:   "123",
+			authUser:    domain.AuthUser{UserID: "123"},
 			requestBody: `{"name":"Test chat name","description":"Test chat description"}`,
 			updateChatDTO: domain.UpdateChatDTO{
 				ID:          "2",
@@ -429,7 +430,7 @@ func TestChatHandler_update(t *testing.T) {
 		{
 			name:        "Chat is not found",
 			chatID:      "1",
-			creatorID:   "123",
+			authUser:    domain.AuthUser{UserID: "123"},
 			requestBody: `{"name":"Test chat name"}`,
 			updateChatDTO: domain.UpdateChatDTO{
 				ID:        "1",
@@ -445,7 +446,7 @@ func TestChatHandler_update(t *testing.T) {
 		{
 			name:                 "Invalid JSON body",
 			chatID:               "1",
-			creatorID:            "123",
+			authUser:             domain.AuthUser{UserID: "123"},
 			requestBody:          `{"name":"Test chat"`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"invalid body to decode"}`,
@@ -453,7 +454,7 @@ func TestChatHandler_update(t *testing.T) {
 		{
 			name:                 "Empty body",
 			chatID:               "1",
-			creatorID:            "123",
+			authUser:             domain.AuthUser{UserID: "123"},
 			requestBody:          `{}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"name":"field validation for 'name' failed on the 'required' tag"}}`,
@@ -461,7 +462,7 @@ func TestChatHandler_update(t *testing.T) {
 		{
 			name:        "Unexpected error",
 			chatID:      "1",
-			creatorID:   "123",
+			authUser:    domain.AuthUser{UserID: "123"},
 			requestBody: `{"name":"Test chat name"}`,
 			updateChatDTO: domain.UpdateChatDTO{
 				ID:        "1",
@@ -495,7 +496,7 @@ func TestChatHandler_update(t *testing.T) {
 				httprouter.Params{{Key: "chat_id", Value: testCase.chatID}},
 			)
 
-			ctx = domain.NewContextFromUserID(ctx, testCase.creatorID)
+			ctx = domain.NewContextFromAuthUser(ctx, testCase.authUser)
 			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
@@ -516,7 +517,7 @@ func TestChatHandler_update(t *testing.T) {
 }
 
 func TestChatHandler_delete(t *testing.T) {
-	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, chatID, creatorID string)
+	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, chatID string, authUser domain.AuthUser)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -527,36 +528,36 @@ func TestChatHandler_delete(t *testing.T) {
 	testTable := []struct {
 		name                 string
 		chatID               string
-		creatorID            string
+		authUser             domain.AuthUser
 		mockBehaviour        mockBehaviour
 		expectedStatusCode   int
 		expectedResponseBody string
 	}{
 		{
-			name:      "Success",
-			chatID:    "1",
-			creatorID: "123",
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID, creatorID string) {
-				chs.EXPECT().Delete(ctx, chatID, creatorID).Return(nil)
+			name:     "Success",
+			chatID:   "1",
+			authUser: domain.AuthUser{UserID: "123"},
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID string, authUser domain.AuthUser) {
+				chs.EXPECT().Delete(ctx, chatID, authUser).Return(nil)
 			},
 			expectedStatusCode: http.StatusNoContent,
 		},
 		{
-			name:      "Not found",
-			chatID:    "2",
-			creatorID: "123",
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID, creatorID string) {
-				chs.EXPECT().Delete(ctx, chatID, creatorID).Return(domain.ErrChatNotFound)
+			name:     "Not found",
+			chatID:   "2",
+			authUser: domain.AuthUser{UserID: "123"},
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID string, authUser domain.AuthUser) {
+				chs.EXPECT().Delete(ctx, chatID, authUser).Return(domain.ErrChatNotFound)
 			},
 			expectedStatusCode:   http.StatusNotFound,
 			expectedResponseBody: `{"message":"chat is not found"}`,
 		},
 		{
-			name:      "Unexpected error",
-			chatID:    "2",
-			creatorID: "123",
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID, creatorID string) {
-				chs.EXPECT().Delete(ctx, chatID, creatorID).Return(errors.New("unexpected error"))
+			name:     "Unexpected error",
+			chatID:   "2",
+			authUser: domain.AuthUser{UserID: "123"},
+			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, chatID string, authUser domain.AuthUser) {
+				chs.EXPECT().Delete(ctx, chatID, authUser).Return(errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -582,11 +583,11 @@ func TestChatHandler_delete(t *testing.T) {
 				httprouter.Params{{Key: "chat_id", Value: testCase.chatID}},
 			)
 
-			ctx = domain.NewContextFromUserID(ctx, testCase.creatorID)
+			ctx = domain.NewContextFromAuthUser(ctx, testCase.authUser)
 			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(chs, req.Context(), testCase.chatID, testCase.creatorID)
+				testCase.mockBehaviour(chs, req.Context(), testCase.chatID, testCase.authUser)
 			}
 
 			chh.delete(rec, req)

@@ -26,12 +26,14 @@ type AuthService interface {
 }
 
 type ChatService interface {
-	List(ctx context.Context, memberID string) ([]domain.Chat, error)
+	// List gets a list of chats in which the authenticated user is a member.
+	List(ctx context.Context, user domain.AuthUser) ([]domain.Chat, error)
 	Create(ctx context.Context, dto domain.CreateChatDTO) (domain.Chat, error)
-	GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error)
-	GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error)
+	// GetByID gets chat by id in which the authenticated user is a member.
+	GetByID(ctx context.Context, chatID string, user domain.AuthUser) (domain.Chat, error)
 	Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error)
-	Delete(ctx context.Context, chatID, creatorID string) error
+	// Delete deletes chat by id in which the authenticated user is a creator.
+	Delete(ctx context.Context, chatID string, user domain.AuthUser) error
 }
 
 type ChatMemberService interface {
@@ -45,13 +47,8 @@ type ChatMemberService interface {
 	UpdateStatusByCreator(ctx context.Context, creatorID string, dto domain.UpdateChatMemberDTO) error
 }
 
-type MessageServeSession interface {
-	InChannel() chan<- domain.CreateMessageDTO
-	OutChannel() <-chan domain.Message
-}
-
 type MessageService interface {
-	NewServeSession(ctx context.Context, userID string) (MessageServeSession, error)
+	NewServeSession(ctx context.Context, userID string) (inCh chan<- domain.CreateMessageDTO, outCh <-chan domain.Message, err error)
 	Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error)
 	List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error)
 }

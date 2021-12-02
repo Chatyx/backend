@@ -25,7 +25,7 @@ func NewChatMemberCacheRepository(repo ChatMemberRepository, redisClient *redis.
 	}
 }
 
-func (r *chatMemberCacheRepositoryDecorator) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
+func (r *chatMemberCacheRepositoryDecorator) IsInChat(ctx context.Context, userID, chatID string) (bool, error) {
 	if err := r.populateCacheIfNotExist(ctx, chatID); err != nil {
 		return false, err
 	}

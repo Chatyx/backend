@@ -63,7 +63,8 @@ func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
 				return
 			}
 
-			ctx := domain.NewContextFromUserID(req.Context(), claims.Subject)
+			ctx := domain.NewContextFromUserID(req.Context(), claims.Subject) // TODO: delete
+			ctx = domain.NewContextFromAuthUser(ctx, domain.AuthUser{UserID: claims.Subject})
 
 			handler.ServeHTTP(w, req.WithContext(ctx))
 		})

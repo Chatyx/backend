@@ -20,26 +20,22 @@ func NewChatService(repo repository.ChatRepository) ChatService {
 	}
 }
 
-func (s *chatService) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
-	return s.repo.List(ctx, memberID)
+func (s *chatService) List(ctx context.Context, user domain.AuthUser) ([]domain.Chat, error) {
+	return s.repo.List(ctx, user.UserID)
 }
 
 func (s *chatService) Create(ctx context.Context, dto domain.CreateChatDTO) (domain.Chat, error) {
 	return s.repo.Create(ctx, dto)
 }
 
-func (s *chatService) GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error) {
-	return s.repo.GetByID(ctx, chatID, memberID)
-}
-
-func (s *chatService) GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error) {
-	return s.repo.GetOwnByID(ctx, chatID, creatorID)
+func (s *chatService) GetByID(ctx context.Context, chatID string, user domain.AuthUser) (domain.Chat, error) {
+	return s.repo.GetByID(ctx, chatID, user.UserID)
 }
 
 func (s *chatService) Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error) {
 	return s.repo.Update(ctx, dto)
 }
 
-func (s *chatService) Delete(ctx context.Context, chatID, creatorID string) error {
-	return s.repo.Delete(ctx, chatID, creatorID)
+func (s *chatService) Delete(ctx context.Context, chatID string, user domain.AuthUser) error {
+	return s.repo.Delete(ctx, chatID, user.UserID)
 }

@@ -94,7 +94,6 @@ func NewApp(cfg *config.Config) *App {
 	chatService := service.NewChatService(chatRepo)
 	chatMemberService := service.NewChatMemberService(service.ChatMemberConfig{
 		UserService:    userService,
-		ChatService:    chatService,
 		ChatMemberRepo: chatMemberRepo,
 		MessageRepo:    msgRepo,
 		MessagePubSub:  msgPubSub,

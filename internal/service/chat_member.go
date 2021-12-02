@@ -13,7 +13,6 @@ import (
 
 type chatMemberService struct {
 	userService         UserService
-	chatService         ChatService
 	chatMemberRepo      repository.ChatMemberRepository
 	messageRepo         repository.MessageRepository
 	messagePubSub       repository.MessagePubSub
@@ -24,7 +23,6 @@ type chatMemberService struct {
 
 type ChatMemberConfig struct {
 	UserService    UserService
-	ChatService    ChatService
 	ChatMemberRepo repository.ChatMemberRepository
 	MessageRepo    repository.MessageRepository
 	MessagePubSub  repository.MessagePubSub
@@ -33,7 +31,6 @@ type ChatMemberConfig struct {
 func NewChatMemberService(cfg ChatMemberConfig) ChatMemberService {
 	return &chatMemberService{
 		userService:    cfg.UserService,
-		chatService:    cfg.ChatService,
 		chatMemberRepo: cfg.ChatMemberRepo,
 		messageRepo:    cfg.MessageRepo,
 		messagePubSub:  cfg.MessagePubSub,
@@ -81,7 +78,7 @@ func (s *chatMemberService) ListByUserID(ctx context.Context, userID string) ([]
 }
 
 func (s *chatMemberService) IsInChat(ctx context.Context, userID, chatID string) (bool, error) {
-	return s.chatMemberRepo.IsMemberInChat(ctx, userID, chatID)
+	return s.chatMemberRepo.IsInChat(ctx, userID, chatID)
 }
 
 func (s *chatMemberService) Get(ctx context.Context, chatID, userID string) (domain.ChatMember, error) {
@@ -107,8 +104,18 @@ func (s *chatMemberService) GetAnother(ctx context.Context, authUserID, chatID, 
 }
 
 func (s *chatMemberService) JoinToChat(ctx context.Context, chatID, creatorID, userID string) error {
-	if _, err := s.chatService.GetOwnByID(ctx, chatID, creatorID); err != nil {
+	ok, err := s.chatMemberRepo.IsChatCreator(ctx, creatorID, chatID)
+	if err != nil {
 		return err
+	}
+
+	if !ok {
+		s.logger.WithFields(logging.Fields{
+			"user_id": creatorID,
+			"chat_id": chatID,
+		}).Debug("can't join member to chat due the user isn't a creator")
+
+		return domain.ErrChatNotFound
 	}
 
 	user, err := s.userService.GetByID(ctx, userID)
@@ -140,8 +147,18 @@ func (s *chatMemberService) UpdateStatus(ctx context.Context, dto domain.UpdateC
 }
 
 func (s *chatMemberService) UpdateStatusByCreator(ctx context.Context, creatorID string, dto domain.UpdateChatMemberDTO) error {
-	if _, err := s.chatService.GetOwnByID(ctx, dto.ChatID, creatorID); err != nil {
+	ok, err := s.chatMemberRepo.IsChatCreator(ctx, creatorID, dto.ChatID)
+	if err != nil {
 		return err
+	}
+
+	if !ok {
+		s.logger.WithFields(logging.Fields{
+			"user_id": creatorID,
+			"chat_id": dto.ChatID,
+		}).Debug("can't update member status due the user isn't a creator")
+
+		return domain.ErrChatNotFound
 	}
 
 	return s.updateStatus(ctx, s.creatorStatusMatrix, dto)

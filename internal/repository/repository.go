@@ -27,10 +27,9 @@ type SessionRepository interface {
 }
 
 type ChatRepository interface {
-	List(ctx context.Context, memberID string) ([]domain.Chat, error)
+	List(ctx context.Context, userID string) ([]domain.Chat, error)
 	Create(ctx context.Context, dto domain.CreateChatDTO) (domain.Chat, error)
-	GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error)
-	GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error)
+	GetByID(ctx context.Context, chatID, userID string) (domain.Chat, error)
 	Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error)
 	Delete(ctx context.Context, chatID, creatorID string) error
 }
@@ -38,7 +37,8 @@ type ChatRepository interface {
 type ChatMemberRepository interface {
 	ListByChatID(ctx context.Context, chatID string) ([]domain.ChatMember, error)
 	ListByUserID(ctx context.Context, userID string) ([]domain.ChatMember, error)
-	IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error)
+	IsInChat(ctx context.Context, userID, chatID string) (bool, error)
+	IsChatCreator(ctx context.Context, userID, chatID string) (bool, error)
 	Create(ctx context.Context, userID, chatID string) error
 	Get(ctx context.Context, userID, chatID string) (domain.ChatMember, error)
 	Update(ctx context.Context, dto domain.UpdateChatMemberDTO) error

@@ -27,10 +27,10 @@ func NewMessageService(chatService ChatService, chatMemberService ChatMemberServ
 	}
 }
 
-func (s *messageService) NewServeSession(ctx context.Context, userID string) (MessageServeSession, error) {
+func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, error) {
 	members, err := s.chatMemberService.ListByUserID(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	chatIDs := make([]string, 0, len(members))
@@ -41,18 +41,21 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (Me
 		}
 	}
 
+	inCh := make(chan domain.CreateMessageDTO)
+	outCh := make(chan domain.Message)
+
 	session := &messageServeSession{
 		userID:            userID,
 		messageService:    s,
 		chatMemberService: s.chatMemberService,
 		subscriber:        s.pubSub.Subscribe(ctx, chatIDs...),
-		inCh:              make(chan domain.CreateMessageDTO),
-		outCh:             make(chan domain.Message),
+		inCh:              inCh,
+		outCh:             outCh,
 		logger:            s.logger,
 	}
 	go session.serve(ctx)
 
-	return session, nil
+	return inCh, outCh, nil
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
@@ -109,14 +112,6 @@ type messageServeSession struct {
 
 	inCh  chan domain.CreateMessageDTO
 	outCh chan domain.Message
-}
-
-func (s *messageServeSession) InChannel() chan<- domain.CreateMessageDTO {
-	return s.inCh
-}
-
-func (s *messageServeSession) OutChannel() <-chan domain.Message {
-	return s.outCh
 }
 
 func (s *messageServeSession) serve(ctx context.Context) {

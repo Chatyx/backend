@@ -52,32 +52,32 @@ func (mr *MockUserServiceMockRecorder) Create(ctx, dto interface{}) *gomock.Call
 }
 
 // Delete mocks base method.
-func (m *MockUserService) Delete(ctx context.Context, id string) error {
+func (m *MockUserService) Delete(ctx context.Context, userID string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret := m.ctrl.Call(m, "Delete", ctx, userID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockUserServiceMockRecorder) Delete(ctx, id interface{}) *gomock.Call {
+func (mr *MockUserServiceMockRecorder) Delete(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockUserService)(nil).Delete), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockUserService)(nil).Delete), ctx, userID)
 }
 
 // GetByID mocks base method.
-func (m *MockUserService) GetByID(ctx context.Context, id string) (domain.User, error) {
+func (m *MockUserService) GetByID(ctx context.Context, userID string) (domain.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret := m.ctrl.Call(m, "GetByID", ctx, userID)
 	ret0, _ := ret[0].(domain.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockUserServiceMockRecorder) GetByID(ctx, id interface{}) *gomock.Call {
+func (mr *MockUserServiceMockRecorder) GetByID(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockUserService)(nil).GetByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockUserService)(nil).GetByID), ctx, userID)
 }
 
 // GetByUsername mocks base method.
@@ -246,62 +246,47 @@ func (mr *MockChatServiceMockRecorder) Create(ctx, dto interface{}) *gomock.Call
 }
 
 // Delete mocks base method.
-func (m *MockChatService) Delete(ctx context.Context, chatID, creatorID string) error {
+func (m *MockChatService) Delete(ctx context.Context, chatID string, user domain.AuthUser) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, chatID, creatorID)
+	ret := m.ctrl.Call(m, "Delete", ctx, chatID, user)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockChatServiceMockRecorder) Delete(ctx, chatID, creatorID interface{}) *gomock.Call {
+func (mr *MockChatServiceMockRecorder) Delete(ctx, chatID, user interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockChatService)(nil).Delete), ctx, chatID, creatorID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockChatService)(nil).Delete), ctx, chatID, user)
 }
 
 // GetByID mocks base method.
-func (m *MockChatService) GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error) {
+func (m *MockChatService) GetByID(ctx context.Context, chatID string, user domain.AuthUser) (domain.Chat, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, chatID, memberID)
+	ret := m.ctrl.Call(m, "GetByID", ctx, chatID, user)
 	ret0, _ := ret[0].(domain.Chat)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockChatServiceMockRecorder) GetByID(ctx, chatID, memberID interface{}) *gomock.Call {
+func (mr *MockChatServiceMockRecorder) GetByID(ctx, chatID, user interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockChatService)(nil).GetByID), ctx, chatID, memberID)
-}
-
-// GetOwnByID mocks base method.
-func (m *MockChatService) GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOwnByID", ctx, chatID, creatorID)
-	ret0, _ := ret[0].(domain.Chat)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetOwnByID indicates an expected call of GetOwnByID.
-func (mr *MockChatServiceMockRecorder) GetOwnByID(ctx, chatID, creatorID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnByID", reflect.TypeOf((*MockChatService)(nil).GetOwnByID), ctx, chatID, creatorID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockChatService)(nil).GetByID), ctx, chatID, user)
 }
 
 // List mocks base method.
-func (m *MockChatService) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
+func (m *MockChatService) List(ctx context.Context, user domain.AuthUser) ([]domain.Chat, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, memberID)
+	ret := m.ctrl.Call(m, "List", ctx, user)
 	ret0, _ := ret[0].([]domain.Chat)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockChatServiceMockRecorder) List(ctx, memberID interface{}) *gomock.Call {
+func (mr *MockChatServiceMockRecorder) List(ctx, user interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockChatService)(nil).List), ctx, memberID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockChatService)(nil).List), ctx, user)
 }
 
 // Update mocks base method.
@@ -513,12 +498,13 @@ func (mr *MockMessageServiceMockRecorder) List(ctx, chatID, userID, timestamp in
 }
 
 // NewServeSession mocks base method.
-func (m *MockMessageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message) {
+func (m *MockMessageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewServeSession", ctx, userID)
 	ret0, _ := ret[0].(chan<- domain.CreateMessageDTO)
 	ret1, _ := ret[1].(<-chan domain.Message)
-	return ret0, ret1
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // NewServeSession indicates an expected call of NewServeSession.

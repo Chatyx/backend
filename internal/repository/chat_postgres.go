@@ -22,7 +22,7 @@ func NewChatPostgresRepository(dbPool PgxPool) ChatRepository {
 	}
 }
 
-func (r *chatPostgresRepository) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
+func (r *chatPostgresRepository) List(ctx context.Context, userID string) ([]domain.Chat, error) {
 	query := `SELECT 
 		chats.id, chats.name, chats.description, 
 		chats.creator_id, chats.created_at, chats.updated_at 
@@ -31,7 +31,7 @@ func (r *chatPostgresRepository) List(ctx context.Context, memberID string) ([]d
 		ON chats.id = chat_members.chat_id
 	WHERE chat_members.user_id = $1`
 
-	rows, err := r.dbPool.Query(ctx, query, memberID)
+	rows, err := r.dbPool.Query(ctx, query, userID)
 	if err != nil {
 		r.logger.WithError(err).Error("Unable to list chats from database")
 		return nil, err
@@ -96,13 +96,13 @@ func (r *chatPostgresRepository) Create(ctx context.Context, dto domain.CreateCh
 	return chat, nil
 }
 
-func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error) {
+func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, userID string) (domain.Chat, error) {
 	logger := r.logger.WithFields(logging.Fields{
 		"chat_id": chatID,
-		"user_id": memberID,
+		"user_id": userID,
 	})
 
-	if !utils.IsValidUUID(chatID) || !utils.IsValidUUID(memberID) {
+	if !utils.IsValidUUID(chatID) || !utils.IsValidUUID(userID) {
 		logger.Debug("chat is not found")
 		return domain.Chat{}, domain.ErrChatNotFound
 	}
@@ -115,26 +115,7 @@ func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, memberID s
 		ON chats.id = chat_members.chat_id
 	WHERE chats.id = $1 AND chat_members.user_id = $2`
 
-	return r.getOne(ctx, logger, query, chatID, memberID)
-}
-
-func (r *chatPostgresRepository) GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error) {
-	logger := r.logger.WithFields(logging.Fields{
-		"chat_id":    chatID,
-		"creator_id": creatorID,
-	})
-
-	if !utils.IsValidUUID(chatID) || !utils.IsValidUUID(creatorID) {
-		logger.Debug("chat is not found")
-		return domain.Chat{}, domain.ErrChatNotFound
-	}
-
-	query := `SELECT 
-		chats.id, chats.name, chats.description, 
-		chats.creator_id, chats.created_at, chats.updated_at
-	FROM chats WHERE chats.id = $1 AND chats.creator_id = $2`
-
-	return r.getOne(ctx, logger, query, chatID, creatorID)
+	return r.getOne(ctx, logger, query, chatID, userID)
 }
 
 func (r *chatPostgresRepository) getOne(ctx context.Context, logger logging.Logger, query string, args ...interface{}) (domain.Chat, error) {
