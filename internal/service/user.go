@@ -42,8 +42,8 @@ func (s *userService) Create(ctx context.Context, dto domain.CreateUserDTO) (dom
 	return s.userRepo.Create(ctx, dto)
 }
 
-func (s *userService) GetByID(ctx context.Context, id string) (domain.User, error) {
-	return s.userRepo.GetByID(ctx, id)
+func (s *userService) GetByID(ctx context.Context, userID string) (domain.User, error) {
+	return s.userRepo.GetByID(ctx, userID)
 }
 
 func (s *userService) GetByUsername(ctx context.Context, username string) (domain.User, error) {
@@ -78,10 +78,10 @@ func (s *userService) UpdatePassword(ctx context.Context, dto domain.UpdateUserP
 	return s.userRepo.UpdatePassword(ctx, dto.UserID, hash)
 }
 
-func (s *userService) Delete(ctx context.Context, id string) error {
-	if err := s.userRepo.Delete(ctx, id); err != nil {
+func (s *userService) Delete(ctx context.Context, userID string) error {
+	if err := s.userRepo.Delete(ctx, userID); err != nil {
 		return err
 	}
 
-	return s.sessionRepo.DeleteAllByUserID(ctx, id)
+	return s.sessionRepo.DeleteAllByUserID(ctx, userID)
 }
