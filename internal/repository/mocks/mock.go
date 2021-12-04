@@ -53,32 +53,32 @@ func (mr *MockUserRepositoryMockRecorder) Create(ctx, dto interface{}) *gomock.C
 }
 
 // Delete mocks base method.
-func (m *MockUserRepository) Delete(ctx context.Context, id string) error {
+func (m *MockUserRepository) Delete(ctx context.Context, userID string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret := m.ctrl.Call(m, "Delete", ctx, userID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockUserRepositoryMockRecorder) Delete(ctx, id interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) Delete(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockUserRepository)(nil).Delete), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockUserRepository)(nil).Delete), ctx, userID)
 }
 
 // GetByID mocks base method.
-func (m *MockUserRepository) GetByID(ctx context.Context, id string) (domain.User, error) {
+func (m *MockUserRepository) GetByID(ctx context.Context, userID string) (domain.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret := m.ctrl.Call(m, "GetByID", ctx, userID)
 	ret0, _ := ret[0].(domain.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockUserRepositoryMockRecorder) GetByID(ctx, id interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) GetByID(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockUserRepository)(nil).GetByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockUserRepository)(nil).GetByID), ctx, userID)
 }
 
 // GetByUsername mocks base method.
@@ -127,17 +127,17 @@ func (mr *MockUserRepositoryMockRecorder) Update(ctx, dto interface{}) *gomock.C
 }
 
 // UpdatePassword mocks base method.
-func (m *MockUserRepository) UpdatePassword(ctx context.Context, id, password string) error {
+func (m *MockUserRepository) UpdatePassword(ctx context.Context, userID, password string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdatePassword", ctx, id, password)
+	ret := m.ctrl.Call(m, "UpdatePassword", ctx, userID, password)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdatePassword indicates an expected call of UpdatePassword.
-func (mr *MockUserRepositoryMockRecorder) UpdatePassword(ctx, id, password interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) UpdatePassword(ctx, userID, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePassword", reflect.TypeOf((*MockUserRepository)(nil).UpdatePassword), ctx, id, password)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePassword", reflect.TypeOf((*MockUserRepository)(nil).UpdatePassword), ctx, userID, password)
 }
 
 // MockSessionRepository is a mock of SessionRepository interface.
@@ -259,62 +259,47 @@ func (mr *MockChatRepositoryMockRecorder) Create(ctx, dto interface{}) *gomock.C
 }
 
 // Delete mocks base method.
-func (m *MockChatRepository) Delete(ctx context.Context, chatID, creatorID string) error {
+func (m *MockChatRepository) Delete(ctx context.Context, memberKey domain.ChatMemberIdentity) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, chatID, creatorID)
+	ret := m.ctrl.Call(m, "Delete", ctx, memberKey)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockChatRepositoryMockRecorder) Delete(ctx, chatID, creatorID interface{}) *gomock.Call {
+func (mr *MockChatRepositoryMockRecorder) Delete(ctx, memberKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockChatRepository)(nil).Delete), ctx, chatID, creatorID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockChatRepository)(nil).Delete), ctx, memberKey)
 }
 
-// GetByID mocks base method.
-func (m *MockChatRepository) GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error) {
+// Get mocks base method.
+func (m *MockChatRepository) Get(ctx context.Context, memberKey domain.ChatMemberIdentity) (domain.Chat, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, chatID, memberID)
+	ret := m.ctrl.Call(m, "Get", ctx, memberKey)
 	ret0, _ := ret[0].(domain.Chat)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetByID indicates an expected call of GetByID.
-func (mr *MockChatRepositoryMockRecorder) GetByID(ctx, chatID, memberID interface{}) *gomock.Call {
+// Get indicates an expected call of Get.
+func (mr *MockChatRepositoryMockRecorder) Get(ctx, memberKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockChatRepository)(nil).GetByID), ctx, chatID, memberID)
-}
-
-// GetOwnByID mocks base method.
-func (m *MockChatRepository) GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOwnByID", ctx, chatID, creatorID)
-	ret0, _ := ret[0].(domain.Chat)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetOwnByID indicates an expected call of GetOwnByID.
-func (mr *MockChatRepositoryMockRecorder) GetOwnByID(ctx, chatID, creatorID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnByID", reflect.TypeOf((*MockChatRepository)(nil).GetOwnByID), ctx, chatID, creatorID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockChatRepository)(nil).Get), ctx, memberKey)
 }
 
 // List mocks base method.
-func (m *MockChatRepository) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
+func (m *MockChatRepository) List(ctx context.Context, userID string) ([]domain.Chat, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, memberID)
+	ret := m.ctrl.Call(m, "List", ctx, userID)
 	ret0, _ := ret[0].([]domain.Chat)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockChatRepositoryMockRecorder) List(ctx, memberID interface{}) *gomock.Call {
+func (mr *MockChatRepositoryMockRecorder) List(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockChatRepository)(nil).List), ctx, memberID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockChatRepository)(nil).List), ctx, userID)
 }
 
 // Update mocks base method.
@@ -356,47 +341,62 @@ func (m *MockChatMemberRepository) EXPECT() *MockChatMemberRepositoryMockRecorde
 }
 
 // Create mocks base method.
-func (m *MockChatMemberRepository) Create(ctx context.Context, userID, chatID string) error {
+func (m *MockChatMemberRepository) Create(ctx context.Context, memberKey domain.ChatMemberIdentity) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, userID, chatID)
+	ret := m.ctrl.Call(m, "Create", ctx, memberKey)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockChatMemberRepositoryMockRecorder) Create(ctx, userID, chatID interface{}) *gomock.Call {
+func (mr *MockChatMemberRepositoryMockRecorder) Create(ctx, memberKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockChatMemberRepository)(nil).Create), ctx, userID, chatID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockChatMemberRepository)(nil).Create), ctx, memberKey)
 }
 
-// Get mocks base method.
-func (m *MockChatMemberRepository) Get(ctx context.Context, userID, chatID string) (domain.ChatMember, error) {
+// GetByKey mocks base method.
+func (m *MockChatMemberRepository) GetByKey(ctx context.Context, memberKey domain.ChatMemberIdentity) (domain.ChatMember, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, userID, chatID)
+	ret := m.ctrl.Call(m, "GetByKey", ctx, memberKey)
 	ret0, _ := ret[0].(domain.ChatMember)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get.
-func (mr *MockChatMemberRepositoryMockRecorder) Get(ctx, userID, chatID interface{}) *gomock.Call {
+// GetByKey indicates an expected call of GetByKey.
+func (mr *MockChatMemberRepositoryMockRecorder) GetByKey(ctx, memberKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockChatMemberRepository)(nil).Get), ctx, userID, chatID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByKey", reflect.TypeOf((*MockChatMemberRepository)(nil).GetByKey), ctx, memberKey)
 }
 
-// IsMemberInChat mocks base method.
-func (m *MockChatMemberRepository) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
+// IsChatCreator mocks base method.
+func (m *MockChatMemberRepository) IsChatCreator(ctx context.Context, memberKey domain.ChatMemberIdentity) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsMemberInChat", ctx, userID, chatID)
+	ret := m.ctrl.Call(m, "IsChatCreator", ctx, memberKey)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// IsMemberInChat indicates an expected call of IsMemberInChat.
-func (mr *MockChatMemberRepositoryMockRecorder) IsMemberInChat(ctx, userID, chatID interface{}) *gomock.Call {
+// IsChatCreator indicates an expected call of IsChatCreator.
+func (mr *MockChatMemberRepositoryMockRecorder) IsChatCreator(ctx, memberKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMemberInChat", reflect.TypeOf((*MockChatMemberRepository)(nil).IsMemberInChat), ctx, userID, chatID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsChatCreator", reflect.TypeOf((*MockChatMemberRepository)(nil).IsChatCreator), ctx, memberKey)
+}
+
+// IsInChat mocks base method.
+func (m *MockChatMemberRepository) IsInChat(ctx context.Context, memberKey domain.ChatMemberIdentity) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsInChat", ctx, memberKey)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsInChat indicates an expected call of IsInChat.
+func (mr *MockChatMemberRepositoryMockRecorder) IsInChat(ctx, memberKey interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsInChat", reflect.TypeOf((*MockChatMemberRepository)(nil).IsInChat), ctx, memberKey)
 }
 
 // ListByChatID mocks base method.

@@ -6,6 +6,10 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 )
 
+type AuthUser struct {
+	UserID string
+}
+
 type Session struct {
 	UserID       string
 	RefreshToken string

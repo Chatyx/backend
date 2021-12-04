@@ -120,9 +120,9 @@ func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUs
 	return user, nil
 }
 
-func (r *userPostgresRepository) GetByID(ctx context.Context, id string) (domain.User, error) {
-	if !utils.IsValidUUID(id) {
-		r.logger.Debugf("user is not found with id = %s", id)
+func (r *userPostgresRepository) GetByID(ctx context.Context, userID string) (domain.User, error) {
+	if !utils.IsValidUUID(userID) {
+		r.logger.Debugf("user is not found with id = %s", userID)
 
 		return domain.User{}, domain.ErrUserNotFound
 	}
@@ -134,7 +134,7 @@ func (r *userPostgresRepository) GetByID(ctx context.Context, id string) (domain
 		created_at, updated_at
 	FROM users WHERE id = $1`
 
-	return r.getBy(ctx, query, id)
+	return r.getBy(ctx, query, userID)
 }
 
 func (r *userPostgresRepository) GetByUsername(ctx context.Context, username string) (domain.User, error) {
@@ -243,44 +243,44 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 	return user, nil
 }
 
-func (r *userPostgresRepository) UpdatePassword(ctx context.Context, id, password string) error {
-	if !utils.IsValidUUID(id) {
-		r.logger.Debugf("user is not found with id = %s", id)
+func (r *userPostgresRepository) UpdatePassword(ctx context.Context, userID, password string) error {
+	if !utils.IsValidUUID(userID) {
+		r.logger.Debugf("user is not found with id = %s", userID)
 		return domain.ErrUserNotFound
 	}
 
 	query := "UPDATE users SET password = $2 WHERE id = $1 AND is_deleted IS FALSE"
 
-	cmdTag, err := r.dbPool.Exec(ctx, query, id, password)
+	cmdTag, err := r.dbPool.Exec(ctx, query, userID, password)
 	if err != nil {
 		r.logger.WithError(err).Error("An error occurred while updating user password into the database")
 		return err
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		r.logger.Debugf("user is not found with id = %s", id)
+		r.logger.Debugf("user is not found with id = %s", userID)
 		return domain.ErrUserNotFound
 	}
 
 	return nil
 }
 
-func (r *userPostgresRepository) Delete(ctx context.Context, id string) error {
-	if !utils.IsValidUUID(id) {
-		r.logger.Debugf("user is not found with id = %s", id)
+func (r *userPostgresRepository) Delete(ctx context.Context, userID string) error {
+	if !utils.IsValidUUID(userID) {
+		r.logger.Debugf("user is not found with id = %s", userID)
 		return domain.ErrUserNotFound
 	}
 
 	query := "UPDATE users SET is_deleted = TRUE WHERE id = $1 AND is_deleted IS FALSE"
 
-	cmgTag, err := r.dbPool.Exec(ctx, query, id)
+	cmgTag, err := r.dbPool.Exec(ctx, query, userID)
 	if err != nil {
 		r.logger.WithError(err).Error("An error occurred while updating user into the database")
 		return err
 	}
 
 	if cmgTag.RowsAffected() == 0 {
-		r.logger.Debugf("user is not found with id = %s", id)
+		r.logger.Debugf("user is not found with id = %s", userID)
 		return domain.ErrUserNotFound
 	}
 

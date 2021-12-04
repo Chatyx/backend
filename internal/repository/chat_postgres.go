@@ -22,7 +22,7 @@ func NewChatPostgresRepository(dbPool PgxPool) ChatRepository {
 	}
 }
 
-func (r *chatPostgresRepository) List(ctx context.Context, memberID string) ([]domain.Chat, error) {
+func (r *chatPostgresRepository) List(ctx context.Context, userID string) ([]domain.Chat, error) {
 	query := `SELECT 
 		chats.id, chats.name, chats.description, 
 		chats.creator_id, chats.created_at, chats.updated_at 
@@ -31,7 +31,7 @@ func (r *chatPostgresRepository) List(ctx context.Context, memberID string) ([]d
 		ON chats.id = chat_members.chat_id
 	WHERE chat_members.user_id = $1`
 
-	rows, err := r.dbPool.Query(ctx, query, memberID)
+	rows, err := r.dbPool.Query(ctx, query, userID)
 	if err != nil {
 		r.logger.WithError(err).Error("Unable to list chats from database")
 		return nil, err
@@ -96,13 +96,13 @@ func (r *chatPostgresRepository) Create(ctx context.Context, dto domain.CreateCh
 	return chat, nil
 }
 
-func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error) {
+func (r *chatPostgresRepository) Get(ctx context.Context, memberKey domain.ChatMemberIdentity) (domain.Chat, error) {
 	logger := r.logger.WithFields(logging.Fields{
-		"chat_id": chatID,
-		"user_id": memberID,
+		"chat_id": memberKey.ChatID,
+		"user_id": memberKey.UserID,
 	})
 
-	if !utils.IsValidUUID(chatID) || !utils.IsValidUUID(memberID) {
+	if !utils.IsValidUUID(memberKey.ChatID) || !utils.IsValidUUID(memberKey.UserID) {
 		logger.Debug("chat is not found")
 		return domain.Chat{}, domain.ErrChatNotFound
 	}
@@ -115,26 +115,7 @@ func (r *chatPostgresRepository) GetByID(ctx context.Context, chatID, memberID s
 		ON chats.id = chat_members.chat_id
 	WHERE chats.id = $1 AND chat_members.user_id = $2`
 
-	return r.getOne(ctx, logger, query, chatID, memberID)
-}
-
-func (r *chatPostgresRepository) GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error) {
-	logger := r.logger.WithFields(logging.Fields{
-		"chat_id":    chatID,
-		"creator_id": creatorID,
-	})
-
-	if !utils.IsValidUUID(chatID) || !utils.IsValidUUID(creatorID) {
-		logger.Debug("chat is not found")
-		return domain.Chat{}, domain.ErrChatNotFound
-	}
-
-	query := `SELECT 
-		chats.id, chats.name, chats.description, 
-		chats.creator_id, chats.created_at, chats.updated_at
-	FROM chats WHERE chats.id = $1 AND chats.creator_id = $2`
-
-	return r.getOne(ctx, logger, query, chatID, creatorID)
+	return r.getOne(ctx, logger, query, memberKey.ChatID, memberKey.UserID)
 }
 
 func (r *chatPostgresRepository) getOne(ctx context.Context, logger logging.Logger, query string, args ...interface{}) (domain.Chat, error) {
@@ -158,8 +139,13 @@ func (r *chatPostgresRepository) getOne(ctx context.Context, logger logging.Logg
 }
 
 func (r *chatPostgresRepository) Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error) {
+	logger := r.logger.WithFields(logging.Fields{
+		"user_id": dto.CreatorID,
+		"chat_id": dto.ID,
+	})
+
 	if !utils.IsValidUUID(dto.ID) || !utils.IsValidUUID(dto.CreatorID) {
-		r.logger.Debugf("chat is not found with chatID = %s, creatorID = %s", dto.ID, dto.CreatorID)
+		logger.Debug("chat is not found")
 		return domain.Chat{}, domain.ErrChatNotFound
 	}
 
@@ -176,7 +162,7 @@ func (r *chatPostgresRepository) Update(ctx context.Context, dto domain.UpdateCh
 		dto.ID, dto.CreatorID,
 	).Scan(&chat.CreatedAt, &chat.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			r.logger.Debugf("chat is not found with chatID = %s, creatorID = %s", dto.ID, dto.CreatorID)
+			logger.Debugf("chat is not found")
 			return domain.Chat{}, domain.ErrChatNotFound
 		}
 
@@ -193,22 +179,27 @@ func (r *chatPostgresRepository) Update(ctx context.Context, dto domain.UpdateCh
 	return chat, nil
 }
 
-func (r *chatPostgresRepository) Delete(ctx context.Context, chatID, creatorID string) error {
-	if !utils.IsValidUUID(chatID) || !utils.IsValidUUID(creatorID) {
-		r.logger.Debugf("chat is not found with chatID = %s, creatorID = %s", chatID, creatorID)
+func (r *chatPostgresRepository) Delete(ctx context.Context, memberKey domain.ChatMemberIdentity) error {
+	logger := r.logger.WithFields(logging.Fields{
+		"user_id": memberKey.UserID,
+		"chat_id": memberKey.ChatID,
+	})
+
+	if !utils.IsValidUUID(memberKey.ChatID) || !utils.IsValidUUID(memberKey.UserID) {
+		logger.Debug("chat is not found")
 		return domain.ErrChatNotFound
 	}
 
 	query := "DELETE FROM chats WHERE id = $1 AND creator_id = $2"
 
-	cmgTag, err := r.dbPool.Exec(ctx, query, chatID, creatorID)
+	cmgTag, err := r.dbPool.Exec(ctx, query, memberKey.ChatID, memberKey.UserID)
 	if err != nil {
 		r.logger.WithError(err).Error("An error occurred while deleting chat from database")
 		return err
 	}
 
 	if cmgTag.RowsAffected() == 0 {
-		r.logger.Debugf("chat is not found with chatID = %s, creatorID = %s", chatID, creatorID)
+		logger.Debug("chat is not found")
 		return domain.ErrChatNotFound
 	}
 

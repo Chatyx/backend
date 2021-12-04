@@ -12,11 +12,11 @@ import (
 type UserRepository interface {
 	List(ctx context.Context) ([]domain.User, error)
 	Create(ctx context.Context, dto domain.CreateUserDTO) (domain.User, error)
-	GetByID(ctx context.Context, id string) (domain.User, error)
+	GetByID(ctx context.Context, userID string) (domain.User, error)
 	GetByUsername(ctx context.Context, username string) (domain.User, error)
 	Update(ctx context.Context, dto domain.UpdateUserDTO) (domain.User, error)
-	UpdatePassword(ctx context.Context, id, password string) error
-	Delete(ctx context.Context, id string) error
+	UpdatePassword(ctx context.Context, userID, password string) error
+	Delete(ctx context.Context, userID string) error
 }
 
 type SessionRepository interface {
@@ -27,20 +27,20 @@ type SessionRepository interface {
 }
 
 type ChatRepository interface {
-	List(ctx context.Context, memberID string) ([]domain.Chat, error)
+	List(ctx context.Context, userID string) ([]domain.Chat, error)
 	Create(ctx context.Context, dto domain.CreateChatDTO) (domain.Chat, error)
-	GetByID(ctx context.Context, chatID, memberID string) (domain.Chat, error)
-	GetOwnByID(ctx context.Context, chatID, creatorID string) (domain.Chat, error)
+	Get(ctx context.Context, memberKey domain.ChatMemberIdentity) (domain.Chat, error)
 	Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error)
-	Delete(ctx context.Context, chatID, creatorID string) error
+	Delete(ctx context.Context, memberKey domain.ChatMemberIdentity) error
 }
 
 type ChatMemberRepository interface {
 	ListByChatID(ctx context.Context, chatID string) ([]domain.ChatMember, error)
 	ListByUserID(ctx context.Context, userID string) ([]domain.ChatMember, error)
-	IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error)
-	Create(ctx context.Context, userID, chatID string) error
-	Get(ctx context.Context, userID, chatID string) (domain.ChatMember, error)
+	GetByKey(ctx context.Context, memberKey domain.ChatMemberIdentity) (domain.ChatMember, error)
+	IsInChat(ctx context.Context, memberKey domain.ChatMemberIdentity) (bool, error)
+	IsChatCreator(ctx context.Context, memberKey domain.ChatMemberIdentity) (bool, error)
+	Create(ctx context.Context, memberKey domain.ChatMemberIdentity) error
 	Update(ctx context.Context, dto domain.UpdateChatMemberDTO) error
 }
 

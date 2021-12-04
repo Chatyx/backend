@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package http
@@ -402,7 +403,7 @@ func TestUserHandler_update(t *testing.T) {
 
 	testTable := []struct {
 		name                 string
-		authUserID           string
+		authUser             domain.AuthUser
 		requestBody          string
 		updateUserDTO        domain.UpdateUserDTO
 		updatedUser          domain.User
@@ -412,7 +413,7 @@ func TestUserHandler_update(t *testing.T) {
 	}{
 		{
 			name:        "Success",
-			authUserID:  "1",
+			authUser:    domain.AuthUser{UserID: "1"},
 			requestBody: `{"username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR"}`,
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:         "1",
@@ -443,28 +444,28 @@ func TestUserHandler_update(t *testing.T) {
 		},
 		{
 			name:                 "Invalid JSON body",
-			authUserID:           "1",
+			authUser:             domain.AuthUser{UserID: "1"},
 			requestBody:          `{"birth_date""1970-01-01"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Invalid email address",
-			authUserID:           "1",
+			authUser:             domain.AuthUser{UserID: "1"},
 			requestBody:          `{"username":"john1967","email":"12345"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"email":"field validation for 'email' failed on the 'email' tag"}}`,
 		},
 		{
 			name:                 "Invalid birth date",
-			authUserID:           "1",
+			authUser:             domain.AuthUser{UserID: "1"},
 			requestBody:          `{"username":"john1967","email":"john1967@gmail.com","birth_date":"20.12.1994"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"birth_date":"field validation for 'birth_date' failed on the 'sql-date' tag"}}`,
 		},
 		{
 			name:        "User is not found",
-			authUserID:  "2",
+			authUser:    domain.AuthUser{UserID: "2"},
 			requestBody: `{"username":"john1967","email":"john1967@gmail.com"}`,
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:       "2",
@@ -479,7 +480,7 @@ func TestUserHandler_update(t *testing.T) {
 		},
 		{
 			name:        "User with such username or email already exists",
-			authUserID:  "2",
+			authUser:    domain.AuthUser{UserID: "2"},
 			requestBody: `{"username":"john1967","email":"john1967@gmail.com"}`,
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:       "2",
@@ -494,7 +495,7 @@ func TestUserHandler_update(t *testing.T) {
 		},
 		{
 			name:        "Unexpected error",
-			authUserID:  "1",
+			authUser:    domain.AuthUser{UserID: "1"},
 			requestBody: `{"username":"john1967","email":"john1967@gmail.com","birth_date":"1998-01-01"}`,
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:        "1",
@@ -523,7 +524,7 @@ func TestUserHandler_update(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPut, "/api/user", strings.NewReader(testCase.requestBody))
-			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.authUserID))
+			req = req.WithContext(domain.NewContextFromAuthUser(context.Background(), testCase.authUser))
 
 			if testCase.mockBehavior != nil {
 				testCase.mockBehavior(us, req.Context(), testCase.updateUserDTO, testCase.updatedUser)
@@ -553,7 +554,7 @@ func TestUserHandler_updatePassword(t *testing.T) {
 
 	testTable := []struct {
 		name                  string
-		authUserID            string
+		authUser              domain.AuthUser
 		requestBody           string
 		updateUserPasswordDTO domain.UpdateUserPasswordDTO
 		mockBehavior          mockBehaviour
@@ -562,7 +563,7 @@ func TestUserHandler_updatePassword(t *testing.T) {
 	}{
 		{
 			name:        "Success",
-			authUserID:  "1",
+			authUser:    domain.AuthUser{UserID: "1"},
 			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
 			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
 				UserID:  "1",
@@ -576,21 +577,21 @@ func TestUserHandler_updatePassword(t *testing.T) {
 		},
 		{
 			name:                 "Invalid JSON body",
-			authUserID:           "1",
+			authUser:             domain.AuthUser{UserID: "1"},
 			requestBody:          `{"current_password":"qwerty12345","new_password":admin55555"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Empty body",
-			authUserID:           "1",
+			authUser:             domain.AuthUser{UserID: "1"},
 			requestBody:          `{}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"current_password":"field validation for 'current_password' failed on the 'required' tag","new_password":"field validation for 'new_password' failed on the 'required' tag"}}`,
 		},
 		{
 			name:        "Wrong user's current password",
-			authUserID:  "1",
+			authUser:    domain.AuthUser{UserID: "1"},
 			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
 			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
 				UserID:  "1",
@@ -605,7 +606,7 @@ func TestUserHandler_updatePassword(t *testing.T) {
 		},
 		{
 			name:        "User is not found",
-			authUserID:  "1",
+			authUser:    domain.AuthUser{UserID: "1"},
 			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
 			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
 				UserID:  "1",
@@ -620,7 +621,7 @@ func TestUserHandler_updatePassword(t *testing.T) {
 		},
 		{
 			name:        "Unexpected error",
-			authUserID:  "1",
+			authUser:    domain.AuthUser{UserID: "1"},
 			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
 			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
 				UserID:  "1",
@@ -648,7 +649,7 @@ func TestUserHandler_updatePassword(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPut, "/api/user/password", strings.NewReader(testCase.requestBody))
-			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.authUserID))
+			req = req.WithContext(domain.NewContextFromAuthUser(context.Background(), testCase.authUser))
 
 			if testCase.mockBehavior != nil {
 				testCase.mockBehavior(us, req.Context(), testCase.updateUserPasswordDTO)
@@ -678,22 +679,22 @@ func TestUserHandler_delete(t *testing.T) {
 
 	testTable := []struct {
 		name                 string
-		authUserID           string
+		authUser             domain.AuthUser
 		mockBehaviour        mockBehaviour
 		expectedStatusCode   int
 		expectedResponseBody string
 	}{
 		{
-			name:       "Success",
-			authUserID: "1",
+			name:     "Success",
+			authUser: domain.AuthUser{UserID: "1"},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string) {
 				us.EXPECT().Delete(ctx, id).Return(nil)
 			},
 			expectedStatusCode: http.StatusNoContent,
 		},
 		{
-			name:       "Not found",
-			authUserID: "2",
+			name:     "Not found",
+			authUser: domain.AuthUser{UserID: "2"},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string) {
 				us.EXPECT().Delete(ctx, id).Return(domain.ErrUserNotFound)
 			},
@@ -701,8 +702,8 @@ func TestUserHandler_delete(t *testing.T) {
 			expectedResponseBody: `{"message":"user is not found"}`,
 		},
 		{
-			name:       "Unexpected error",
-			authUserID: "1",
+			name:     "Unexpected error",
+			authUser: domain.AuthUser{UserID: "1"},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string) {
 				us.EXPECT().Delete(ctx, id).Return(errors.New("unexpected error"))
 			},
@@ -724,10 +725,10 @@ func TestUserHandler_delete(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodDelete, "/api/user", nil)
-			req = req.WithContext(domain.NewContextFromUserID(context.Background(), testCase.authUserID))
+			req = req.WithContext(domain.NewContextFromAuthUser(context.Background(), testCase.authUser))
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(us, req.Context(), testCase.authUserID)
+				testCase.mockBehaviour(us, req.Context(), testCase.authUser.UserID)
 			}
 
 			uh.delete(rec, req)

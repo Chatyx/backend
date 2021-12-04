@@ -82,24 +82,45 @@ func (r *chatMemberPostgresRepository) list(ctx context.Context, query string, a
 	return members, nil
 }
 
-func (r *chatMemberPostgresRepository) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
+func (r *chatMemberPostgresRepository) IsInChat(ctx context.Context, memberKey domain.ChatMemberIdentity) (bool, error) {
 	query := "SELECT EXISTS(SELECT 1 FROM chat_members WHERE user_id = $1 AND chat_id = $2 AND status_id = 1)"
 
-	isIn := false
-	row := r.dbPool.QueryRow(ctx, query, userID, chatID)
-
-	if err := row.Scan(&isIn); err != nil {
+	inChat, err := r.exists(ctx, query, memberKey.UserID, memberKey.ChatID)
+	if err != nil {
 		r.logger.WithError(err).Error("An error occurred while checking if member is in the chat")
 		return false, err
 	}
 
-	return isIn, nil
+	return inChat, nil
 }
 
-func (r *chatMemberPostgresRepository) Create(ctx context.Context, userID, chatID string) error {
+func (r *chatMemberPostgresRepository) IsChatCreator(ctx context.Context, memberKey domain.ChatMemberIdentity) (bool, error) {
+	query := "SELECT EXISTS(SELECT 1 FROM chats WHERE id = $1 AND creator_id = $2)"
+
+	isCreator, err := r.exists(ctx, query, memberKey.ChatID, memberKey.UserID)
+	if err != nil {
+		r.logger.WithError(err).Error("An error occurred while checking if member is a chat creator")
+		return false, err
+	}
+
+	return isCreator, nil
+}
+
+func (r *chatMemberPostgresRepository) exists(ctx context.Context, query string, args ...interface{}) (bool, error) {
+	var result bool
+
+	row := r.dbPool.QueryRow(ctx, query, args...)
+	if err := row.Scan(&result); err != nil {
+		return false, err
+	}
+
+	return result, nil
+}
+
+func (r *chatMemberPostgresRepository) Create(ctx context.Context, memberKey domain.ChatMemberIdentity) error {
 	query := "INSERT INTO chat_members (user_id, chat_id) VALUES ($1, $2)"
 
-	if _, err := r.dbPool.Exec(ctx, query, userID, chatID); err != nil {
+	if _, err := r.dbPool.Exec(ctx, query, memberKey.UserID, memberKey.ChatID); err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			r.logger.WithError(err).Debug("chat member with such fields is already associated with this chat")
 			return domain.ErrChatMemberUniqueViolation
@@ -113,10 +134,10 @@ func (r *chatMemberPostgresRepository) Create(ctx context.Context, userID, chatI
 	return nil
 }
 
-func (r *chatMemberPostgresRepository) Get(ctx context.Context, userID, chatID string) (domain.ChatMember, error) {
+func (r *chatMemberPostgresRepository) GetByKey(ctx context.Context, memberKey domain.ChatMemberIdentity) (domain.ChatMember, error) {
 	logger := r.logger.WithFields(logging.Fields{
-		"user_id": userID,
-		"chat_id": chatID,
+		"user_id": memberKey.UserID,
+		"chat_id": memberKey.ChatID,
 	})
 	query := `SELECT users.username, chat_members.status_id, 
 		chat_members.user_id = chats.creator_id, chat_members.user_id, chat_members.chat_id
@@ -129,7 +150,7 @@ func (r *chatMemberPostgresRepository) Get(ctx context.Context, userID, chatID s
 
 	var member domain.ChatMember
 
-	if err := r.dbPool.QueryRow(ctx, query, userID, chatID).Scan(
+	if err := r.dbPool.QueryRow(ctx, query, memberKey.UserID, memberKey.ChatID).Scan(
 		&member.Username, &member.StatusID,
 		&member.IsCreator, &member.UserID, &member.ChatID,
 	); err != nil {

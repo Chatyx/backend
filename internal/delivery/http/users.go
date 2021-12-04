@@ -154,7 +154,8 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	dto.ID = domain.UserIDFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(req.Context())
+	dto.ID = authUser.UserID
 
 	if err := h.validateStruct(dto); err != nil {
 		respondError(w, err)
@@ -195,7 +196,8 @@ func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	dto.UserID = domain.UserIDFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(req.Context())
+	dto.UserID = authUser.UserID
 
 	if err := h.validateStruct(dto); err != nil {
 		respondError(w, err)
@@ -228,7 +230,9 @@ func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /user [delete]
 func (h *userHandler) delete(w http.ResponseWriter, req *http.Request) {
-	err := h.userService.Delete(req.Context(), domain.UserIDFromContext(req.Context()))
+	authUser := domain.AuthUserFromContext(req.Context())
+
+	err := h.userService.Delete(req.Context(), authUser.UserID)
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:

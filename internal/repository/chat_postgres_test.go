@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package repository
@@ -313,7 +314,7 @@ func TestChatPostgresRepository_Create(t *testing.T) {
 }
 
 func TestChatPostgresRepository_GetByID(t *testing.T) {
-	type mockBehavior func(mockPool pgxmock.PgxPoolIface, chatID, memberID string, returnRow Row, rowErr error)
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, memberKey domain.ChatMemberIdentity, returnRow Row, rowErr error)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -327,8 +328,8 @@ func TestChatPostgresRepository_GetByID(t *testing.T) {
 	WHERE chats.id = $1 AND chat_members.user_id = $2`,
 		strings.Join(chatTableColumns, ", "))
 
-	var defaultMockBehavior mockBehavior = func(mockPool pgxmock.PgxPoolIface, chatID, memberID string, returnRow Row, rowErr error) {
-		expected := mockPool.ExpectQuery(query).WithArgs(chatID, memberID)
+	var defaultMockBehavior mockBehavior = func(mockPool pgxmock.PgxPoolIface, memberKey domain.ChatMemberIdentity, returnRow Row, rowErr error) {
+		expected := mockPool.ExpectQuery(query).WithArgs(memberKey.ChatID, memberKey.UserID)
 
 		if len(returnRow) != 0 {
 			expected.WillReturnRows(
@@ -343,8 +344,7 @@ func TestChatPostgresRepository_GetByID(t *testing.T) {
 
 	testTable := []struct {
 		name         string
-		chatID       string
-		memberID     string
+		memberKey    domain.ChatMemberIdentity
 		returnRow    Row
 		rowErr       error
 		mockBehavior mockBehavior
@@ -352,38 +352,48 @@ func TestChatPostgresRepository_GetByID(t *testing.T) {
 		expectedErr  error
 	}{
 		{
-			name:         "Success",
-			chatID:       "afccfc65-b8c3-4e37-8717-3136a246bf09",
-			memberID:     "6be043ca-3005-4b1c-b847-eb677897c618",
+			name: "Success",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
+				ChatID: "afccfc65-b8c3-4e37-8717-3136a246bf09",
+			},
 			returnRow:    chatWithFullFieldsRowValues,
 			mockBehavior: defaultMockBehavior,
 			expectedChat: chatWithFullFields,
 			expectedErr:  nil,
 		},
 		{
-			name:         "Chat is not found",
-			chatID:       "d1596312-4943-434a-86aa-edadc7e9aaf2",
-			memberID:     "6be043ca-3005-4b1c-b847-eb677897c618",
+			name: "Chat is not found",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
+				ChatID: "d1596312-4943-434a-86aa-edadc7e9aaf2",
+			},
 			rowErr:       pgx.ErrNoRows,
 			mockBehavior: defaultMockBehavior,
 			expectedErr:  domain.ErrChatNotFound,
 		},
 		{
-			name:        "With invalid chat_id (not uuid4)",
-			chatID:      "1",
-			memberID:    "6be043ca-3005-4b1c-b847-eb677897c618",
+			name: "With invalid chat_id (not uuid4)",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
+				ChatID: "1",
+			},
 			expectedErr: domain.ErrChatNotFound,
 		},
 		{
-			name:        "With invalid member_id (not uuid4)",
-			chatID:      "d1596312-4943-434a-86aa-edadc7e9aaf2",
-			memberID:    "1",
+			name: "With invalid member_id (not uuid4)",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "1",
+				ChatID: "d1596312-4943-434a-86aa-edadc7e9aaf2",
+			},
 			expectedErr: domain.ErrChatNotFound,
 		},
 		{
-			name:         "Unexpected error while getting chat",
-			chatID:       "d1596312-4943-434a-86aa-edadc7e9aaf2",
-			memberID:     "6be043ca-3005-4b1c-b847-eb677897c618",
+			name: "Unexpected error while getting chat",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
+				ChatID: "d1596312-4943-434a-86aa-edadc7e9aaf2",
+			},
 			rowErr:       errUnexpected,
 			mockBehavior: defaultMockBehavior,
 			expectedErr:  errUnexpected,
@@ -398,12 +408,12 @@ func TestChatPostgresRepository_GetByID(t *testing.T) {
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(mockPool, testCase.chatID, testCase.memberID, testCase.returnRow, testCase.rowErr)
+				testCase.mockBehavior(mockPool, testCase.memberKey, testCase.returnRow, testCase.rowErr)
 			}
 
 			chatRepo := NewChatPostgresRepository(mockPool)
 
-			chat, err := chatRepo.GetByID(context.Background(), testCase.chatID, testCase.memberID)
+			chat, err := chatRepo.Get(context.Background(), testCase.memberKey)
 
 			if testCase.expectedErr == nil {
 				assert.NoError(t, err)
@@ -538,7 +548,7 @@ func TestChatPostgresRepository_Update(t *testing.T) {
 }
 
 func TestChatPostgresRepository_Delete(t *testing.T) {
-	type mockBehavior func(mockPool pgxmock.PgxPoolIface, chatID, creatorID string)
+	type mockBehavior func(mockPool pgxmock.PgxPoolIface, memberKey domain.ChatMemberIdentity)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -550,52 +560,61 @@ func TestChatPostgresRepository_Delete(t *testing.T) {
 
 	testTable := []struct {
 		name         string
-		chatID       string
-		creatorID    string
+		memberKey    domain.ChatMemberIdentity
 		mockBehavior mockBehavior
 		expectedErr  error
 	}{
 		{
-			name:      "Success",
-			chatID:    "afccfc65-b8c3-4e37-8717-3136a246bf09",
-			creatorID: "6be043ca-3005-4b1c-b847-eb677897c618",
-			mockBehavior: func(mockPool pgxmock.PgxPoolIface, chatID, creatorID string) {
+			name: "Success",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
+				ChatID: "afccfc65-b8c3-4e37-8717-3136a246bf09",
+			},
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, memberKey domain.ChatMemberIdentity) {
 				mockPool.ExpectExec(query).
-					WithArgs(chatID, creatorID).
+					WithArgs(memberKey.ChatID, memberKey.UserID).
 					WillReturnResult(pgxmock.NewResult("deleted", 1))
 			},
 			expectedErr: nil,
 		},
 		{
-			name:      "Chat is not found",
-			chatID:    "afccfc65-b8c3-4e37-8717-3136a246bf09",
-			creatorID: "6be043ca-3005-4b1c-b847-eb677897c618",
-			mockBehavior: func(mockPool pgxmock.PgxPoolIface, chatID, creatorID string) {
+			name: "Chat is not found",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
+				ChatID: "afccfc65-b8c3-4e37-8717-3136a246bf09",
+			},
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, memberKey domain.ChatMemberIdentity) {
 				mockPool.ExpectExec(query).
-					WithArgs(chatID, creatorID).
+					WithArgs(memberKey.ChatID, memberKey.UserID).
 					WillReturnResult(pgxmock.NewResult("deleted", 0))
 			},
 			expectedErr: domain.ErrChatNotFound,
 		},
 		{
-			name:        "With invalid chat_id (not uuid4)",
-			chatID:      "1",
-			creatorID:   "6be043ca-3005-4b1c-b847-eb677897c618",
+			name: "With invalid chat_id (not uuid4)",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
+				ChatID: "1",
+			},
 			expectedErr: domain.ErrChatNotFound,
 		},
 		{
-			name:        "With invalid creator_id (not uuid4)",
-			chatID:      "afccfc65-b8c3-4e37-8717-3136a246bf09",
-			creatorID:   "1",
+			name: "With invalid creator_id (not uuid4)",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "1",
+				ChatID: "6be043ca-3005-4b1c-b847-eb677897c618",
+			},
 			expectedErr: domain.ErrChatNotFound,
 		},
 		{
-			name:      "Unexpected error",
-			chatID:    "afccfc65-b8c3-4e37-8717-3136a246bf09",
-			creatorID: "6be043ca-3005-4b1c-b847-eb677897c618",
-			mockBehavior: func(mockPool pgxmock.PgxPoolIface, chatID, creatorID string) {
+			name: "Unexpected error",
+			memberKey: domain.ChatMemberIdentity{
+				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
+				ChatID: "afccfc65-b8c3-4e37-8717-3136a246bf09",
+			},
+			mockBehavior: func(mockPool pgxmock.PgxPoolIface, memberKey domain.ChatMemberIdentity) {
 				mockPool.ExpectExec(query).
-					WithArgs(chatID, creatorID).
+					WithArgs(memberKey.ChatID, memberKey.UserID).
 					WillReturnError(errUnexpected)
 			},
 			expectedErr: errUnexpected,
@@ -610,12 +629,12 @@ func TestChatPostgresRepository_Delete(t *testing.T) {
 			defer mockPool.Close()
 
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(mockPool, testCase.chatID, testCase.creatorID)
+				testCase.mockBehavior(mockPool, testCase.memberKey)
 			}
 
 			chatRepo := NewChatPostgresRepository(mockPool)
 
-			err = chatRepo.Delete(context.Background(), testCase.chatID, testCase.creatorID)
+			err = chatRepo.Delete(context.Background(), testCase.memberKey)
 
 			if testCase.expectedErr == nil {
 				assert.NoError(t, err)

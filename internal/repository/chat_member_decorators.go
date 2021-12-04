@@ -25,18 +25,18 @@ func NewChatMemberCacheRepository(repo ChatMemberRepository, redisClient *redis.
 	}
 }
 
-func (r *chatMemberCacheRepositoryDecorator) IsMemberInChat(ctx context.Context, userID, chatID string) (bool, error) {
-	if err := r.populateCacheIfNotExist(ctx, chatID); err != nil {
+func (r *chatMemberCacheRepositoryDecorator) IsInChat(ctx context.Context, memberKey domain.ChatMemberIdentity) (bool, error) {
+	if err := r.populateCacheIfNotExist(ctx, memberKey.ChatID); err != nil {
 		return false, err
 	}
 
-	chatUsersKey := r.getChatUsersKey(chatID)
+	chatUsersKey := r.getChatUsersKey(memberKey.ChatID)
 	logger := r.logger.WithFields(logging.Fields{
-		"user_id":   userID,
+		"user_id":   memberKey.UserID,
 		"redis_key": chatUsersKey,
 	})
 
-	isIn, err := r.redisClient.SIsMember(ctx, chatUsersKey, userID).Result()
+	isIn, err := r.redisClient.SIsMember(ctx, chatUsersKey, memberKey.UserID).Result()
 	if err != nil {
 		logger.WithError(err).Error("An error occurred while checking if member is in the chat")
 		return false, err
@@ -45,22 +45,22 @@ func (r *chatMemberCacheRepositoryDecorator) IsMemberInChat(ctx context.Context,
 	return isIn, nil
 }
 
-func (r *chatMemberCacheRepositoryDecorator) Create(ctx context.Context, userID string, chatID string) error {
-	if err := r.ChatMemberRepository.Create(ctx, userID, chatID); err != nil {
+func (r *chatMemberCacheRepositoryDecorator) Create(ctx context.Context, memberKey domain.ChatMemberIdentity) error {
+	if err := r.ChatMemberRepository.Create(ctx, memberKey); err != nil {
 		return err
 	}
 
-	if err := r.populateCacheIfNotExist(ctx, chatID); err != nil {
+	if err := r.populateCacheIfNotExist(ctx, memberKey.ChatID); err != nil {
 		return err
 	}
 
-	chatUsersKey := r.getChatUsersKey(chatID)
+	chatUsersKey := r.getChatUsersKey(memberKey.ChatID)
 	logger := r.logger.WithFields(logging.Fields{
-		"user_id":   userID,
+		"user_id":   memberKey.UserID,
 		"redis_key": chatUsersKey,
 	})
 
-	if err := r.redisClient.SAdd(ctx, chatUsersKey, userID).Err(); err != nil {
+	if err := r.redisClient.SAdd(ctx, chatUsersKey, memberKey.UserID).Err(); err != nil {
 		logger.WithError(err).Error("An error occurred while setting user ids")
 		return err
 	}

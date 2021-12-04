@@ -6,10 +6,14 @@ const (
 	Kicked
 )
 
+type ChatMemberIdentity struct {
+	UserID string `json:"-"`
+	ChatID string `json:"-"`
+}
+
 type UpdateChatMemberDTO struct {
-	UserID   string `json:"-"`
-	ChatID   string `json:"-"`
-	StatusID int    `json:"status_id" validate:"required,oneof=1 2 3"`
+	ChatMemberIdentity
+	StatusID int `json:"status_id" validate:"required,oneof=1 2 3"`
 }
 
 type ChatMember struct {
