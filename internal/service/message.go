@@ -10,25 +10,23 @@ import (
 )
 
 type messageService struct {
-	chatService       ChatService
-	chatMemberService ChatMemberService
-	messageRepo       repository.MessageRepository
-	pubSub            repository.MessagePubSub
-	logger            logging.Logger
+	chatMemberRepo repository.ChatMemberRepository
+	messageRepo    repository.MessageRepository
+	pubSub         repository.MessagePubSub
+	logger         logging.Logger
 }
 
-func NewMessageService(chatService ChatService, chatMemberService ChatMemberService, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
+func NewMessageService(chatMemberRepo repository.ChatMemberRepository, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
 	return &messageService{
-		chatService:       chatService,
-		chatMemberService: chatMemberService,
-		messageRepo:       messageRepo,
-		pubSub:            pubSub,
-		logger:            logging.GetLogger(),
+		chatMemberRepo: chatMemberRepo,
+		messageRepo:    messageRepo,
+		pubSub:         pubSub,
+		logger:         logging.GetLogger(),
 	}
 }
 
 func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, error) {
-	members, err := s.chatMemberService.ListByUserID(ctx, userID)
+	members, err := s.chatMemberRepo.ListByUserID(ctx, userID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -45,13 +43,13 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 	outCh := make(chan domain.Message)
 
 	session := &messageServeSession{
-		userID:            userID,
-		messageService:    s,
-		chatMemberService: s.chatMemberService,
-		subscriber:        s.pubSub.Subscribe(ctx, chatIDs...),
-		inCh:              inCh,
-		outCh:             outCh,
-		logger:            s.logger,
+		userID:         userID,
+		messageService: s,
+		chatMemberRepo: s.chatMemberRepo,
+		subscriber:     s.pubSub.Subscribe(ctx, chatIDs...),
+		inCh:           inCh,
+		outCh:          outCh,
+		logger:         s.logger,
 	}
 	go session.serve(ctx)
 
@@ -59,7 +57,10 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
-	ok, err := s.chatMemberService.IsInChat(ctx, dto.SenderID, dto.ChatID)
+	ok, err := s.chatMemberRepo.IsInChat(ctx, domain.ChatMemberIdentity{
+		UserID: dto.SenderID,
+		ChatID: dto.ChatID,
+	})
 	if err != nil {
 		return domain.Message{}, err
 	}
@@ -85,30 +86,30 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 	return message, nil
 }
 
-func (s *messageService) List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error) {
-	ok, err := s.chatMemberService.IsInChat(ctx, userID, chatID)
+func (s *messageService) List(ctx context.Context, memberKey domain.ChatMemberIdentity, timestamp time.Time) ([]domain.Message, error) {
+	ok, err := s.chatMemberRepo.IsInChat(ctx, memberKey)
 	if err != nil {
 		return nil, err
 	}
 
 	if !ok {
 		s.logger.WithFields(logging.Fields{
-			"user_id": userID,
-			"chat_id": chatID,
+			"user_id": memberKey.UserID,
+			"chat_id": memberKey.ChatID,
 		}).Debug("member isn't in this chat")
 
 		return nil, domain.ErrChatNotFound
 	}
 
-	return s.messageRepo.List(ctx, chatID, timestamp)
+	return s.messageRepo.List(ctx, memberKey.ChatID, timestamp)
 }
 
 type messageServeSession struct {
-	userID            string
-	messageService    MessageService
-	chatMemberService ChatMemberService
-	subscriber        repository.MessageSubscriber
-	logger            logging.Logger
+	userID         string
+	messageService MessageService
+	chatMemberRepo repository.ChatMemberRepository
+	subscriber     repository.MessageSubscriber
+	logger         logging.Logger
 
 	inCh  chan domain.CreateMessageDTO
 	outCh chan domain.Message
@@ -156,7 +157,10 @@ func (s *messageServeSession) handleMessage(ctx context.Context, message domain.
 			return false, nil
 		}
 	case domain.MessageJoinAction:
-		ok, err = s.chatMemberService.IsInChat(ctx, s.userID, message.ChatID)
+		ok, err = s.chatMemberRepo.IsInChat(ctx, domain.ChatMemberIdentity{
+			UserID: s.userID,
+			ChatID: message.ChatID,
+		})
 		if err != nil {
 			return false, err
 		}

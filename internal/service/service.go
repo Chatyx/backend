@@ -26,31 +26,32 @@ type AuthService interface {
 }
 
 type ChatService interface {
-	// List gets a list of chats in which the authenticated user is a member.
-	List(ctx context.Context, user domain.AuthUser) ([]domain.Chat, error)
+	// List gets a list of chats where user is a member.
+	List(ctx context.Context, userID string) ([]domain.Chat, error)
 	Create(ctx context.Context, dto domain.CreateChatDTO) (domain.Chat, error)
-	// GetByID gets chat by id in which the authenticated user is a member.
-	GetByID(ctx context.Context, chatID string, user domain.AuthUser) (domain.Chat, error)
+	// Get gets chat where user is a member.
+	Get(ctx context.Context, memberKey domain.ChatMemberIdentity) (domain.Chat, error)
 	Update(ctx context.Context, dto domain.UpdateChatDTO) (domain.Chat, error)
-	// Delete deletes chat by id in which the authenticated user is a creator.
-	Delete(ctx context.Context, chatID string, user domain.AuthUser) error
+	// Delete deletes chat where user is a creator.
+	Delete(ctx context.Context, memberKey domain.ChatMemberIdentity) error
 }
 
 type ChatMemberService interface {
-	ListByUserID(ctx context.Context, userID string) ([]domain.ChatMember, error)
-	ListByChatID(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error)
-	IsInChat(ctx context.Context, userID, chatID string) (bool, error)
-	Get(ctx context.Context, chatID, userID string) (domain.ChatMember, error)
-	GetAnother(ctx context.Context, authUserID, chatID, userID string) (domain.ChatMember, error)
-	JoinToChat(ctx context.Context, chatID, creatorID, userID string) error
-	UpdateStatus(ctx context.Context, dto domain.UpdateChatMemberDTO) error
-	UpdateStatusByCreator(ctx context.Context, creatorID string, dto domain.UpdateChatMemberDTO) error
+	// List gets a list of chat members if accepted member consists in this chat.
+	List(ctx context.Context, memberKey domain.ChatMemberIdentity) ([]domain.ChatMember, error)
+	// GetByKey gets a chat member by its key where authenticated user is a member of this chat.
+	GetByKey(ctx context.Context, memberKey domain.ChatMemberIdentity, user domain.AuthUser) (domain.ChatMember, error)
+	// JoinToChat joins member to chat if authenticated user is a creator of this chat.
+	JoinToChat(ctx context.Context, memberKey domain.ChatMemberIdentity, user domain.AuthUser) error
+	// UpdateStatus updates status member if authenticated user is a chat creator or updatable member.
+	UpdateStatus(ctx context.Context, dto domain.UpdateChatMemberDTO, user domain.AuthUser) error
 }
 
 type MessageService interface {
 	NewServeSession(ctx context.Context, userID string) (inCh chan<- domain.CreateMessageDTO, outCh <-chan domain.Message, err error)
 	Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error)
-	List(ctx context.Context, chatID, userID string, timestamp time.Time) ([]domain.Message, error)
+	// List gets a list of chat messages with timestamp if accepted member consists in this chat.
+	List(ctx context.Context, memberKey domain.ChatMemberIdentity, timestamp time.Time) ([]domain.Message, error)
 }
 
 type ServiceContainer struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-redis/redis/v8"
 )
@@ -22,12 +23,12 @@ func NewChatCacheRepositoryDecorator(repo ChatRepository, redisClient *redis.Cli
 	}
 }
 
-func (r *chatCacheRepositoryDecorator) Delete(ctx context.Context, chatID, creatorID string) error {
-	if err := r.ChatRepository.Delete(ctx, chatID, creatorID); err != nil {
+func (r *chatCacheRepositoryDecorator) Delete(ctx context.Context, memberKey domain.ChatMemberIdentity) error {
+	if err := r.ChatRepository.Delete(ctx, memberKey); err != nil {
 		return err
 	}
 
-	chatUsersKey := fmt.Sprintf("chat:%s:user_ids", chatID)
+	chatUsersKey := fmt.Sprintf("chat:%s:user_ids", memberKey.ChatID)
 	if err := r.redisClient.Del(ctx, chatUsersKey).Err(); err != nil {
 		r.logger.WithFields(logging.Fields{
 			"error":     err,

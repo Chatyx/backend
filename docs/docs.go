@@ -154,7 +154,7 @@ var doc = `{
                 "tags": [
                     "Chats"
                 ],
-                "summary": "Get list of chats where user consists",
+                "summary": "Get list of chats where user is a member",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -235,7 +235,7 @@ var doc = `{
                 "tags": [
                     "Chats"
                 ],
-                "summary": "Get chat by id where user consists",
+                "summary": "Get chat by id where user is a member",
                 "parameters": [
                     {
                         "type": "string",
@@ -281,7 +281,7 @@ var doc = `{
                 "tags": [
                     "Chats"
                 ],
-                "summary": "Update chat where user is creator",
+                "summary": "Update chat where authenticated user is creator",
                 "parameters": [
                     {
                         "type": "string",
@@ -342,7 +342,7 @@ var doc = `{
                 "tags": [
                     "Chats"
                 ],
-                "summary": "Delete chat where user is creator",
+                "summary": "Delete chat where authenticated user is creator",
                 "parameters": [
                     {
                         "type": "string",
@@ -1157,7 +1157,8 @@ var doc = `{
                     "type": "string"
                 },
                 "text": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 4096
                 }
             }
         },
@@ -1173,22 +1174,29 @@ var doc = `{
                     "type": "string"
                 },
                 "department": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 50
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 50
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 27,
+                    "minLength": 8
                 },
                 "username": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 50
                 }
             }
         },
@@ -1273,7 +1281,12 @@ var doc = `{
             ],
             "properties": {
                 "status_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2,
+                        3
+                    ]
                 }
             }
         },
@@ -1288,19 +1301,24 @@ var doc = `{
                     "type": "string"
                 },
                 "department": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 50
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 50
                 },
                 "username": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 50
                 }
             }
         },
@@ -1312,10 +1330,14 @@ var doc = `{
             ],
             "properties": {
                 "current_password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 27,
+                    "minLength": 8
                 },
                 "new_password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 27,
+                    "minLength": 8
                 }
             }
         },
@@ -1473,5 +1495,5 @@ func (s *s) ReadDoc() string {
 }
 
 func init() {
-	swag.Register(swag.Name, &s{})
+	swag.Register("swagger", &s{})
 }

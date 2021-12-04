@@ -73,10 +73,13 @@ func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
 	}
 
 	ps := httprouter.ParamsFromContext(req.Context())
-	userID := domain.UserIDFromContext(req.Context())
-	chatID := ps.ByName("chat_id")
+	authUser := domain.AuthUserFromContext(req.Context())
+	memberKey := domain.ChatMemberIdentity{
+		UserID: authUser.UserID,
+		ChatID: ps.ByName("chat_id"),
+	}
 
-	messages, err := h.msgService.List(req.Context(), chatID, userID, ts)
+	messages, err := h.msgService.List(req.Context(), memberKey, ts)
 	if err != nil {
 		switch err {
 		case domain.ErrChatNotFound:

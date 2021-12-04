@@ -46,8 +46,8 @@ func NewChatMemberService(cfg ChatMemberConfig) ChatMemberService {
 	}
 }
 
-func (s *chatMemberService) ListByChatID(ctx context.Context, chatID, userID string) ([]domain.ChatMember, error) {
-	members, err := s.chatMemberRepo.ListByChatID(ctx, chatID)
+func (s *chatMemberService) List(ctx context.Context, memberKey domain.ChatMemberIdentity) ([]domain.ChatMember, error) {
+	members, err := s.chatMemberRepo.ListByChatID(ctx, memberKey.ChatID)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (s *chatMemberService) ListByChatID(ctx context.Context, chatID, userID str
 	isIn := false
 
 	for _, member := range members {
-		if member.UserID == userID && member.IsInChat() {
+		if member.UserID == memberKey.UserID && member.IsInChat() {
 			isIn = true
 			break
 		}
@@ -63,8 +63,8 @@ func (s *chatMemberService) ListByChatID(ctx context.Context, chatID, userID str
 
 	if !isIn {
 		s.logger.WithFields(logging.Fields{
-			"user_id": userID,
-			"chat_id": chatID,
+			"user_id": memberKey.UserID,
+			"chat_id": memberKey.ChatID,
 		}).Debug("member isn't in this chat")
 
 		return nil, domain.ErrChatNotFound
@@ -73,65 +73,59 @@ func (s *chatMemberService) ListByChatID(ctx context.Context, chatID, userID str
 	return members, nil
 }
 
-func (s *chatMemberService) ListByUserID(ctx context.Context, userID string) ([]domain.ChatMember, error) {
-	return s.chatMemberRepo.ListByUserID(ctx, userID)
-}
-
-func (s *chatMemberService) IsInChat(ctx context.Context, userID, chatID string) (bool, error) {
-	return s.chatMemberRepo.IsInChat(ctx, userID, chatID)
-}
-
-func (s *chatMemberService) Get(ctx context.Context, chatID, userID string) (domain.ChatMember, error) {
-	return s.chatMemberRepo.Get(ctx, userID, chatID)
-}
-
-func (s *chatMemberService) GetAnother(ctx context.Context, authUserID, chatID, userID string) (domain.ChatMember, error) {
-	ok, err := s.IsInChat(ctx, authUserID, chatID)
+func (s *chatMemberService) GetByKey(ctx context.Context, memberKey domain.ChatMemberIdentity, user domain.AuthUser) (domain.ChatMember, error) {
+	ok, err := s.chatMemberRepo.IsInChat(ctx, domain.ChatMemberIdentity{
+		UserID: user.UserID,
+		ChatID: memberKey.ChatID,
+	})
 	if err != nil {
 		return domain.ChatMember{}, err
 	}
 
 	if !ok {
 		s.logger.WithFields(logging.Fields{
-			"user_id": authUserID,
-			"chat_id": chatID,
+			"user_id": user.UserID,
+			"chat_id": memberKey.ChatID,
 		}).Debug("member isn't in this chat")
 
 		return domain.ChatMember{}, domain.ErrChatNotFound
 	}
 
-	return s.Get(ctx, chatID, userID)
+	return s.chatMemberRepo.GetByKey(ctx, memberKey)
 }
 
-func (s *chatMemberService) JoinToChat(ctx context.Context, chatID, creatorID, userID string) error {
-	ok, err := s.chatMemberRepo.IsChatCreator(ctx, creatorID, chatID)
+func (s *chatMemberService) JoinToChat(ctx context.Context, memberKey domain.ChatMemberIdentity, user domain.AuthUser) error {
+	ok, err := s.chatMemberRepo.IsChatCreator(ctx, domain.ChatMemberIdentity{
+		UserID: user.UserID,
+		ChatID: memberKey.ChatID,
+	})
 	if err != nil {
 		return err
 	}
 
 	if !ok {
 		s.logger.WithFields(logging.Fields{
-			"user_id": creatorID,
-			"chat_id": chatID,
-		}).Debug("can't join member to chat due the user isn't a creator")
+			"user_id": user.UserID,
+			"chat_id": memberKey.ChatID,
+		}).Debug("can't join member to chat due the authenticated user isn't a creator")
 
 		return domain.ErrChatNotFound
 	}
 
-	user, err := s.userService.GetByID(ctx, userID)
+	joinUser, err := s.userService.GetByID(ctx, memberKey.UserID)
 	if err != nil {
 		return err
 	}
 
-	if err = s.chatMemberRepo.Create(ctx, userID, chatID); err != nil {
+	if err = s.chatMemberRepo.Create(ctx, memberKey); err != nil {
 		return err
 	}
 
 	dto := domain.CreateMessageDTO{
 		ActionID: domain.MessageJoinAction,
-		Text:     fmt.Sprintf("%s successfully joined to the chat", user.Username),
-		ChatID:   chatID,
-		SenderID: userID,
+		Text:     fmt.Sprintf("%s successfully joined to the chat", joinUser.Username),
+		ChatID:   memberKey.ChatID,
+		SenderID: memberKey.UserID,
 	}
 
 	message, err := s.messageRepo.Create(ctx, dto)
@@ -142,46 +136,42 @@ func (s *chatMemberService) JoinToChat(ctx context.Context, chatID, creatorID, u
 	return s.messagePubSub.Publish(ctx, message)
 }
 
-func (s *chatMemberService) UpdateStatus(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
-	return s.updateStatus(ctx, s.memberStatusMatrix, dto)
-}
+func (s *chatMemberService) UpdateStatus(ctx context.Context, dto domain.UpdateChatMemberDTO, user domain.AuthUser) error {
+	logger := s.logger.WithFields(logging.Fields{
+		"chat_id": dto.ChatID,
+	})
 
-func (s *chatMemberService) UpdateStatusByCreator(ctx context.Context, creatorID string, dto domain.UpdateChatMemberDTO) error {
-	ok, err := s.chatMemberRepo.IsChatCreator(ctx, creatorID, dto.ChatID)
+	isAuthUserCreator, err := s.chatMemberRepo.IsChatCreator(ctx, domain.ChatMemberIdentity{
+		UserID: user.UserID,
+		ChatID: dto.ChatID,
+	})
 	if err != nil {
 		return err
 	}
 
-	if !ok {
-		s.logger.WithFields(logging.Fields{
-			"user_id": creatorID,
-			"chat_id": dto.ChatID,
-		}).Debug("can't update member status due the user isn't a creator")
+	member, err := s.chatMemberRepo.GetByKey(ctx, dto.ChatMemberIdentity)
+	if err != nil {
+		return err
+	}
+
+	var mx utils.StatusMatrix
+
+	switch {
+	case member.UserID == user.UserID:
+		mx = s.memberStatusMatrix
+	case isAuthUserCreator:
+		mx = s.creatorStatusMatrix
+	default:
+		logger.WithFields(logging.Fields{
+			"user_id": user.UserID,
+		}).Debug("can't update chat member status due authenticated user isn't a creator of this chat")
 
 		return domain.ErrChatNotFound
 	}
 
-	return s.updateStatus(ctx, s.creatorStatusMatrix, dto)
-}
-
-func (s *chatMemberService) updateStatus(ctx context.Context, mx utils.StatusMatrix, dto domain.UpdateChatMemberDTO) error {
-	member, err := s.chatMemberRepo.Get(ctx, dto.UserID, dto.ChatID)
-	if err != nil {
-		return err
-	}
-
-	logger := s.logger.WithFields(logging.Fields{
-		"user_id": dto.UserID,
-		"chat_id": dto.ChatID,
-	})
-
-	if member.IsCreator {
-		logger.Debug("can't update chat member status if he's a chat creator")
-		return domain.ErrChatCreatorInvalidUpdateStatus
-	}
-
 	if !mx.IsCorrectTransit(member.StatusID, dto.StatusID) {
 		logger.WithFields(logging.Fields{
+			"user_id":        dto.UserID,
 			"from_status_id": member.StatusID,
 			"to_status_id":   dto.StatusID,
 		}).Debug("wrong chat member transition")
@@ -189,7 +179,11 @@ func (s *chatMemberService) updateStatus(ctx context.Context, mx utils.StatusMat
 		return domain.ErrChatMemberWrongStatusTransit
 	}
 
-	if err = s.chatMemberRepo.Update(ctx, dto); err != nil {
+	return s.updateStatus(ctx, member, dto)
+}
+
+func (s *chatMemberService) updateStatus(ctx context.Context, member domain.ChatMember, dto domain.UpdateChatMemberDTO) error {
+	if err := s.chatMemberRepo.Update(ctx, dto); err != nil {
 		return err
 	}
 
@@ -209,7 +203,8 @@ func (s *chatMemberService) updateStatus(ctx context.Context, mx utils.StatusMat
 		msgDTO.ActionID = domain.MessageKickAction
 		msgDTO.Text = fmt.Sprintf("%s has been kicked from the chat", member.Username)
 	default:
-		logger.WithFields(logging.Fields{
+		s.logger.WithFields(logging.Fields{
+			"user_id":   dto.UserID,
 			"status_id": dto.StatusID,
 		}).Error("unknown chat member status")
 

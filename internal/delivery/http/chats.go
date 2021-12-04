@@ -52,7 +52,7 @@ func (h *chatHandler) register(router *httprouter.Router, authMid Middleware) {
 	router.Handler(http.MethodDelete, detailChatURI, authMid(http.HandlerFunc(h.delete)))
 }
 
-// @Summary Get list of chats where user consists
+// @Summary Get list of chats where user is a member
 // @Tags Chats
 // @Security JWTTokenAuth
 // @Accept json
@@ -63,7 +63,7 @@ func (h *chatHandler) register(router *httprouter.Router, authMid Middleware) {
 func (h *chatHandler) list(w http.ResponseWriter, req *http.Request) {
 	authUser := domain.AuthUserFromContext(req.Context())
 
-	chats, err := h.chatService.List(req.Context(), authUser)
+	chats, err := h.chatService.List(req.Context(), authUser.UserID)
 	if err != nil {
 		respondError(w, err)
 		return
@@ -106,7 +106,7 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 	respondSuccess(http.StatusCreated, w, encoding.NewJSONChatMarshaler(chat))
 }
 
-// @Summary Get chat by id where user consists
+// @Summary Get chat by id where user is a member
 // @Tags Chats
 // @Security JWTTokenAuth
 // @Accept json
@@ -118,9 +118,13 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 // @Router /chats/{chat_id} [get]
 func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 	ps := httprouter.ParamsFromContext(req.Context())
-	chatID, authUser := ps.ByName("chat_id"), domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(req.Context())
+	memberKey := domain.ChatMemberIdentity{
+		UserID: authUser.UserID,
+		ChatID: ps.ByName("chat_id"),
+	}
 
-	chat, err := h.chatService.GetByID(req.Context(), chatID, authUser)
+	chat, err := h.chatService.Get(req.Context(), memberKey)
 	if err != nil {
 		switch err {
 		case domain.ErrChatNotFound:
@@ -135,7 +139,7 @@ func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
 }
 
-// @Summary Update chat where user is creator
+// @Summary Update chat where authenticated user is creator
 // @Tags Chats
 // @Security JWTTokenAuth
 // @Accept json
@@ -179,7 +183,7 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
 }
 
-// @Summary Delete chat where user is creator
+// @Summary Delete chat where authenticated user is creator
 // @Tags Chats
 // @Security JWTTokenAuth
 // @Accept json
@@ -191,9 +195,13 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 // @Router /chats/{chat_id} [delete]
 func (h *chatHandler) delete(w http.ResponseWriter, req *http.Request) {
 	ps := httprouter.ParamsFromContext(req.Context())
-	chatID, authUser := ps.ByName("chat_id"), domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(req.Context())
+	memberKey := domain.ChatMemberIdentity{
+		UserID: authUser.UserID,
+		ChatID: ps.ByName("chat_id"),
+	}
 
-	err := h.chatService.Delete(req.Context(), chatID, authUser)
+	err := h.chatService.Delete(req.Context(), memberKey)
 	if err != nil {
 		switch err {
 		case domain.ErrChatNotFound:
