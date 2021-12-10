@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/internal/utils"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
@@ -121,12 +120,6 @@ func (r *userPostgresRepository) Create(ctx context.Context, dto domain.CreateUs
 }
 
 func (r *userPostgresRepository) GetByID(ctx context.Context, userID string) (domain.User, error) {
-	if !utils.IsValidUUID(userID) {
-		r.logger.Debugf("user is not found with id = %s", userID)
-
-		return domain.User{}, domain.ErrUserNotFound
-	}
-
 	query := `SELECT 
 		id, username, password, 
 		first_name, last_name, email, 
@@ -178,11 +171,6 @@ func (r *userPostgresRepository) getBy(ctx context.Context, query string, args .
 }
 
 func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUserDTO) (domain.User, error) {
-	if !utils.IsValidUUID(dto.ID) {
-		r.logger.Debugf("user is not found with id = %s", dto.ID)
-		return domain.User{}, domain.ErrUserNotFound
-	}
-
 	var (
 		user      domain.User
 		birthDate pgtype.Date
@@ -244,11 +232,6 @@ func (r *userPostgresRepository) Update(ctx context.Context, dto domain.UpdateUs
 }
 
 func (r *userPostgresRepository) UpdatePassword(ctx context.Context, userID, password string) error {
-	if !utils.IsValidUUID(userID) {
-		r.logger.Debugf("user is not found with id = %s", userID)
-		return domain.ErrUserNotFound
-	}
-
 	query := "UPDATE users SET password = $2 WHERE id = $1 AND is_deleted IS FALSE"
 
 	cmdTag, err := r.dbPool.Exec(ctx, query, userID, password)
@@ -266,11 +249,6 @@ func (r *userPostgresRepository) UpdatePassword(ctx context.Context, userID, pas
 }
 
 func (r *userPostgresRepository) Delete(ctx context.Context, userID string) error {
-	if !utils.IsValidUUID(userID) {
-		r.logger.Debugf("user is not found with id = %s", userID)
-		return domain.ErrUserNotFound
-	}
-
 	query := "UPDATE users SET is_deleted = TRUE WHERE id = $1 AND is_deleted IS FALSE"
 
 	cmgTag, err := r.dbPool.Exec(ctx, query, userID)

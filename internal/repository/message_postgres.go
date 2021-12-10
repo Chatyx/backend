@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/internal/utils"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
@@ -26,11 +25,6 @@ func (r *messagePostgresRepository) Create(ctx context.Context, dto domain.Creat
 }
 
 func (r *messagePostgresRepository) List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error) {
-	if !utils.IsValidUUID(chatID) {
-		r.logger.Debugf("chat is not found with id = %s", chatID)
-		return nil, domain.ErrChatNotFound
-	}
-
 	query := `SELECT 
 		id, action_id, text, 
 		sender_id, chat_id, created_at 

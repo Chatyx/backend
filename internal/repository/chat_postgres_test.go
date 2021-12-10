@@ -373,22 +373,6 @@ func TestChatPostgresRepository_GetByID(t *testing.T) {
 			expectedErr:  domain.ErrChatNotFound,
 		},
 		{
-			name: "With invalid chat_id (not uuid4)",
-			memberKey: domain.ChatMemberIdentity{
-				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
-				ChatID: "1",
-			},
-			expectedErr: domain.ErrChatNotFound,
-		},
-		{
-			name: "With invalid member_id (not uuid4)",
-			memberKey: domain.ChatMemberIdentity{
-				UserID: "1",
-				ChatID: "d1596312-4943-434a-86aa-edadc7e9aaf2",
-			},
-			expectedErr: domain.ErrChatNotFound,
-		},
-		{
 			name: "Unexpected error while getting chat",
 			memberKey: domain.ChatMemberIdentity{
 				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
@@ -467,24 +451,6 @@ func TestChatPostgresRepository_Update(t *testing.T) {
 			},
 			expectedChat: chatWithFullFields,
 			expectedErr:  nil,
-		},
-		{
-			name: "With invalid chat_id (not uuid4)",
-			updateChatDTO: domain.UpdateChatDTO{
-				ID:        "1",
-				Name:      "Test chat_1 name",
-				CreatorID: "6be043ca-3005-4b1c-b847-eb677897c618",
-			},
-			expectedErr: domain.ErrChatNotFound,
-		},
-		{
-			name: "With invalid creator_id (not uuid4)",
-			updateChatDTO: domain.UpdateChatDTO{
-				ID:        "d1596312-4943-434a-86aa-edadc7e9aaf2",
-				Name:      "Test chat_1 name",
-				CreatorID: "1",
-			},
-			expectedErr: domain.ErrChatNotFound,
 		},
 		{
 			name: "Chat is not found",
@@ -587,22 +553,6 @@ func TestChatPostgresRepository_Delete(t *testing.T) {
 				mockPool.ExpectExec(query).
 					WithArgs(memberKey.ChatID, memberKey.UserID).
 					WillReturnResult(pgxmock.NewResult("deleted", 0))
-			},
-			expectedErr: domain.ErrChatNotFound,
-		},
-		{
-			name: "With invalid chat_id (not uuid4)",
-			memberKey: domain.ChatMemberIdentity{
-				UserID: "6be043ca-3005-4b1c-b847-eb677897c618",
-				ChatID: "1",
-			},
-			expectedErr: domain.ErrChatNotFound,
-		},
-		{
-			name: "With invalid creator_id (not uuid4)",
-			memberKey: domain.ChatMemberIdentity{
-				UserID: "1",
-				ChatID: "6be043ca-3005-4b1c-b847-eb677897c618",
 			},
 			expectedErr: domain.ErrChatNotFound,
 		},

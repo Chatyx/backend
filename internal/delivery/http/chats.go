@@ -8,7 +8,7 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/go-playground/validator/v10"
+	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -16,6 +16,8 @@ const (
 	listChatURI   = "/api/chats"
 	detailChatURI = "/api/chats/:chat_id"
 )
+
+const chatIDParam = "chat_id"
 
 type ChatListResponse struct {
 	List []domain.Chat `json:"list"`
@@ -31,14 +33,11 @@ type chatHandler struct {
 	logger      logging.Logger
 }
 
-func newChatHandler(chatService service.ChatService, validate *validator.Validate) *chatHandler {
+func newChatHandler(chatService service.ChatService) *chatHandler {
 	logger := logging.GetLogger()
 
 	return &chatHandler{
-		baseHandler: &baseHandler{
-			logger:   logger,
-			validate: validate,
-		},
+		baseHandler: &baseHandler{logger: logger},
 		chatService: chatService,
 		logger:      logger,
 	}
@@ -89,13 +88,13 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
-	dto.CreatorID = authUser.UserID
-
-	if err := h.validateStruct(dto); err != nil {
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondError(w, err)
 		return
 	}
+
+	authUser := domain.AuthUserFromContext(req.Context())
+	dto.CreatorID = authUser.UserID
 
 	chat, err := h.chatService.Create(req.Context(), dto)
 	if err != nil {
@@ -113,15 +112,22 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 // @Produce json
 // @Param chat_id path string true "Chat id"
 // @Success 200 {object} domain.Chat
-// @Failure 404 {object} ResponseError
+// @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id} [get]
 func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 	ps := httprouter.ParamsFromContext(req.Context())
+	chatID := ps.ByName(chatIDParam)
+
+	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
+		respondError(w, err)
+		return
+	}
+
 	authUser := domain.AuthUserFromContext(req.Context())
 	memberKey := domain.ChatMemberIdentity{
 		UserID: authUser.UserID,
-		ChatID: ps.ByName("chat_id"),
+		ChatID: chatID,
 	}
 
 	chat, err := h.chatService.Get(req.Context(), memberKey)
@@ -153,20 +159,26 @@ func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateChatDTO{}
 	ps := httprouter.ParamsFromContext(req.Context())
+	chatID := ps.ByName(chatIDParam)
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChatDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
-	dto.ID = ps.ByName("chat_id")
-	dto.CreatorID = authUser.UserID
+	vl := validator.ChainValidator(
+		validator.StructValidator(dto),
+		validator.UUIDValidator(chatIDParam, chatID),
+	)
 
-	if err := h.validateStruct(dto); err != nil {
+	if err := h.validate(vl); err != nil {
 		respondError(w, err)
 		return
 	}
+
+	authUser := domain.AuthUserFromContext(req.Context())
+	dto.ID = chatID
+	dto.CreatorID = authUser.UserID
 
 	chat, err := h.chatService.Update(req.Context(), dto)
 	if err != nil {
@@ -190,15 +202,22 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 // @Produce json
 // @Param chat_id path string true "Chat id"
 // @Success 204 "No Content"
-// @Failure 404 {object} ResponseError
+// @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id} [delete]
 func (h *chatHandler) delete(w http.ResponseWriter, req *http.Request) {
 	ps := httprouter.ParamsFromContext(req.Context())
+	chatID := ps.ByName(chatIDParam)
+
+	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
+		respondError(w, err)
+		return
+	}
+
 	authUser := domain.AuthUserFromContext(req.Context())
 	memberKey := domain.ChatMemberIdentity{
 		UserID: authUser.UserID,
-		ChatID: ps.ByName("chat_id"),
+		ChatID: chatID,
 	}
 
 	err := h.chatService.Delete(req.Context(), memberKey)

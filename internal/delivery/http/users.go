@@ -8,7 +8,7 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/go-playground/validator/v10"
+	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -17,6 +17,10 @@ const (
 	userPasswordURI = "/api/user/password"
 	listUserURL     = "/api/users"
 	detailUserURI   = "/api/users/:user_id"
+)
+
+const (
+	userIDParam = "user_id"
 )
 
 type UserListResponse struct {
@@ -33,14 +37,11 @@ type userHandler struct {
 	logger      logging.Logger
 }
 
-func newUserHandler(us service.UserService, validate *validator.Validate) *userHandler {
+func newUserHandler(us service.UserService) *userHandler {
 	logger := logging.GetLogger()
 
 	return &userHandler{
-		baseHandler: &baseHandler{
-			logger:   logger,
-			validate: validate,
-		},
+		baseHandler: &baseHandler{logger: logger},
 		userService: us,
 		logger:      logger,
 	}
@@ -80,13 +81,19 @@ func (h *userHandler) list(w http.ResponseWriter, req *http.Request) {
 // @Produce json
 // @Param user_id path string true "User id"
 // @Success 200 {object} domain.User
-// @Failure 404 {object} ResponseError
+// @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /users/{user_id} [get]
 func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
 	ps := httprouter.ParamsFromContext(req.Context())
+	userID := ps.ByName(userIDParam)
 
-	user, err := h.userService.GetByID(req.Context(), ps.ByName("user_id"))
+	if err := h.validate(validator.UUIDValidator(userIDParam, userID)); err != nil {
+		respondError(w, err)
+		return
+	}
+
+	user, err := h.userService.GetByID(req.Context(), userID)
 	if err != nil {
 		switch err {
 		case domain.ErrUserNotFound:
@@ -117,7 +124,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := h.validateStruct(dto); err != nil {
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -154,13 +161,13 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
-	dto.ID = authUser.UserID
-
-	if err := h.validateStruct(dto); err != nil {
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondError(w, err)
 		return
 	}
+
+	authUser := domain.AuthUserFromContext(req.Context())
+	dto.ID = authUser.UserID
 
 	user, err := h.userService.Update(req.Context(), dto)
 	if err != nil {
@@ -196,13 +203,13 @@ func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
-	dto.UserID = authUser.UserID
-
-	if err := h.validateStruct(dto); err != nil {
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondError(w, err)
 		return
 	}
+
+	authUser := domain.AuthUserFromContext(req.Context())
+	dto.UserID = authUser.UserID
 
 	if err := h.userService.UpdatePassword(req.Context(), dto); err != nil {
 		switch err {

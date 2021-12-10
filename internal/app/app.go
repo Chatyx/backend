@@ -15,10 +15,11 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/repository"
 	"github.com/Mort4lis/scht-backend/internal/server"
 	"github.com/Mort4lis/scht-backend/internal/service"
+	inVld "github.com/Mort4lis/scht-backend/internal/validator"
 	"github.com/Mort4lis/scht-backend/pkg/auth"
 	password "github.com/Mort4lis/scht-backend/pkg/hasher"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/Mort4lis/scht-backend/pkg/validator"
+	pkgVld "github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -69,10 +70,12 @@ func NewApp(cfg *config.Config) *App {
 		logger.WithError(err).Fatal("Failed to create new token manager")
 	}
 
-	validate, err := validator.New()
+	validate, err := inVld.New()
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to init validator")
 	}
+
+	pkgVld.SetValidate(validate)
 
 	msgPubSub := repository.NewMessagePubSub(redisClient)
 	userRepo := repository.NewUserPostgresRepository(dbPool)
@@ -125,7 +128,7 @@ func NewApp(cfg *config.Config) *App {
 			BindPort:   apiListenCfg.BindPort,
 		},
 		&http.Server{
-			Handler:      apiHandlers.Init(container, cfg, validate),
+			Handler:      apiHandlers.Init(container, cfg),
 			ReadTimeout:  15 * time.Second,
 			WriteTimeout: 15 * time.Second,
 		},
@@ -140,7 +143,7 @@ func NewApp(cfg *config.Config) *App {
 			BindPort:   chatListenCfg.BindPort,
 		},
 		&http.Server{
-			Handler:      chatHandlers.Init(container, cfg, validate),
+			Handler:      chatHandlers.Init(container, cfg),
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 5 * time.Second,
 		},

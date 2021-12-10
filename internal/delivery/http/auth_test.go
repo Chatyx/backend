@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package http
@@ -14,8 +15,9 @@ import (
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	mockservice "github.com/Mort4lis/scht-backend/internal/service/mocks"
+	inVld "github.com/Mort4lis/scht-backend/internal/validator"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/Mort4lis/scht-backend/pkg/validator"
+	pkgVld "github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,6 +36,11 @@ func TestAuthHandler_signIn(t *testing.T) {
 			LoggerKind: "mock",
 		},
 	)
+
+	validate, err := inVld.New()
+	require.NoError(t, err, "Unexpected error while creating validator")
+
+	pkgVld.SetValidate(validate)
 
 	testTable := []struct {
 		name                   string
@@ -138,16 +145,13 @@ func TestAuthHandler_signIn(t *testing.T) {
 		},
 	}
 
-	validate, err := validator.New()
-	require.NoError(t, err, "Unexpected error while creating validator")
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
 			defer c.Finish()
 
 			as := mockservice.NewMockAuthService(c)
-			ah := newAuthHandler(as, validate, domainName, refreshTokenTTL)
+			ah := newAuthHandler(as, domainName, refreshTokenTTL)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, signInURI, strings.NewReader(testCase.requestBody))
@@ -187,6 +191,11 @@ func TestAuthHandler_refresh(t *testing.T) {
 			LoggerKind: "mock",
 		},
 	)
+
+	validate, err := inVld.New()
+	require.NoError(t, err, "Unexpected error while creating validator")
+
+	pkgVld.SetValidate(validate)
 
 	testTable := []struct {
 		name                   string
@@ -295,16 +304,13 @@ func TestAuthHandler_refresh(t *testing.T) {
 		},
 	}
 
-	validate, err := validator.New()
-	require.NoError(t, err, "Unexpected error while creating validator")
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
 			defer c.Finish()
 
 			as := mockservice.NewMockAuthService(c)
-			ah := newAuthHandler(as, validate, domainName, refreshTokenTTL)
+			ah := newAuthHandler(as, domainName, refreshTokenTTL)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, refreshURI, strings.NewReader(testCase.requestBody))

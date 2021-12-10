@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package repository
@@ -396,11 +397,6 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 			expectedErr:  domain.ErrUserNotFound,
 		},
 		{
-			name:        "Get user with invalid id (not uuid4)",
-			id:          "1",
-			expectedErr: domain.ErrUserNotFound,
-		},
-		{
 			name:         "Unexpected error while getting user",
 			id:           "6be043ca-3005-4b1c-b847-eb677897c618",
 			rowErr:       errUnexpected,
@@ -613,15 +609,6 @@ func TestUserPostgresRepository_Update(t *testing.T) {
 			expectedErr: domain.ErrUserNotFound,
 		},
 		{
-			name: "Update user with invalid id",
-			updateUserDTO: domain.UpdateUserDTO{
-				ID:       "1",
-				Username: "mick47",
-				Email:    "mick47@gmail.com",
-			},
-			expectedErr: domain.ErrUserNotFound,
-		},
-		{
 			name: "Update user with such username or email",
 			updateUserDTO: domain.UpdateUserDTO{
 				ID:       "02185cd4-05b5-4688-836d-3154e9c8a340",
@@ -717,12 +704,6 @@ func TestUserPostgresRepository_UpdatePassword(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name:        "With invalid user id (not uuid4)",
-			userID:      "1",
-			password:    "qwerty12345",
-			expectedErr: domain.ErrUserNotFound,
-		},
-		{
 			name:     "User is not found",
 			userID:   "02185cd4-05b5-4688-836d-3154e9c8a340",
 			password: "qwerty12345",
@@ -801,11 +782,6 @@ func TestUserPostgresRepository_Delete(t *testing.T) {
 					)
 			},
 			expectedErr: nil,
-		},
-		{
-			name:        "Deleting user with invalid id",
-			id:          "1",
-			expectedErr: domain.ErrUserNotFound,
 		},
 		{
 			name: "User is not found",

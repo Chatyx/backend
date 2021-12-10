@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Mort4lis/scht-backend/internal/encoding"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/go-playground/validator/v10"
+	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -33,14 +32,11 @@ type chatMemberHandler struct {
 	logger            logging.Logger
 }
 
-func newChatMemberHandler(cms service.ChatMemberService, validate *validator.Validate) *chatMemberHandler {
+func newChatMemberHandler(cms service.ChatMemberService) *chatMemberHandler {
 	logger := logging.GetLogger()
 
 	return &chatMemberHandler{
-		baseHandler: &baseHandler{
-			logger:   logger,
-			validate: validate,
-		},
+		baseHandler:       &baseHandler{logger: logger},
 		chatMemberService: cms,
 		logger:            logger,
 	}
@@ -62,20 +58,25 @@ func (h *chatMemberHandler) register(router *httprouter.Router, authMid Middlewa
 // @Produce json
 // @Param chat_id path string true "Chat id"
 // @Success 200 {object} MemberListResponse
-// @Failure 404 {object} ResponseError
+// @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/members [get]
 func (h *chatMemberHandler) list(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-	ps := httprouter.ParamsFromContext(ctx)
+	ps := httprouter.ParamsFromContext(req.Context())
+	chatID := ps.ByName(chatIDParam)
 
-	authUser := domain.AuthUserFromContext(ctx)
-	memberKey := domain.ChatMemberIdentity{
-		UserID: authUser.UserID,
-		ChatID: ps.ByName("chat_id"),
+	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
+		respondError(w, err)
+		return
 	}
 
-	members, err := h.chatMemberService.List(ctx, memberKey)
+	authUser := domain.AuthUserFromContext(req.Context())
+	memberKey := domain.ChatMemberIdentity{
+		UserID: authUser.UserID,
+		ChatID: chatID,
+	}
+
+	members, err := h.chatMemberService.List(req.Context(), memberKey)
 	if err != nil {
 		switch err {
 		case domain.ErrChatNotFound:
@@ -102,27 +103,26 @@ func (h *chatMemberHandler) list(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/members [post]
 func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
-	userID := req.URL.Query().Get("user_id")
-	if userID == "" {
-		respondError(w, ResponseError{
-			StatusCode: http.StatusBadRequest,
-			Message:    "validation error",
-			Fields:     ErrorFields{"user_id": "must be required"},
-		})
+	ps := httprouter.ParamsFromContext(req.Context())
+	chatID, userID := ps.ByName(chatIDParam), req.URL.Query().Get(userIDParam)
 
+	vl := validator.ChainValidator(
+		validator.UUIDValidator(chatIDParam, chatID),
+		validator.UUIDValidator(userIDParam, userID),
+	)
+
+	if err := h.validate(vl); err != nil {
+		respondError(w, err)
 		return
 	}
 
-	ctx := req.Context()
-	ps := httprouter.ParamsFromContext(ctx)
-
-	authUser := domain.AuthUserFromContext(ctx)
+	authUser := domain.AuthUserFromContext(req.Context())
 	memberKey := domain.ChatMemberIdentity{
 		UserID: userID,
-		ChatID: ps.ByName("chat_id"),
+		ChatID: chatID,
 	}
 
-	if err := h.chatMemberService.JoinToChat(ctx, memberKey, authUser); err != nil {
+	if err := h.chatMemberService.JoinToChat(req.Context(), memberKey, authUser); err != nil {
 		switch err {
 		case domain.ErrChatNotFound, domain.ErrUserNotFound:
 			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
@@ -146,20 +146,30 @@ func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
 // @Param chat_id path string true "Chat id"
 // @Param user_id path string true "User id"
 // @Success 200 {object} domain.ChatMember
-// @Failure 404 {object} ResponseError
+// @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/members/{user_id} [get]
 func (h *chatMemberHandler) detail(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-	ps := httprouter.ParamsFromContext(ctx)
+	ps := httprouter.ParamsFromContext(req.Context())
+	chatID, userID := ps.ByName(chatIDParam), ps.ByName(userIDParam)
 
-	authUser := domain.AuthUserFromContext(ctx)
-	memberKey := domain.ChatMemberIdentity{
-		UserID: ps.ByName("user_id"),
-		ChatID: ps.ByName("chat_id"),
+	vl := validator.ChainValidator(
+		validator.UUIDValidator(chatIDParam, chatID),
+		validator.UUIDValidator(userIDParam, userID),
+	)
+
+	if err := h.validate(vl); err != nil {
+		respondError(w, err)
+		return
 	}
 
-	member, err := h.chatMemberService.GetByKey(ctx, memberKey, authUser)
+	authUser := domain.AuthUserFromContext(req.Context())
+	memberKey := domain.ChatMemberIdentity{
+		UserID: userID,
+		ChatID: chatID,
+	}
+
+	member, err := h.chatMemberService.GetByKey(req.Context(), memberKey, authUser)
 	if err != nil {
 		switch err {
 		case domain.ErrChatNotFound, domain.ErrChatMemberNotFound:
@@ -181,20 +191,25 @@ func (h *chatMemberHandler) detail(w http.ResponseWriter, req *http.Request) {
 // @Produce json
 // @Param chat_id path string true "Chat id"
 // @Success 200 {object} domain.ChatMember
-// @Failure 404 {object} ResponseError
+// @Failure 400,404 {object} ResponseError
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/member [get]
 func (h *chatMemberHandler) detailCurrent(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-	ps := httprouter.ParamsFromContext(ctx)
+	ps := httprouter.ParamsFromContext(req.Context())
+	chatID := ps.ByName(chatIDParam)
 
-	authUser := domain.AuthUserFromContext(ctx)
-	memberKey := domain.ChatMemberIdentity{
-		UserID: authUser.UserID,
-		ChatID: ps.ByName("chat_id"),
+	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
+		respondError(w, err)
+		return
 	}
 
-	member, err := h.chatMemberService.GetByKey(ctx, memberKey, authUser)
+	authUser := domain.AuthUserFromContext(req.Context())
+	memberKey := domain.ChatMemberIdentity{
+		UserID: authUser.UserID,
+		ChatID: chatID,
+	}
+
+	member, err := h.chatMemberService.GetByKey(req.Context(), memberKey, authUser)
 	if err != nil {
 		switch err {
 		case domain.ErrChatNotFound, domain.ErrChatMemberNotFound:
@@ -222,25 +237,30 @@ func (h *chatMemberHandler) detailCurrent(w http.ResponseWriter, req *http.Reque
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/member [patch]
 func (h *chatMemberHandler) updateStatus(w http.ResponseWriter, req *http.Request) {
+	ps := httprouter.ParamsFromContext(req.Context())
+	chatID := ps.ByName(chatIDParam)
 	dto := domain.UpdateChatMemberDTO{}
+
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChaMemberDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}
 
-	if err := h.validateStruct(dto); err != nil {
+	vl := validator.ChainValidator(
+		validator.StructValidator(dto),
+		validator.UUIDValidator(chatIDParam, chatID),
+	)
+
+	if err := h.validate(vl); err != nil {
 		respondError(w, err)
 		return
 	}
 
-	ctx := req.Context()
-	ps := httprouter.ParamsFromContext(ctx)
-
-	authUser := domain.AuthUserFromContext(ctx)
-	dto.ChatID = ps.ByName("chat_id")
+	authUser := domain.AuthUserFromContext(req.Context())
+	dto.ChatID = chatID
 	dto.UserID = authUser.UserID
 
-	if err := h.chatMemberService.UpdateStatus(ctx, dto, authUser); err != nil {
+	if err := h.chatMemberService.UpdateStatus(req.Context(), dto, authUser); err != nil {
 		switch err {
 		case domain.ErrChatNotFound, domain.ErrChatMemberNotFound:
 			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
@@ -270,25 +290,31 @@ func (h *chatMemberHandler) updateStatus(w http.ResponseWriter, req *http.Reques
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/members/{user_id} [patch]
 func (h *chatMemberHandler) updateStatusByCreator(w http.ResponseWriter, req *http.Request) {
+	ps := httprouter.ParamsFromContext(req.Context())
+	chatID, userID := ps.ByName(chatIDParam), ps.ByName(userIDParam)
 	dto := domain.UpdateChatMemberDTO{}
+
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChaMemberDTOUnmarshaler(&dto)); err != nil {
 		respondError(w, err)
 		return
 	}
 
-	if err := h.validateStruct(dto); err != nil {
+	vl := validator.ChainValidator(
+		validator.StructValidator(dto),
+		validator.UUIDValidator(chatIDParam, chatID),
+		validator.UUIDValidator(userIDParam, userID),
+	)
+
+	if err := h.validate(vl); err != nil {
 		respondError(w, err)
 		return
 	}
 
-	ctx := req.Context()
-	ps := httprouter.ParamsFromContext(ctx)
+	authUser := domain.AuthUserFromContext(req.Context())
+	dto.ChatID = chatID
+	dto.UserID = userID
 
-	authUser := domain.AuthUserFromContext(ctx)
-	dto.ChatID = ps.ByName("chat_id")
-	dto.UserID = ps.ByName("user_id")
-
-	if err := h.chatMemberService.UpdateStatus(ctx, dto, authUser); err != nil {
+	if err := h.chatMemberService.UpdateStatus(req.Context(), dto, authUser); err != nil {
 		switch err {
 		case domain.ErrChatMemberNotFound, domain.ErrChatNotFound:
 			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})

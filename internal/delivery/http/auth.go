@@ -4,12 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Mort4lis/scht-backend/internal/encoding"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
+	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/go-playground/validator/v10"
+	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -29,14 +28,11 @@ type authHandler struct {
 	refreshTokenTTL time.Duration
 }
 
-func newAuthHandler(as service.AuthService, validate *validator.Validate, domain string, refreshTokenTTL time.Duration) *authHandler {
+func newAuthHandler(as service.AuthService, domain string, refreshTokenTTL time.Duration) *authHandler {
 	logger := logging.GetLogger()
 
 	return &authHandler{
-		baseHandler: &baseHandler{
-			logger:   logger,
-			validate: validate,
-		},
+		baseHandler:     &baseHandler{logger: logger},
 		service:         as,
 		logger:          logger,
 		domain:          domain,
@@ -68,7 +64,7 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := h.validateStruct(dto); err != nil {
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -125,7 +121,7 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := h.validateStruct(dto); err != nil {
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondError(w, err)
 		return
 	}

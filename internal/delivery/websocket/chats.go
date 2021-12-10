@@ -8,14 +8,13 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/go-playground/validator/v10"
+	"github.com/Mort4lis/scht-backend/pkg/validator"
 	ws "github.com/gorilla/websocket"
 )
 
 type chatSession struct {
 	conn       *ws.Conn
 	userID     string
-	validate   *validator.Validate
 	msgService service.MessageService
 	logger     logging.Logger
 }
@@ -74,8 +73,12 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) {
 			return
 		}
 
-		if err = s.validate.Struct(dto); err != nil {
-			s.logger.WithError(err).Debug("message validation error")
+		vl := validator.StructValidator(dto)
+		if errFields := vl.Validate(); len(errFields) != 0 {
+			s.logger.WithFields(logging.Fields{
+				"fields": errFields,
+			}).Debug("message validation error")
+
 			return
 		}
 
@@ -88,18 +91,16 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) {
 
 type chatSessionHandler struct {
 	upgrader   *ws.Upgrader
-	validate   *validator.Validate
 	msgService service.MessageService
 	logger     logging.Logger
 }
 
-func newChatSessionHandler(msgService service.MessageService, validate *validator.Validate) *chatSessionHandler {
+func newChatSessionHandler(msgService service.MessageService) *chatSessionHandler {
 	return &chatSessionHandler{
 		upgrader: &ws.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
-		validate:   validate,
 		msgService: msgService,
 		logger:     logging.GetLogger(),
 	}
@@ -117,7 +118,6 @@ func (h *chatSessionHandler) ServeHTTP(w http.ResponseWriter, req *http.Request)
 	chs := &chatSession{
 		conn:       conn,
 		logger:     h.logger,
-		validate:   h.validate,
 		msgService: h.msgService,
 		userID:     domain.UserIDFromContext(req.Context()),
 	}

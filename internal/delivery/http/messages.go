@@ -9,7 +9,7 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/go-playground/validator/v10"
+	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -32,16 +32,13 @@ type messageHandler struct {
 	logger     logging.Logger
 }
 
-func newMessageHandler(ms service.MessageService, validate *validator.Validate) *messageHandler {
+func newMessageHandler(ms service.MessageService) *messageHandler {
 	logger := logging.GetLogger()
 
 	return &messageHandler{
-		baseHandler: &baseHandler{
-			logger:   logger,
-			validate: validate,
-		},
-		msgService: ms,
-		logger:     logger,
+		baseHandler: &baseHandler{logger: logger},
+		msgService:  ms,
+		logger:      logger,
 	}
 }
 
@@ -62,24 +59,27 @@ func (h *messageHandler) register(router *httprouter.Router, authMid Middleware)
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/messages [get]
 func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
-	tsRaw := req.URL.Query().Get("timestamp")
+	ps := httprouter.ParamsFromContext(req.Context())
+	chatID, tsRaw := ps.ByName(chatIDParam), req.URL.Query().Get("timestamp")
 
-	ts, err := time.Parse(time.RFC3339Nano, tsRaw)
-	if err != nil {
-		h.logger.WithError(err).Debugf("Failed to convert to time.Time timestamp %s", tsRaw)
-		respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: "failed to parse timestamp"})
+	timeValidator := validator.NewTimeValidator("timestamp", tsRaw, time.RFC3339Nano)
+	vl := validator.ChainValidator(
+		validator.UUIDValidator(chatIDParam, chatID),
+		timeValidator,
+	)
 
+	if err := h.validate(vl); err != nil {
+		respondError(w, err)
 		return
 	}
 
-	ps := httprouter.ParamsFromContext(req.Context())
 	authUser := domain.AuthUserFromContext(req.Context())
 	memberKey := domain.ChatMemberIdentity{
 		UserID: authUser.UserID,
-		ChatID: ps.ByName("chat_id"),
+		ChatID: chatID,
 	}
 
-	messages, err := h.msgService.List(req.Context(), memberKey, ts)
+	messages, err := h.msgService.List(req.Context(), memberKey, timeValidator.Value())
 	if err != nil {
 		switch err {
 		case domain.ErrChatNotFound:
@@ -111,13 +111,14 @@ func (h *messageHandler) create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := h.validateStruct(dto); err != nil {
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondError(w, err)
 		return
 	}
 
+	authUser := domain.AuthUserFromContext(req.Context())
 	dto.ActionID = domain.MessageSendAction
-	dto.SenderID = domain.UserIDFromContext(req.Context())
+	dto.SenderID = authUser.UserID
 
 	message, err := h.msgService.Create(req.Context(), dto)
 	if err != nil {

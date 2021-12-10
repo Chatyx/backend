@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/internal/utils"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/jackc/pgx/v4"
 )
@@ -102,11 +101,6 @@ func (r *chatPostgresRepository) Get(ctx context.Context, memberKey domain.ChatM
 		"user_id": memberKey.UserID,
 	})
 
-	if !utils.IsValidUUID(memberKey.ChatID) || !utils.IsValidUUID(memberKey.UserID) {
-		logger.Debug("chat is not found")
-		return domain.Chat{}, domain.ErrChatNotFound
-	}
-
 	query := `SELECT 
 		chats.id, chats.name, chats.description, 
 		chats.creator_id, chats.created_at, chats.updated_at 
@@ -144,11 +138,6 @@ func (r *chatPostgresRepository) Update(ctx context.Context, dto domain.UpdateCh
 		"chat_id": dto.ID,
 	})
 
-	if !utils.IsValidUUID(dto.ID) || !utils.IsValidUUID(dto.CreatorID) {
-		logger.Debug("chat is not found")
-		return domain.Chat{}, domain.ErrChatNotFound
-	}
-
 	query := `UPDATE chats 
 	SET name = $1, description = $2 
 	WHERE id = $3 AND creator_id = $4 
@@ -184,11 +173,6 @@ func (r *chatPostgresRepository) Delete(ctx context.Context, memberKey domain.Ch
 		"user_id": memberKey.UserID,
 		"chat_id": memberKey.ChatID,
 	})
-
-	if !utils.IsValidUUID(memberKey.ChatID) || !utils.IsValidUUID(memberKey.UserID) {
-		logger.Debug("chat is not found")
-		return domain.ErrChatNotFound
-	}
 
 	query := "DELETE FROM chats WHERE id = $1 AND creator_id = $2"
 

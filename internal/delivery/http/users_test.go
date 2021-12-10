@@ -13,14 +13,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	mockservice "github.com/Mort4lis/scht-backend/internal/service/mocks"
+	inVld "github.com/Mort4lis/scht-backend/internal/validator"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/Mort4lis/scht-backend/pkg/validator"
+	pkgVld "github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
+	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,6 +39,11 @@ func TestUserHandler_list(t *testing.T) {
 		},
 	)
 
+	validate, err := inVld.New()
+	require.NoError(t, err, "Unexpected error while creating validator")
+
+	pkgVld.SetValidate(validate)
+
 	testTable := []struct {
 		name                 string
 		returnedUsers        []domain.User
@@ -50,7 +55,7 @@ func TestUserHandler_list(t *testing.T) {
 			name: "Success",
 			returnedUsers: []domain.User{
 				{
-					ID:        "1",
+					ID:        "80323cde-599d-4c25-9f5b-a67357193b1f",
 					Username:  "john1967",
 					Email:     "john1967@gmail.com",
 					FirstName: "John",
@@ -60,7 +65,7 @@ func TestUserHandler_list(t *testing.T) {
 					UpdatedAt: &userUpdatedAt,
 				},
 				{
-					ID:        "2",
+					ID:        "46a5c17b-5354-4e24-8ad0-87e2913ab1bd",
 					Username:  "mick49",
 					Email:     "mick49@gmail.com",
 					CreatedAt: &userCreatedAt,
@@ -70,7 +75,7 @@ func TestUserHandler_list(t *testing.T) {
 				us.EXPECT().List(ctx).Return(returnedUsers, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
-			expectedResponseBody: `{"list":[{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1940-10-09","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"},{"id":"2","username":"mick49","email":"mick49@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}]}`,
+			expectedResponseBody: `{"list":[{"id":"80323cde-599d-4c25-9f5b-a67357193b1f","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1940-10-09","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"},{"id":"46a5c17b-5354-4e24-8ad0-87e2913ab1bd","username":"mick49","email":"mick49@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}]}`,
 		},
 		{
 			name:          "Success empty list",
@@ -92,16 +97,13 @@ func TestUserHandler_list(t *testing.T) {
 		},
 	}
 
-	validate, err := validator.New()
-	require.NoError(t, err, "Unexpected error while creating validator")
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, validate)
+			uh := newUserHandler(us)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/users", nil)
@@ -132,6 +134,11 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 	)
 
+	validate, err := inVld.New()
+	require.NoError(t, err, "Unexpected error while creating validator")
+
+	pkgVld.SetValidate(validate)
+
 	testTable := []struct {
 		name                 string
 		userID               string
@@ -142,9 +149,9 @@ func TestUserHandler_detail(t *testing.T) {
 	}{
 		{
 			name:   "Success with required fields",
-			userID: "1",
+			userID: "80323cde-599d-4c25-9f5b-a67357193b1f",
 			returnedUser: domain.User{
-				ID:        "1",
+				ID:        "80323cde-599d-4c25-9f5b-a67357193b1f",
 				Username:  "john1967",
 				Email:     "john1967@gmail.com",
 				CreatedAt: &userCreatedAt,
@@ -153,13 +160,13 @@ func TestUserHandler_detail(t *testing.T) {
 				us.EXPECT().GetByID(ctx, id).Return(returnedUser, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
-			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
+			expectedResponseBody: `{"id":"80323cde-599d-4c25-9f5b-a67357193b1f","username":"john1967","email":"john1967@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
 		},
 		{
 			name:   "Success with full fields",
-			userID: "1",
+			userID: "80323cde-599d-4c25-9f5b-a67357193b1f",
 			returnedUser: domain.User{
-				ID:         "1",
+				ID:         "80323cde-599d-4c25-9f5b-a67357193b1f",
 				Username:   "john1967",
 				Email:      "john1967@gmail.com",
 				FirstName:  "John",
@@ -173,7 +180,7 @@ func TestUserHandler_detail(t *testing.T) {
 				us.EXPECT().GetByID(ctx, id).Return(returnedUser, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
-			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1940-10-09","department":"IoT","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"}`,
+			expectedResponseBody: `{"id":"80323cde-599d-4c25-9f5b-a67357193b1f","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1940-10-09","department":"IoT","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"}`,
 		},
 		{
 			name:   "Not found",
@@ -186,7 +193,7 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 		{
 			name:   "Unexpected error",
-			userID: "1",
+			userID: "80323cde-599d-4c25-9f5b-a67357193b1f",
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string, returnedUser domain.User) {
 				us.EXPECT().GetByID(ctx, id).Return(domain.User{}, errors.New("unexpected error"))
 			},
@@ -195,16 +202,13 @@ func TestUserHandler_detail(t *testing.T) {
 		},
 	}
 
-	validate, err := validator.New()
-	require.NoError(t, err, "Unexpected error while creating validator")
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, validate)
+			uh := newUserHandler(us)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/users/"+testCase.userID, nil)
@@ -242,6 +246,11 @@ func TestUserHandler_create(t *testing.T) {
 		},
 	)
 
+	validate, err := inVld.New()
+	require.NoError(t, err, "Unexpected error while creating validator")
+
+	pkgVld.SetValidate(validate)
+
 	testTable := []struct {
 		name                 string
 		requestBody          string
@@ -260,7 +269,7 @@ func TestUserHandler_create(t *testing.T) {
 				Email:    "john1967@gmail.com",
 			},
 			createdUser: domain.User{
-				ID:        "1",
+				ID:        "80323cde-599d-4c25-9f5b-a67357193b1f",
 				Username:  "john1967",
 				Password:  uuid.New().String(),
 				Email:     "john1967@gmail.com",
@@ -270,7 +279,7 @@ func TestUserHandler_create(t *testing.T) {
 				us.EXPECT().Create(ctx, dto).Return(createdUser, nil)
 			},
 			expectedStatusCode:   http.StatusCreated,
-			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
+			expectedResponseBody: `{"id":"80323cde-599d-4c25-9f5b-a67357193b1f","username":"john1967","email":"john1967@gmail.com","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
 		},
 		{
 			name:        "Success with full fields",
@@ -285,7 +294,7 @@ func TestUserHandler_create(t *testing.T) {
 				Department: "IoT",
 			},
 			createdUser: domain.User{
-				ID:         "1",
+				ID:         "80323cde-599d-4c25-9f5b-a67357193b1f",
 				Username:   "john1967",
 				Password:   uuid.New().String(),
 				Email:      "john1967@gmail.com",
@@ -299,7 +308,7 @@ func TestUserHandler_create(t *testing.T) {
 				us.EXPECT().Create(ctx, dto).Return(createdUser, nil)
 			},
 			expectedStatusCode:   http.StatusCreated,
-			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1983-10-27","department":"IoT","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
+			expectedResponseBody: `{"id":"80323cde-599d-4c25-9f5b-a67357193b1f","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1983-10-27","department":"IoT","created_at":"2021-09-27T11:10:12.000000411+03:00"}`,
 		},
 		{
 			name:                 "Invalid JSON body",
@@ -361,16 +370,13 @@ func TestUserHandler_create(t *testing.T) {
 		},
 	}
 
-	validate, err := validator.New()
-	require.NoError(t, err, "Unexpected error while creating validator")
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, validate)
+			uh := newUserHandler(us)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/users", strings.NewReader(testCase.requestBody))
@@ -401,6 +407,11 @@ func TestUserHandler_update(t *testing.T) {
 		},
 	)
 
+	validate, err := inVld.New()
+	require.NoError(t, err, "Unexpected error while creating validator")
+
+	pkgVld.SetValidate(validate)
+
 	testTable := []struct {
 		name                 string
 		authUser             domain.AuthUser
@@ -413,10 +424,10 @@ func TestUserHandler_update(t *testing.T) {
 	}{
 		{
 			name:        "Success",
-			authUser:    domain.AuthUser{UserID: "1"},
+			authUser:    domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody: `{"username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR"}`,
 			updateUserDTO: domain.UpdateUserDTO{
-				ID:         "1",
+				ID:         "80323cde-599d-4c25-9f5b-a67357193b1f",
 				Username:   "john1967",
 				Email:      "john1967@gmail.com",
 				FirstName:  "John",
@@ -425,7 +436,7 @@ func TestUserHandler_update(t *testing.T) {
 				Department: "HR",
 			},
 			updatedUser: domain.User{
-				ID:         "1",
+				ID:         "80323cde-599d-4c25-9f5b-a67357193b1f",
 				Username:   "john1967",
 				Password:   uuid.New().String(),
 				Email:      "john1967@gmail.com",
@@ -440,35 +451,35 @@ func TestUserHandler_update(t *testing.T) {
 				us.EXPECT().Update(ctx, dto).Return(updatedUser, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
-			expectedResponseBody: `{"id":"1","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"}`,
+			expectedResponseBody: `{"id":"80323cde-599d-4c25-9f5b-a67357193b1f","username":"john1967","email":"john1967@gmail.com","first_name":"John","last_name":"Lennon","birth_date":"1967-10-09","department":"HR","created_at":"2021-09-27T11:10:12.000000411+03:00","updated_at":"2021-11-14T22:00:53.000000512+03:00"}`,
 		},
 		{
 			name:                 "Invalid JSON body",
-			authUser:             domain.AuthUser{UserID: "1"},
+			authUser:             domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody:          `{"birth_date""1970-01-01"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Invalid email address",
-			authUser:             domain.AuthUser{UserID: "1"},
+			authUser:             domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody:          `{"username":"john1967","email":"12345"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"email":"field validation for 'email' failed on the 'email' tag"}}`,
 		},
 		{
 			name:                 "Invalid birth date",
-			authUser:             domain.AuthUser{UserID: "1"},
+			authUser:             domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody:          `{"username":"john1967","email":"john1967@gmail.com","birth_date":"20.12.1994"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"birth_date":"field validation for 'birth_date' failed on the 'sql-date' tag"}}`,
 		},
 		{
 			name:        "User is not found",
-			authUser:    domain.AuthUser{UserID: "2"},
+			authUser:    domain.AuthUser{UserID: "46a5c17b-5354-4e24-8ad0-87e2913ab1bd"},
 			requestBody: `{"username":"john1967","email":"john1967@gmail.com"}`,
 			updateUserDTO: domain.UpdateUserDTO{
-				ID:       "2",
+				ID:       "46a5c17b-5354-4e24-8ad0-87e2913ab1bd",
 				Username: "john1967",
 				Email:    "john1967@gmail.com",
 			},
@@ -480,10 +491,10 @@ func TestUserHandler_update(t *testing.T) {
 		},
 		{
 			name:        "User with such username or email already exists",
-			authUser:    domain.AuthUser{UserID: "2"},
+			authUser:    domain.AuthUser{UserID: "46a5c17b-5354-4e24-8ad0-87e2913ab1bd"},
 			requestBody: `{"username":"john1967","email":"john1967@gmail.com"}`,
 			updateUserDTO: domain.UpdateUserDTO{
-				ID:       "2",
+				ID:       "46a5c17b-5354-4e24-8ad0-87e2913ab1bd",
 				Username: "john1967",
 				Email:    "john1967@gmail.com",
 			},
@@ -495,10 +506,10 @@ func TestUserHandler_update(t *testing.T) {
 		},
 		{
 			name:        "Unexpected error",
-			authUser:    domain.AuthUser{UserID: "1"},
+			authUser:    domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody: `{"username":"john1967","email":"john1967@gmail.com","birth_date":"1998-01-01"}`,
 			updateUserDTO: domain.UpdateUserDTO{
-				ID:        "1",
+				ID:        "80323cde-599d-4c25-9f5b-a67357193b1f",
 				Username:  "john1967",
 				Email:     "john1967@gmail.com",
 				BirthDate: "1998-01-01",
@@ -511,16 +522,13 @@ func TestUserHandler_update(t *testing.T) {
 		},
 	}
 
-	validate, err := validator.New()
-	require.NoError(t, err, "Unexpected error while creating validator")
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, validate)
+			uh := newUserHandler(us)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPut, "/api/user", strings.NewReader(testCase.requestBody))
@@ -552,6 +560,11 @@ func TestUserHandler_updatePassword(t *testing.T) {
 		},
 	)
 
+	validate, err := inVld.New()
+	require.NoError(t, err, "Unexpected error while creating validator")
+
+	pkgVld.SetValidate(validate)
+
 	testTable := []struct {
 		name                  string
 		authUser              domain.AuthUser
@@ -563,10 +576,10 @@ func TestUserHandler_updatePassword(t *testing.T) {
 	}{
 		{
 			name:        "Success",
-			authUser:    domain.AuthUser{UserID: "1"},
+			authUser:    domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
 			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
-				UserID:  "1",
+				UserID:  "80323cde-599d-4c25-9f5b-a67357193b1f",
 				New:     "admin55555",
 				Current: "qwerty12345",
 			},
@@ -577,24 +590,24 @@ func TestUserHandler_updatePassword(t *testing.T) {
 		},
 		{
 			name:                 "Invalid JSON body",
-			authUser:             domain.AuthUser{UserID: "1"},
+			authUser:             domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody:          `{"current_password":"qwerty12345","new_password":admin55555"}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"invalid body to decode"}`,
 		},
 		{
 			name:                 "Empty body",
-			authUser:             domain.AuthUser{UserID: "1"},
+			authUser:             domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody:          `{}`,
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"validation error","fields":{"current_password":"field validation for 'current_password' failed on the 'required' tag","new_password":"field validation for 'new_password' failed on the 'required' tag"}}`,
 		},
 		{
 			name:        "Wrong user's current password",
-			authUser:    domain.AuthUser{UserID: "1"},
+			authUser:    domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
 			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
-				UserID:  "1",
+				UserID:  "80323cde-599d-4c25-9f5b-a67357193b1f",
 				New:     "admin55555",
 				Current: "qwerty12345",
 			},
@@ -606,10 +619,10 @@ func TestUserHandler_updatePassword(t *testing.T) {
 		},
 		{
 			name:        "User is not found",
-			authUser:    domain.AuthUser{UserID: "1"},
+			authUser:    domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
 			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
-				UserID:  "1",
+				UserID:  "80323cde-599d-4c25-9f5b-a67357193b1f",
 				New:     "admin55555",
 				Current: "qwerty12345",
 			},
@@ -621,10 +634,10 @@ func TestUserHandler_updatePassword(t *testing.T) {
 		},
 		{
 			name:        "Unexpected error",
-			authUser:    domain.AuthUser{UserID: "1"},
+			authUser:    domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			requestBody: `{"current_password":"qwerty12345","new_password":"admin55555"}`,
 			updateUserPasswordDTO: domain.UpdateUserPasswordDTO{
-				UserID:  "1",
+				UserID:  "80323cde-599d-4c25-9f5b-a67357193b1f",
 				New:     "admin55555",
 				Current: "qwerty12345",
 			},
@@ -636,16 +649,13 @@ func TestUserHandler_updatePassword(t *testing.T) {
 		},
 	}
 
-	validate, err := validator.New()
-	require.NoError(t, err, "Unexpected error while creating validator")
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, validate)
+			uh := newUserHandler(us)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPut, "/api/user/password", strings.NewReader(testCase.requestBody))
@@ -677,6 +687,11 @@ func TestUserHandler_delete(t *testing.T) {
 		},
 	)
 
+	validate, err := inVld.New()
+	require.NoError(t, err, "Unexpected error while creating validator")
+
+	pkgVld.SetValidate(validate)
+
 	testTable := []struct {
 		name                 string
 		authUser             domain.AuthUser
@@ -686,7 +701,7 @@ func TestUserHandler_delete(t *testing.T) {
 	}{
 		{
 			name:     "Success",
-			authUser: domain.AuthUser{UserID: "1"},
+			authUser: domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string) {
 				us.EXPECT().Delete(ctx, id).Return(nil)
 			},
@@ -694,7 +709,7 @@ func TestUserHandler_delete(t *testing.T) {
 		},
 		{
 			name:     "Not found",
-			authUser: domain.AuthUser{UserID: "2"},
+			authUser: domain.AuthUser{UserID: "46a5c17b-5354-4e24-8ad0-87e2913ab1bd"},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string) {
 				us.EXPECT().Delete(ctx, id).Return(domain.ErrUserNotFound)
 			},
@@ -703,7 +718,7 @@ func TestUserHandler_delete(t *testing.T) {
 		},
 		{
 			name:     "Unexpected error",
-			authUser: domain.AuthUser{UserID: "1"},
+			authUser: domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			mockBehaviour: func(us *mockservice.MockUserService, ctx context.Context, id string) {
 				us.EXPECT().Delete(ctx, id).Return(errors.New("unexpected error"))
 			},
@@ -712,16 +727,13 @@ func TestUserHandler_delete(t *testing.T) {
 		},
 	}
 
-	validate, err := validator.New()
-	require.NoError(t, err, "Unexpected error while creating validator")
-
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := gomock.NewController(t)
 			defer c.Finish()
 
 			us := mockservice.NewMockUserService(c)
-			uh := newUserHandler(us, validate)
+			uh := newUserHandler(us)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodDelete, "/api/user", nil)

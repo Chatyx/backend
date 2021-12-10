@@ -2,29 +2,24 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
-	"github.com/Mort4lis/scht-backend/internal/encoding"
-
-	"github.com/rs/cors"
-
-	httpSwagger "github.com/swaggo/http-swagger"
-
 	_ "github.com/Mort4lis/scht-backend/docs"
 	"github.com/Mort4lis/scht-backend/internal/config"
+	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
-	"github.com/go-playground/validator/v10"
+	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type baseHandler struct {
-	logger   logging.Logger
-	validate *validator.Validate
+	logger logging.Logger
 }
 
 func (h *baseHandler) decodeBody(body io.ReadCloser, unmarshaler encoding.Unmarshaler) error {
@@ -44,22 +39,16 @@ func (h *baseHandler) decodeBody(body io.ReadCloser, unmarshaler encoding.Unmars
 	return nil
 }
 
-func (h *baseHandler) validateStruct(s interface{}) error {
-	if err := h.validate.Struct(s); err != nil {
-		fields := ErrorFields{}
-		for _, err := range err.(validator.ValidationErrors) {
-			fields[err.Field()] = fmt.Sprintf(
-				"field validation for '%s' failed on the '%s' tag",
-				err.Field(), err.Tag(),
-			)
-		}
-
-		h.logger.Debugf("fields validation failed: %v", fields)
+func (h *baseHandler) validate(validator validator.Validator) error {
+	if errFields := validator.Validate(); len(errFields) != 0 {
+		h.logger.WithFields(logging.Fields{
+			"fields": errFields,
+		}).Debug("validation error")
 
 		return ResponseError{
 			StatusCode: http.StatusBadRequest,
 			Message:    "validation error",
-			Fields:     fields,
+			Fields:     ErrorFields(errFields),
 		}
 	}
 
@@ -135,15 +124,15 @@ func respondError(w http.ResponseWriter, err error) {
 	}
 }
 
-func Init(container service.ServiceContainer, cfg *config.Config, validate *validator.Validate) http.Handler {
+func Init(container service.ServiceContainer, cfg *config.Config) http.Handler {
 	router := httprouter.New()
 	authMid := AuthorizationMiddlewareFactory(container.Auth)
 
-	newUserHandler(container.User, validate).register(router, authMid)
-	newChatHandler(container.Chat, validate).register(router, authMid)
-	newChatMemberHandler(container.ChatMember, validate).register(router, authMid)
-	newMessageHandler(container.Message, validate).register(router, authMid)
-	newAuthHandler(container.Auth, validate, cfg.Domain, cfg.Auth.RefreshTokenTTL).register(router)
+	newUserHandler(container.User).register(router, authMid)
+	newChatHandler(container.Chat).register(router, authMid)
+	newChatMemberHandler(container.ChatMember).register(router, authMid)
+	newMessageHandler(container.Message).register(router, authMid)
+	newAuthHandler(container.Auth, cfg.Domain, cfg.Auth.RefreshTokenTTL).register(router)
 
 	router.HandlerFunc(http.MethodGet, "/docs/:any", httpSwagger.WrapHandler)
 	router.Handler(http.MethodGet, "/", http.RedirectHandler("/docs/index.html", http.StatusMovedPermanently))
