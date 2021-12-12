@@ -2,10 +2,8 @@ package validator
 
 import "github.com/go-playground/validator/v10"
 
-type ErrorFields map[string]string
-
 type Validator interface {
-	Validate() ErrorFields
+	Validate() error
 }
 
 var validate *validator.Validate

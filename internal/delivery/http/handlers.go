@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,29 +29,23 @@ func (h *baseHandler) decodeBody(body io.ReadCloser, unmarshaler encoding.Unmars
 
 	payload, err := ioutil.ReadAll(body)
 	if err != nil {
-		h.logger.WithError(err).Error("An error occurred while reading body")
-		return err
+		return fmt.Errorf("an error occurred while reading request body: %w", err)
 	}
 
 	if err = unmarshaler.Unmarshal(payload); err != nil {
-		h.logger.WithError(err).Debug("failed to unmarshal body")
-		return errInvalidDecodeBody
+		return errInvalidDecodeBody.Wrap(fmt.Errorf("failed to unmarshal request body: %w", err))
 	}
 
 	return nil
 }
 
-func (h *baseHandler) validate(validator validator.Validator) error {
-	if errFields := validator.Validate(); len(errFields) != 0 {
-		h.logger.WithFields(logging.Fields{
-			"fields": errFields,
-		}).Debug("validation error")
-
-		return ResponseError{
-			StatusCode: http.StatusBadRequest,
-			Message:    "validation error",
-			Fields:     ErrorFields(errFields),
+func (h *baseHandler) validate(vld validator.Validator) error {
+	if err := vld.Validate(); err != nil {
+		if vldErr, ok := err.(validator.ValidationError); ok {
+			return errValidationError.Wrap(err, WithFields(ErrorFields(vldErr.Fields)))
 		}
+
+		return errInternalServer.Wrap(err)
 	}
 
 	return nil
@@ -121,6 +117,36 @@ func respondError(w http.ResponseWriter, err error) {
 
 	if _, err = w.Write(respBody); err != nil {
 		logging.GetLogger().WithError(err).Error("An error occurred while writing response body")
+	}
+}
+
+func respondErrorRefactored(ctx context.Context, w http.ResponseWriter, err error) {
+	respErr, ok := err.(ResponseError)
+	if !ok {
+		respondErrorRefactored(ctx, w, errInternalServer.Wrap(err))
+		return
+	}
+
+	logger := logging.GetLoggerFromContext(ctx)
+
+	switch respErr.StatusCode {
+	case http.StatusInternalServerError:
+		logger.WithError(err).Error("response error")
+	default:
+		logger.WithError(err).Debug("response error")
+	}
+
+	respBody, err := json.Marshal(respErr)
+	if err != nil {
+		logger.WithError(err).Error("An error occurred while marshaling application error")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(respErr.StatusCode)
+
+	if _, err = w.Write(respBody); err != nil {
+		logger.WithError(err).Error("An error occurred while writing response body")
 	}
 }
 

@@ -11,17 +11,19 @@ type TimeValidator struct {
 	parsed   time.Time
 }
 
-func (v *TimeValidator) Validate() ErrorFields {
+func (v *TimeValidator) Validate() error {
 	parsed, err := time.Parse(v.Layout, v.RawValue)
 	if err != nil {
-		return ErrorFields{
-			v.Field: "wrong the time format",
+		return ValidationError{
+			Fields: ErrorFields{
+				v.Field: "wrong the time format",
+			},
 		}
 	}
 
 	v.parsed = parsed
 
-	return ErrorFields{}
+	return nil
 }
 
 func (v *TimeValidator) Value() time.Time {

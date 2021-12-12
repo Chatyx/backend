@@ -73,12 +73,9 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) {
 			return
 		}
 
-		vl := validator.StructValidator(dto)
-		if errFields := vl.Validate(); len(errFields) != 0 {
-			s.logger.WithFields(logging.Fields{
-				"fields": errFields,
-			}).Debug("message validation error")
-
+		vld := validator.StructValidator(dto)
+		if err = vld.Validate(); err != nil {
+			s.logger.Debug("message validation error")
 			return
 		}
 

@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
@@ -67,7 +68,7 @@ func (h *userHandler) register(router *httprouter.Router, authMid Middleware) {
 func (h *userHandler) list(w http.ResponseWriter, req *http.Request) {
 	users, err := h.userService.List(req.Context())
 	if err != nil {
-		respondError(w, errInternalServer)
+		respondError(w, err)
 		return
 	}
 
@@ -88,18 +89,23 @@ func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
 	ps := httprouter.ParamsFromContext(req.Context())
 	userID := ps.ByName(userIDParam)
 
+	logger := h.logger.WithFields(logging.Fields{
+		"url.user_id": userID,
+	})
+	ctx := logging.NewContextFromLogger(req.Context(), logger)
+
 	if err := h.validate(validator.UUIDValidator(userIDParam, userID)); err != nil {
-		respondError(w, err)
+		respondErrorRefactored(ctx, w, err)
 		return
 	}
 
-	user, err := h.userService.GetByID(req.Context(), userID)
+	user, err := h.userService.GetByID(ctx, userID)
 	if err != nil {
-		switch err {
-		case domain.ErrUserNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			respondErrorRefactored(ctx, w, errUserNotFound.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondErrorRefactored(ctx, w, err)
 		}
 
 		return
@@ -120,22 +126,49 @@ func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
 func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 	dto := domain.CreateUserDTO{}
 	if err := h.decodeBody(req.Body, encoding.NewJSONCreateUserDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
+		respondErrorRefactored(req.Context(), w, err)
 		return
 	}
+
+	logFields := logging.Fields{}
+	if dto.Username != "" {
+		logFields["body.username"] = dto.Username
+	}
+
+	if dto.Email != "" {
+		logFields["body.email"] = dto.Email
+	}
+
+	if dto.FirstName != "" {
+		logFields["body.first_name"] = dto.FirstName
+	}
+
+	if dto.LastName != "" {
+		logFields["body.last_name"] = dto.LastName
+	}
+
+	if dto.BirthDate != "" {
+		logFields["body.birth_date"] = dto.BirthDate
+	}
+
+	if dto.Department != "" {
+		logFields["body.department"] = dto.Department
+	}
+
+	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondError(w, err)
+		respondErrorRefactored(ctx, w, err)
 		return
 	}
 
-	user, err := h.userService.Create(req.Context(), dto)
+	user, err := h.userService.Create(ctx, dto)
 	if err != nil {
-		switch err {
-		case domain.ErrUserUniqueViolation:
-			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrUserUniqueViolation):
+			respondErrorRefactored(ctx, w, errUserUniqueViolation.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondErrorRefactored(ctx, w, err)
 		}
 
 		return
@@ -157,27 +190,55 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateUserDTO{}
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateUserDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
-		return
-	}
-
-	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondError(w, err)
+		respondErrorRefactored(req.Context(), w, err)
 		return
 	}
 
 	authUser := domain.AuthUserFromContext(req.Context())
+	logFields := logging.Fields{"auth.user_id": authUser.UserID}
+
+	if dto.Username != "" {
+		logFields["body.username"] = dto.Username
+	}
+
+	if dto.Email != "" {
+		logFields["body.email"] = dto.Email
+	}
+
+	if dto.FirstName != "" {
+		logFields["body.first_name"] = dto.FirstName
+	}
+
+	if dto.LastName != "" {
+		logFields["body.last_name"] = dto.LastName
+	}
+
+	if dto.BirthDate != "" {
+		logFields["body.birth_date"] = dto.BirthDate
+	}
+
+	if dto.Department != "" {
+		logFields["body.department"] = dto.Department
+	}
+
+	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
+
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
+		respondErrorRefactored(ctx, w, err)
+		return
+	}
+
 	dto.ID = authUser.UserID
 
-	user, err := h.userService.Update(req.Context(), dto)
+	user, err := h.userService.Update(ctx, dto)
 	if err != nil {
-		switch err {
-		case domain.ErrUserUniqueViolation:
-			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
-		case domain.ErrUserNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrUserUniqueViolation):
+			respondErrorRefactored(ctx, w, errUserUniqueViolation.Wrap(err))
+		case errors.Is(err, domain.ErrUserNotFound):
+			respondErrorRefactored(ctx, w, errUserNotFound.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondErrorRefactored(ctx, w, err)
 		}
 
 		return
@@ -199,26 +260,29 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateUserPasswordDTO{}
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateUserPasswordDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
-		return
-	}
-
-	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondError(w, err)
+		respondErrorRefactored(req.Context(), w, err)
 		return
 	}
 
 	authUser := domain.AuthUserFromContext(req.Context())
+	logFields := logging.Fields{"auth.user_id": authUser.UserID}
+	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
+
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
+		respondErrorRefactored(ctx, w, err)
+		return
+	}
+
 	dto.UserID = authUser.UserID
 
-	if err := h.userService.UpdatePassword(req.Context(), dto); err != nil {
-		switch err {
-		case domain.ErrWrongCurrentPassword:
-			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
-		case domain.ErrUserNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+	if err := h.userService.UpdatePassword(ctx, dto); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrWrongCurrentPassword):
+			respondErrorRefactored(ctx, w, errWrongCurrentPassword.Wrap(err))
+		case errors.Is(err, domain.ErrUserNotFound):
+			respondErrorRefactored(ctx, w, errUserNotFound.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondErrorRefactored(ctx, w, err)
 		}
 
 		return
@@ -238,14 +302,16 @@ func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 // @Router /user [delete]
 func (h *userHandler) delete(w http.ResponseWriter, req *http.Request) {
 	authUser := domain.AuthUserFromContext(req.Context())
+	logFields := logging.Fields{"auth.user_id": authUser.UserID}
+	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
 
-	err := h.userService.Delete(req.Context(), authUser.UserID)
+	err := h.userService.Delete(ctx, authUser.UserID)
 	if err != nil {
-		switch err {
-		case domain.ErrUserNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			respondErrorRefactored(ctx, w, errUserNotFound.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondErrorRefactored(ctx, w, err)
 		}
 
 		return
