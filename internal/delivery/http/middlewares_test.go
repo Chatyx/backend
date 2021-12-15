@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package http
@@ -121,8 +122,8 @@ func TestAuthorizationMiddleware(t *testing.T) {
 			}
 
 			handler := authMid(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				id := domain.UserIDFromContext(req.Context())
-				_, _ = fmt.Fprintf(w, `{"id":"%s"}`, id)
+				authUser := domain.AuthUserFromContext(req.Context())
+				_, _ = fmt.Fprintf(w, `{"id":"%s"}`, authUser.UserID)
 			}))
 
 			handler.ServeHTTP(rec, req)

@@ -112,12 +112,14 @@ func (h *chatSessionHandler) ServeHTTP(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
+	authUser := domain.AuthUserFromContext(req.Context())
 	chs := &chatSession{
 		conn:       conn,
 		logger:     h.logger,
 		msgService: h.msgService,
-		userID:     domain.UserIDFromContext(req.Context()),
+		userID:     authUser.UserID,
 	}
+
 	go chs.Serve()
 
 	w.WriteHeader(http.StatusNoContent)
