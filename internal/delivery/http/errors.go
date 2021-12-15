@@ -103,4 +103,8 @@ var (
 		StatusCode: http.StatusUnauthorized,
 		Message:    "wrong username or password",
 	}
+	errChatNotFound = ResponseError{
+		StatusCode: http.StatusNotFound,
+		Message:    "chat is not found",
+	}
 )
