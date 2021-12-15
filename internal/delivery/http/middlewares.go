@@ -46,9 +46,11 @@ func loggingMiddleware(handler http.Handler) http.Handler {
 func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx := req.Context()
+
 			accessToken, err := extractTokenFromHeader(req.Header.Get("Authorization"))
 			if err != nil {
-				respondError(w, err)
+				respondErrorRefactored(ctx, w, err)
 				return
 			}
 
@@ -56,9 +58,9 @@ func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
 			if err != nil {
 				switch {
 				case errors.Is(err, domain.ErrInvalidAccessToken):
-					respondErrorRefactored(req.Context(), w, errInvalidAccessToken.Wrap(err))
+					respondErrorRefactored(ctx, w, errInvalidAccessToken.Wrap(err))
 				default:
-					respondErrorRefactored(req.Context(), w, err)
+					respondErrorRefactored(ctx, w, err)
 				}
 
 				return
@@ -69,7 +71,7 @@ func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
 				"auth.user_id": authUser.UserID,
 			})
 
-			ctx := domain.NewContextFromAuthUser(logging.NewContextFromLogger(req.Context(), logger), authUser)
+			ctx = domain.NewContextFromAuthUser(logging.NewContextFromLogger(ctx, logger), authUser)
 
 			handler.ServeHTTP(w, req.WithContext(ctx))
 		})

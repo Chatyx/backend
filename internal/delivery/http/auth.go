@@ -59,19 +59,19 @@ func (h *authHandler) register(router *httprouter.Router) {
 // @Failure 500 {object} ResponseError
 // @Router /auth/sign-in [post]
 func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
-	var dto domain.SignInDTO
+	ctx := req.Context()
+	dto := domain.SignInDTO{Fingerprint: req.Header.Get("X-Fingerprint")}
+
 	if err := h.decodeBody(req.Body, encoding.NewJSONSignInDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(req.Context(), w, err)
+		respondErrorRefactored(ctx, w, err)
 		return
 	}
-
-	dto.Fingerprint = req.Header.Get("X-Fingerprint")
 
 	logFields := logging.Fields{
 		"username":    dto.Username,
 		"fingerprint": dto.Fingerprint,
 	}
-	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
+	ctx = logging.NewContextFromLogger(ctx, h.logger.WithFields(logFields))
 
 	if dto.Fingerprint == "" {
 		respondErrorRefactored(ctx, w, errEmptyFingerprintHeader)
@@ -119,15 +119,13 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /auth/refresh [post]
 func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
-	var dto domain.RefreshSessionDTO
+	dto := domain.RefreshSessionDTO{Fingerprint: req.Header.Get("X-Fingerprint")}
 	if cookie, err := req.Cookie(refreshCookieName); err == nil {
 		dto.RefreshToken = cookie.Value
 	} else if err = h.decodeBody(req.Body, encoding.NewJSONRefreshSessionDTOUnmarshaler(&dto)); err != nil {
 		respondErrorRefactored(req.Context(), w, err)
 		return
 	}
-
-	dto.Fingerprint = req.Header.Get("X-Fingerprint")
 
 	logFields := logging.Fields{"fingerprint": dto.Fingerprint}
 	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
