@@ -35,16 +35,12 @@ func (r UserListResponse) Marshal() ([]byte, error) {
 type userHandler struct {
 	*baseHandler
 	userService service.UserService
-	logger      logging.Logger
 }
 
 func newUserHandler(us service.UserService) *userHandler {
-	logger := logging.GetLogger()
-
 	return &userHandler{
-		baseHandler: &baseHandler{logger: logger},
+		baseHandler: &baseHandler{logger: logging.GetLogger()},
 		userService: us,
-		logger:      logger,
 	}
 }
 
@@ -68,7 +64,7 @@ func (h *userHandler) register(router *httprouter.Router, authMid Middleware) {
 func (h *userHandler) list(w http.ResponseWriter, req *http.Request) {
 	users, err := h.userService.List(req.Context())
 	if err != nil {
-		respondError(w, err)
+		respondErrorRefactored(req.Context(), w, err)
 		return
 	}
 
@@ -86,13 +82,11 @@ func (h *userHandler) list(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /users/{user_id} [get]
 func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
-	userID := ps.ByName(userIDParam)
+	ctx := req.Context()
+	userID := httprouter.ParamsFromContext(ctx).ByName(userIDParam)
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{"user_id": userID})
 
-	logger := h.logger.WithFields(logging.Fields{
-		"url.user_id": userID,
-	})
-	ctx := logging.NewContextFromLogger(req.Context(), logger)
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(userIDParam, userID)); err != nil {
 		respondErrorRefactored(ctx, w, err)
@@ -124,38 +118,41 @@ func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /users [post]
 func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	dto := domain.CreateUserDTO{}
+
 	if err := h.decodeBody(req.Body, encoding.NewJSONCreateUserDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(req.Context(), w, err)
+		respondErrorRefactored(ctx, w, err)
 		return
 	}
 
 	logFields := logging.Fields{}
 	if dto.Username != "" {
-		logFields["body.username"] = dto.Username
+		logFields["username"] = dto.Username
 	}
 
 	if dto.Email != "" {
-		logFields["body.email"] = dto.Email
+		logFields["email"] = dto.Email
 	}
 
 	if dto.FirstName != "" {
-		logFields["body.first_name"] = dto.FirstName
+		logFields["first_name"] = dto.FirstName
 	}
 
 	if dto.LastName != "" {
-		logFields["body.last_name"] = dto.LastName
+		logFields["last_name"] = dto.LastName
 	}
 
 	if dto.BirthDate != "" {
-		logFields["body.birth_date"] = dto.BirthDate
+		logFields["birth_date"] = dto.BirthDate
 	}
 
 	if dto.Department != "" {
-		logFields["body.department"] = dto.Department
+		logFields["department"] = dto.Department
 	}
 
-	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logFields)
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondErrorRefactored(ctx, w, err)
@@ -188,46 +185,48 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /user [put]
 func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	dto := domain.UpdateUserDTO{}
+
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateUserDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(req.Context(), w, err)
+		respondErrorRefactored(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
-	logFields := logging.Fields{"auth.user_id": authUser.UserID}
-
+	logFields := logging.Fields{}
 	if dto.Username != "" {
-		logFields["body.username"] = dto.Username
+		logFields["username"] = dto.Username
 	}
 
 	if dto.Email != "" {
-		logFields["body.email"] = dto.Email
+		logFields["email"] = dto.Email
 	}
 
 	if dto.FirstName != "" {
-		logFields["body.first_name"] = dto.FirstName
+		logFields["first_name"] = dto.FirstName
 	}
 
 	if dto.LastName != "" {
-		logFields["body.last_name"] = dto.LastName
+		logFields["last_name"] = dto.LastName
 	}
 
 	if dto.BirthDate != "" {
-		logFields["body.birth_date"] = dto.BirthDate
+		logFields["birth_date"] = dto.BirthDate
 	}
 
 	if dto.Department != "" {
-		logFields["body.department"] = dto.Department
+		logFields["department"] = dto.Department
 	}
 
-	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logFields)
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondErrorRefactored(ctx, w, err)
 		return
 	}
 
+	authUser := domain.AuthUserFromContext(ctx)
 	dto.ID = authUser.UserID
 
 	user, err := h.userService.Update(ctx, dto)
@@ -258,21 +257,20 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /user/password [put]
 func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	dto := domain.UpdateUserPasswordDTO{}
+
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateUserPasswordDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(req.Context(), w, err)
+		respondErrorRefactored(ctx, w, err)
 		return
 	}
-
-	authUser := domain.AuthUserFromContext(req.Context())
-	logFields := logging.Fields{"auth.user_id": authUser.UserID}
-	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
 		respondErrorRefactored(ctx, w, err)
 		return
 	}
 
+	authUser := domain.AuthUserFromContext(ctx)
 	dto.UserID = authUser.UserID
 
 	if err := h.userService.UpdatePassword(ctx, dto); err != nil {
@@ -301,9 +299,8 @@ func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /user [delete]
 func (h *userHandler) delete(w http.ResponseWriter, req *http.Request) {
-	authUser := domain.AuthUserFromContext(req.Context())
-	logFields := logging.Fields{"auth.user_id": authUser.UserID}
-	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
+	ctx := req.Context()
+	authUser := domain.AuthUserFromContext(ctx)
 
 	err := h.userService.Delete(ctx, authUser.UserID)
 	if err != nil {

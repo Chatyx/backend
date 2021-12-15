@@ -7,14 +7,12 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/repository"
 	"github.com/Mort4lis/scht-backend/pkg/hasher"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 type userService struct {
 	userRepo    repository.UserRepository
 	sessionRepo repository.SessionRepository
 	hasher      hasher.PasswordHasher
-	logger      logging.Logger
 }
 
 func NewUserService(userRepo repository.UserRepository, sessionRepo repository.SessionRepository, hasher hasher.PasswordHasher) UserService {
@@ -22,7 +20,6 @@ func NewUserService(userRepo repository.UserRepository, sessionRepo repository.S
 		userRepo:    userRepo,
 		sessionRepo: sessionRepo,
 		hasher:      hasher,
-		logger:      logging.GetLogger(),
 	}
 }
 
