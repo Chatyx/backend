@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -53,11 +54,11 @@ func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
 
 			claims, err := as.Authorize(accessToken)
 			if err != nil {
-				switch err {
-				case domain.ErrInvalidAccessToken:
-					respondError(w, errInvalidAccessToken)
+				switch {
+				case errors.Is(err, domain.ErrInvalidAccessToken):
+					respondErrorRefactored(req.Context(), w, errInvalidAccessToken.Wrap(err))
 				default:
-					respondError(w, errInternalServer)
+					respondErrorRefactored(req.Context(), w, err)
 				}
 
 				return

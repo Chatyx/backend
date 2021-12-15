@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -60,30 +61,35 @@ func (h *authHandler) register(router *httprouter.Router) {
 func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 	var dto domain.SignInDTO
 	if err := h.decodeBody(req.Body, encoding.NewJSONSignInDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
-		return
-	}
-
-	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondError(w, err)
+		respondErrorRefactored(req.Context(), w, err)
 		return
 	}
 
 	dto.Fingerprint = req.Header.Get("X-Fingerprint")
-	if dto.Fingerprint == "" {
-		h.logger.Debug("X-Fingerprint header is empty")
-		respondError(w, errEmptyFingerprintHeader)
 
+	logFields := logging.Fields{
+		"username":    dto.Username,
+		"fingerprint": dto.Fingerprint,
+	}
+	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
+
+	if dto.Fingerprint == "" {
+		respondErrorRefactored(ctx, w, errEmptyFingerprintHeader)
 		return
 	}
 
-	pair, err := h.service.SignIn(req.Context(), dto)
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
+		respondErrorRefactored(ctx, w, err)
+		return
+	}
+
+	pair, err := h.service.SignIn(ctx, dto)
 	if err != nil {
-		switch err {
-		case domain.ErrWrongCredentials:
-			respondError(w, ResponseError{StatusCode: http.StatusUnauthorized, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrWrongCredentials):
+			respondErrorRefactored(ctx, w, errWrongCredentials.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondErrorRefactored(ctx, w, err)
 		}
 
 		return
@@ -117,30 +123,32 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 	if cookie, err := req.Cookie(refreshCookieName); err == nil {
 		dto.RefreshToken = cookie.Value
 	} else if err = h.decodeBody(req.Body, encoding.NewJSONRefreshSessionDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
-		return
-	}
-
-	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondError(w, err)
+		respondErrorRefactored(req.Context(), w, err)
 		return
 	}
 
 	dto.Fingerprint = req.Header.Get("X-Fingerprint")
-	if dto.Fingerprint == "" {
-		h.logger.Debug("X-Fingerprint header is empty")
-		respondError(w, errEmptyFingerprintHeader)
 
+	logFields := logging.Fields{"fingerprint": dto.Fingerprint}
+	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
+
+	if dto.Fingerprint == "" {
+		respondErrorRefactored(ctx, w, errEmptyFingerprintHeader)
+		return
+	}
+
+	if err := h.validate(validator.StructValidator(dto)); err != nil {
+		respondErrorRefactored(ctx, w, err)
 		return
 	}
 
 	pair, err := h.service.Refresh(req.Context(), dto)
 	if err != nil {
-		switch err {
-		case domain.ErrInvalidRefreshToken:
-			respondError(w, errInvalidRefreshToken)
+		switch {
+		case errors.Is(err, domain.ErrInvalidRefreshToken):
+			respondErrorRefactored(ctx, w, errInvalidRefreshToken.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondErrorRefactored(ctx, w, err)
 		}
 
 		return

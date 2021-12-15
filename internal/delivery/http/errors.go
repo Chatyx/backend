@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -51,7 +50,11 @@ func (e ResponseError) Unwrap() error {
 }
 
 func (e ResponseError) Error() string {
-	return fmt.Sprintf("%s: %v", e.Message, e.Err)
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+
+	return e.Message
 }
 
 var (
@@ -95,5 +98,9 @@ var (
 	errWrongCurrentPassword = ResponseError{
 		StatusCode: http.StatusBadRequest,
 		Message:    "wrong current password",
+	}
+	errWrongCredentials = ResponseError{
+		StatusCode: http.StatusUnauthorized,
+		Message:    "wrong username or password",
 	}
 )

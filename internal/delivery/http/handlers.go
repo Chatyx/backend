@@ -13,6 +13,7 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/config"
 	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
+	pkgErrors "github.com/Mort4lis/scht-backend/pkg/errors"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/julienschmidt/httprouter"
@@ -127,7 +128,8 @@ func respondErrorRefactored(ctx context.Context, w http.ResponseWriter, err erro
 		return
 	}
 
-	logger := logging.GetLoggerFromContext(ctx)
+	ctxFields := pkgErrors.UnwrapContextFields(err)
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields(ctxFields))
 
 	switch respErr.StatusCode {
 	case http.StatusInternalServerError:
