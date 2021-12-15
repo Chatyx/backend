@@ -95,7 +95,7 @@ func TestAuthService_SignIn(t *testing.T) {
 				us.EXPECT().GetByUsername(context.Background(), username).Return(returnedUser, nil)
 			},
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, refreshToken string) {
-				r.EXPECT().Set(context.Background(), gomock.Any(), refreshTokenTTL).Return(nil)
+				r.EXPECT().Set(gomock.Any(), gomock.Any(), refreshTokenTTL).Return(nil)
 			},
 			hasherMockBehaviour: func(h *mockhasher.MockPasswordHasher, hash, password string) {
 				h.EXPECT().CompareHashAndPassword(hash, password).Return(true)
@@ -181,7 +181,7 @@ func TestAuthService_SignIn(t *testing.T) {
 				tm.EXPECT().NewRefreshToken().Return(pair.RefreshToken, nil)
 			},
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, refreshToken string) {
-				r.EXPECT().Set(context.Background(), gomock.Any(), refreshTokenTTL).Return(errUnexpected)
+				r.EXPECT().Set(gomock.Any(), gomock.Any(), refreshTokenTTL).Return(errUnexpected)
 			},
 			expectedErr: errUnexpected,
 		},
@@ -223,9 +223,11 @@ func TestAuthService_SignIn(t *testing.T) {
 			}
 
 			pair, err := as.SignIn(context.Background(), testCase.signInDTO)
-
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			if testCase.expectedErr == nil {
@@ -270,11 +272,11 @@ func TestAuthService_Refresh(t *testing.T) {
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
-				r.EXPECT().Set(context.Background(), gomock.Any(), refreshTokenTTL).Return(nil)
-				r.EXPECT().Delete(context.Background(), oldRefreshToken, returnedSession.UserID).Return(nil)
+				r.EXPECT().Set(gomock.Any(), gomock.Any(), refreshTokenTTL).Return(nil)
+				r.EXPECT().Delete(gomock.Any(), oldRefreshToken, returnedSession.UserID).Return(nil)
 			},
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
-				us.EXPECT().GetByID(context.Background(), id).Return(returnedUser, nil)
+				us.EXPECT().GetByID(gomock.Any(), id).Return(returnedUser, nil)
 			},
 			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, pair domain.JWTPair) {
 				tm.EXPECT().NewAccessToken(gomock.Any()).Return(pair.AccessToken, nil)
@@ -302,7 +304,7 @@ func TestAuthService_Refresh(t *testing.T) {
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
-				r.EXPECT().Delete(context.Background(), oldRefreshToken, returnedSession.UserID).Return(nil)
+				r.EXPECT().Delete(gomock.Any(), oldRefreshToken, returnedSession.UserID).Return(nil)
 			},
 			expectedErr: domain.ErrInvalidRefreshToken,
 		},
@@ -314,10 +316,10 @@ func TestAuthService_Refresh(t *testing.T) {
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
-				r.EXPECT().Delete(context.Background(), oldRefreshToken, returnedSession.UserID).Return(nil)
+				r.EXPECT().Delete(gomock.Any(), oldRefreshToken, returnedSession.UserID).Return(nil)
 			},
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
-				us.EXPECT().GetByID(context.Background(), id).Return(domain.User{}, domain.ErrUserNotFound)
+				us.EXPECT().GetByID(gomock.Any(), id).Return(domain.User{}, domain.ErrUserNotFound)
 			},
 			expectedErr: domain.ErrInvalidRefreshToken,
 		},
@@ -337,10 +339,10 @@ func TestAuthService_Refresh(t *testing.T) {
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
-				r.EXPECT().Delete(context.Background(), oldRefreshToken, returnedSession.UserID).Return(nil)
+				r.EXPECT().Delete(gomock.Any(), oldRefreshToken, returnedSession.UserID).Return(nil)
 			},
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
-				us.EXPECT().GetByID(context.Background(), id).Return(domain.User{}, errUnexpected)
+				us.EXPECT().GetByID(gomock.Any(), id).Return(domain.User{}, errUnexpected)
 			},
 			expectedErr: errUnexpected,
 		},
@@ -352,10 +354,10 @@ func TestAuthService_Refresh(t *testing.T) {
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
-				r.EXPECT().Delete(context.Background(), oldRefreshToken, returnedSession.UserID).Return(nil)
+				r.EXPECT().Delete(gomock.Any(), oldRefreshToken, returnedSession.UserID).Return(nil)
 			},
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
-				us.EXPECT().GetByID(context.Background(), id).Return(returnedUser, nil)
+				us.EXPECT().GetByID(gomock.Any(), id).Return(returnedUser, nil)
 			},
 			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, pair domain.JWTPair) {
 				tm.EXPECT().NewAccessToken(gomock.Any()).Return("", errUnexpected)
@@ -370,10 +372,10 @@ func TestAuthService_Refresh(t *testing.T) {
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
-				r.EXPECT().Delete(context.Background(), oldRefreshToken, returnedSession.UserID).Return(nil)
+				r.EXPECT().Delete(gomock.Any(), oldRefreshToken, returnedSession.UserID).Return(nil)
 			},
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
-				us.EXPECT().GetByID(context.Background(), id).Return(returnedUser, nil)
+				us.EXPECT().GetByID(gomock.Any(), id).Return(returnedUser, nil)
 			},
 			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, pair domain.JWTPair) {
 				tm.EXPECT().NewAccessToken(gomock.Any()).Return(pair.AccessToken, nil)
@@ -389,11 +391,11 @@ func TestAuthService_Refresh(t *testing.T) {
 			sessionRepoMockBehaviour: func(r *mockrepository.MockSessionRepository, oldRefreshToken string, newRefreshToken string,
 				returnedSession domain.Session) {
 				r.EXPECT().Get(context.Background(), oldRefreshToken).Return(returnedSession, nil)
-				r.EXPECT().Delete(context.Background(), oldRefreshToken, returnedSession.UserID).Return(nil)
-				r.EXPECT().Set(context.Background(), gomock.Any(), refreshTokenTTL).Return(errUnexpected)
+				r.EXPECT().Delete(gomock.Any(), oldRefreshToken, returnedSession.UserID).Return(nil)
+				r.EXPECT().Set(gomock.Any(), gomock.Any(), refreshTokenTTL).Return(errUnexpected)
 			},
 			userServiceMockBehaviour: func(us *mockservice.MockUserService, id string, returnedUser domain.User) {
-				us.EXPECT().GetByID(context.Background(), id).Return(returnedUser, nil)
+				us.EXPECT().GetByID(gomock.Any(), id).Return(returnedUser, nil)
 			},
 			tokenManagerMockBehaviour: func(tm *mockauth.MockTokenManager, pair domain.JWTPair) {
 				tm.EXPECT().NewAccessToken(gomock.Any()).Return(pair.AccessToken, nil)
@@ -440,9 +442,11 @@ func TestAuthService_Refresh(t *testing.T) {
 			}
 
 			pair, err := as.Refresh(context.Background(), testCase.refreshSessionDTO)
-
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			if testCase.expectedErr == nil {
@@ -513,9 +517,11 @@ func TestAuthService_Authorize(t *testing.T) {
 			}
 
 			claims, err := as.Authorize(testCase.accessToken)
-
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			if testCase.expectedErr == nil {

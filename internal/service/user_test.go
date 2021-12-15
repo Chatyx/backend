@@ -133,7 +133,7 @@ func TestUserService_Create(t *testing.T) {
 			user, err := us.Create(context.Background(), testCase.createUserDTO)
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.ErrorIs(t, err, testCase.expectedErr)
 			}
 
 			if testCase.expectedErr == nil {
@@ -289,7 +289,7 @@ func TestUserService_UpdatePassword(t *testing.T) {
 			err := us.UpdatePassword(context.Background(), testCase.updateUserPasswordDTO)
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.ErrorIs(t, err, testCase.expectedErr)
 			}
 
 			if testCase.expectedErr == nil {
@@ -379,7 +379,7 @@ func TestUserService_Delete(t *testing.T) {
 			err := us.Delete(context.Background(), testCase.id)
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.ErrorIs(t, err, testCase.expectedErr)
 			}
 
 			if testCase.expectedErr == nil {

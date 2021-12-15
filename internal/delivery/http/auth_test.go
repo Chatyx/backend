@@ -4,7 +4,6 @@
 package http
 
 import (
-	"context"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -29,7 +28,7 @@ const (
 )
 
 func TestAuthHandler_signIn(t *testing.T) {
-	type mockBehavior func(as *mockservice.MockAuthService, ctx context.Context, dto domain.SignInDTO, jwtPair domain.JWTPair)
+	type mockBehavior func(as *mockservice.MockAuthService, dto domain.SignInDTO, jwtPair domain.JWTPair)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -67,8 +66,8 @@ func TestAuthHandler_signIn(t *testing.T) {
 				AccessToken:  "header.payload.sign",
 				RefreshToken: "qGVFLRQw37TnSmG0LKFN",
 			},
-			mockBehavior: func(as *mockservice.MockAuthService, ctx context.Context, dto domain.SignInDTO, jwtPair domain.JWTPair) {
-				as.EXPECT().SignIn(ctx, dto).Return(jwtPair, nil)
+			mockBehavior: func(as *mockservice.MockAuthService, dto domain.SignInDTO, jwtPair domain.JWTPair) {
+				as.EXPECT().SignIn(gomock.Any(), dto).Return(jwtPair, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"access_token":"header.payload.sign","refresh_token":"qGVFLRQw37TnSmG0LKFN"}`,
@@ -83,8 +82,8 @@ func TestAuthHandler_signIn(t *testing.T) {
 				Password:    "cash91822849572",
 				Fingerprint: "5dc49b7a-6153-4eae-9c0f-297655c45f08",
 			},
-			mockBehavior: func(as *mockservice.MockAuthService, ctx context.Context, dto domain.SignInDTO, jwtPair domain.JWTPair) {
-				as.EXPECT().SignIn(ctx, dto).Return(jwtPair, domain.ErrWrongCredentials)
+			mockBehavior: func(as *mockservice.MockAuthService, dto domain.SignInDTO, jwtPair domain.JWTPair) {
+				as.EXPECT().SignIn(gomock.Any(), dto).Return(jwtPair, domain.ErrWrongCredentials)
 			},
 			expectedStatusCode:   http.StatusUnauthorized,
 			expectedResponseBody: `{"message":"wrong username or password"}`,
@@ -137,8 +136,8 @@ func TestAuthHandler_signIn(t *testing.T) {
 				Password:    "qwerty12345",
 				Fingerprint: "5dc49b7a-6153-4eae-9c0f-297655c45f08",
 			},
-			mockBehavior: func(as *mockservice.MockAuthService, ctx context.Context, dto domain.SignInDTO, jwtPair domain.JWTPair) {
-				as.EXPECT().SignIn(ctx, dto).Return(domain.JWTPair{}, errors.New("unexpected error"))
+			mockBehavior: func(as *mockservice.MockAuthService, dto domain.SignInDTO, jwtPair domain.JWTPair) {
+				as.EXPECT().SignIn(gomock.Any(), dto).Return(domain.JWTPair{}, errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -161,7 +160,7 @@ func TestAuthHandler_signIn(t *testing.T) {
 			}
 
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(as, req.Context(), testCase.signInDTO, testCase.jwtPair)
+				testCase.mockBehavior(as, testCase.signInDTO, testCase.jwtPair)
 			}
 
 			ah.signIn(rec, req)
@@ -184,7 +183,7 @@ func TestAuthHandler_signIn(t *testing.T) {
 }
 
 func TestAuthHandler_refresh(t *testing.T) {
-	type mockBehavior func(as *mockservice.MockAuthService, ctx context.Context, dto domain.RefreshSessionDTO, jwtPair domain.JWTPair)
+	type mockBehavior func(as *mockservice.MockAuthService, dto domain.RefreshSessionDTO, jwtPair domain.JWTPair)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -225,8 +224,8 @@ func TestAuthHandler_refresh(t *testing.T) {
 				AccessToken:  "header.payload.sign",
 				RefreshToken: "Bulto5iG1kxFmt8VGkPw",
 			},
-			mockBehavior: func(as *mockservice.MockAuthService, ctx context.Context, dto domain.RefreshSessionDTO, jwtPair domain.JWTPair) {
-				as.EXPECT().Refresh(ctx, dto).Return(jwtPair, nil)
+			mockBehavior: func(as *mockservice.MockAuthService, dto domain.RefreshSessionDTO, jwtPair domain.JWTPair) {
+				as.EXPECT().Refresh(gomock.Any(), dto).Return(jwtPair, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"access_token":"header.payload.sign","refresh_token":"Bulto5iG1kxFmt8VGkPw"}`,
@@ -240,8 +239,8 @@ func TestAuthHandler_refresh(t *testing.T) {
 				RefreshToken: "qGVFLRQw37TnSmG0LKFN",
 				Fingerprint:  "5dc49b7a-6153-4eae-9c0f-297655c45f08",
 			},
-			mockBehavior: func(as *mockservice.MockAuthService, ctx context.Context, dto domain.RefreshSessionDTO, jwtPair domain.JWTPair) {
-				as.EXPECT().Refresh(ctx, dto).Return(domain.JWTPair{}, domain.ErrInvalidRefreshToken)
+			mockBehavior: func(as *mockservice.MockAuthService, dto domain.RefreshSessionDTO, jwtPair domain.JWTPair) {
+				as.EXPECT().Refresh(gomock.Any(), dto).Return(domain.JWTPair{}, domain.ErrInvalidRefreshToken)
 			},
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"message":"invalid refresh token"}`,
@@ -296,8 +295,8 @@ func TestAuthHandler_refresh(t *testing.T) {
 				RefreshToken: "qGVFLRQw37TnSmG0LKFN",
 				Fingerprint:  "5dc49b7a-6153-4eae-9c0f-297655c45f08",
 			},
-			mockBehavior: func(as *mockservice.MockAuthService, ctx context.Context, dto domain.RefreshSessionDTO, jwtPair domain.JWTPair) {
-				as.EXPECT().Refresh(ctx, dto).Return(domain.JWTPair{}, errors.New("unexpected error"))
+			mockBehavior: func(as *mockservice.MockAuthService, dto domain.RefreshSessionDTO, jwtPair domain.JWTPair) {
+				as.EXPECT().Refresh(gomock.Any(), dto).Return(domain.JWTPair{}, errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -324,7 +323,7 @@ func TestAuthHandler_refresh(t *testing.T) {
 			}
 
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(as, req.Context(), testCase.refreshSessionDTO, testCase.jwtPair)
+				testCase.mockBehavior(as, testCase.refreshSessionDTO, testCase.jwtPair)
 			}
 
 			ah.refresh(rec, req)
