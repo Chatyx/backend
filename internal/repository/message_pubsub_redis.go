@@ -29,11 +29,13 @@ func (s *messageRedisSubscriber) ReceiveMessage(ctx context.Context) (domain.Mes
 	return message, nil
 }
 
-func (s *messageRedisSubscriber) MessageChannel() <-chan domain.Message {
+func (s *messageRedisSubscriber) MessageChannel() (<-chan domain.Message, <-chan error) {
 	ch := s.pubSub.Channel()
 	msgCh := make(chan domain.Message)
+	errCh := make(chan error)
 
 	go func() {
+		defer close(errCh)
 		defer close(msgCh)
 
 		for {
@@ -44,7 +46,7 @@ func (s *messageRedisSubscriber) MessageChannel() <-chan domain.Message {
 
 			var message domain.Message
 			if err := encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(msg.Payload)); err != nil {
-				//TODO: s.logger.WithError(err).Error("An error occurred while unmarshalling the message")
+				errCh <- fmt.Errorf("an error occurred while unmarshalling the message: %v", err)
 				return
 			}
 
@@ -52,7 +54,7 @@ func (s *messageRedisSubscriber) MessageChannel() <-chan domain.Message {
 		}
 	}()
 
-	return msgCh
+	return msgCh, errCh
 }
 
 func (s *messageRedisSubscriber) Unsubscribe(ctx context.Context, chatIDs ...string) error {

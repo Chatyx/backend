@@ -49,7 +49,7 @@ func (r *chatMemberPostgresRepository) ListByUserID(ctx context.Context, userID 
 func (r *chatMemberPostgresRepository) list(ctx context.Context, query string, args ...interface{}) ([]domain.ChatMember, error) {
 	rows, err := r.dbPool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("an error occured while quering list of chat members from database: %v", err)
+		return nil, fmt.Errorf("an error occurred while quering list of chat members from database: %v", err)
 	}
 	defer rows.Close()
 
