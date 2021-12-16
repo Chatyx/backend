@@ -1,12 +1,8 @@
 package auth
 
 import (
-	"fmt"
-
 	"github.com/dgrijalva/jwt-go/v4"
 )
-
-var ErrInvalidTokenParse = fmt.Errorf("invalid token parse")
 
 //go:generate mockgen -source=manager.go -destination=mocks/mock.go
 

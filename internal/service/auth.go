@@ -79,12 +79,12 @@ func (s *authService) SignIn(ctx context.Context, dto domain.SignInDTO) (domain.
 
 	accessToken, err := s.tokenManager.NewAccessToken(claims)
 	if err != nil {
-		return domain.JWTPair{}, pkgErrors.WrapInContextError(fmt.Errorf("%v", err), "an error occurred while creating a new access token", ctxFields)
+		return domain.JWTPair{}, pkgErrors.WrapInContextError(err, "an error occurred while creating a new access token", ctxFields)
 	}
 
 	refreshToken, err := s.tokenManager.NewRefreshToken()
 	if err != nil {
-		return domain.JWTPair{}, pkgErrors.WrapInContextError(fmt.Errorf("%v", err), "an error occurred while creating a new refresh token", ctxFields)
+		return domain.JWTPair{}, pkgErrors.WrapInContextError(err, "an error occurred while creating a new refresh token", ctxFields)
 	}
 
 	session := domain.Session{
@@ -153,12 +153,12 @@ func (s *authService) Refresh(ctx context.Context, dto domain.RefreshSessionDTO)
 
 	newAccessToken, err := s.tokenManager.NewAccessToken(claims)
 	if err != nil {
-		return domain.JWTPair{}, pkgErrors.WrapInContextError(fmt.Errorf("%v", err), "an error occurred while creating a new access token", ctxFields)
+		return domain.JWTPair{}, pkgErrors.WrapInContextError(err, "an error occurred while creating a new access token", ctxFields)
 	}
 
 	newRefreshToken, err := s.tokenManager.NewRefreshToken()
 	if err != nil {
-		return domain.JWTPair{}, pkgErrors.WrapInContextError(fmt.Errorf("%v", err), "an error occurred while creating a new refresh token", ctxFields)
+		return domain.JWTPair{}, pkgErrors.WrapInContextError(err, "an error occurred while creating a new refresh token", ctxFields)
 	}
 
 	newSession := domain.Session{
@@ -182,7 +182,7 @@ func (s *authService) Authorize(accessToken string) (domain.Claims, error) {
 	var claims domain.Claims
 
 	if err := s.tokenManager.Parse(accessToken, &claims); err != nil {
-		return claims, fmt.Errorf("failed to parse access token: %w", domain.ErrInvalidAccessToken)
+		return claims, fmt.Errorf("failed to parse access token due %v: %w", err, domain.ErrInvalidAccessToken)
 	}
 
 	return claims, nil
