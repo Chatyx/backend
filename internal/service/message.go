@@ -8,14 +8,12 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/repository"
 	pkgErrors "github.com/Mort4lis/scht-backend/pkg/errors"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 type messageService struct {
 	chatMemberRepo repository.ChatMemberRepository
 	messageRepo    repository.MessageRepository
 	pubSub         repository.MessagePubSub
-	logger         logging.Logger
 }
 
 func NewMessageService(chatMemberRepo repository.ChatMemberRepository, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
@@ -23,7 +21,6 @@ func NewMessageService(chatMemberRepo repository.ChatMemberRepository, messageRe
 		chatMemberRepo: chatMemberRepo,
 		messageRepo:    messageRepo,
 		pubSub:         pubSub,
-		logger:         logging.GetLogger(),
 	}
 }
 
@@ -53,7 +50,6 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 		inCh:           inCh,
 		outCh:          outCh,
 		errCh:          errCh,
-		logger:         s.logger,
 	}
 	go session.serve(ctx)
 
@@ -108,7 +104,6 @@ type messageServeSession struct {
 	messageService MessageService
 	chatMemberRepo repository.ChatMemberRepository
 	subscriber     repository.MessageSubscriber
-	logger         logging.Logger
 
 	inCh  chan domain.CreateMessageDTO
 	outCh chan domain.Message

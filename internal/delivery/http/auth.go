@@ -23,19 +23,15 @@ const refreshCookieName = "refresh_token"
 type authHandler struct {
 	*baseHandler
 	service service.AuthService
-	logger  logging.Logger
 
 	domain          string
 	refreshTokenTTL time.Duration
 }
 
 func newAuthHandler(as service.AuthService, domain string, refreshTokenTTL time.Duration) *authHandler {
-	logger := logging.GetLogger()
-
 	return &authHandler{
-		baseHandler:     &baseHandler{logger: logger},
+		baseHandler:     &baseHandler{logger: logging.GetLogger()},
 		service:         as,
-		logger:          logger,
 		domain:          domain,
 		refreshTokenTTL: refreshTokenTTL,
 	}

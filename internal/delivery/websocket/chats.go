@@ -93,7 +93,6 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) {
 type chatSessionHandler struct {
 	upgrader   *ws.Upgrader
 	msgService service.MessageService
-	logger     logging.Logger
 }
 
 func newChatSessionHandler(msgService service.MessageService) *chatSessionHandler {
@@ -103,7 +102,6 @@ func newChatSessionHandler(msgService service.MessageService) *chatSessionHandle
 			WriteBufferSize: 1024,
 		},
 		msgService: msgService,
-		logger:     logging.GetLogger(),
 	}
 }
 
