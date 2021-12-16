@@ -590,11 +590,12 @@ func (mr *MockMessageSubscriberMockRecorder) Close() *gomock.Call {
 }
 
 // MessageChannel mocks base method.
-func (m *MockMessageSubscriber) MessageChannel() <-chan domain.Message {
+func (m *MockMessageSubscriber) MessageChannel() (<-chan domain.Message, <-chan error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MessageChannel")
 	ret0, _ := ret[0].(<-chan domain.Message)
-	return ret0
+	ret1, _ := ret[1].(<-chan error)
+	return ret0, ret1
 }
 
 // MessageChannel indicates an expected call of MessageChannel.

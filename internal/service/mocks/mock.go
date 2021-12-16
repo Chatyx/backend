@@ -439,13 +439,14 @@ func (mr *MockMessageServiceMockRecorder) List(ctx, memberKey, timestamp interfa
 }
 
 // NewServeSession mocks base method.
-func (m *MockMessageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, error) {
+func (m *MockMessageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, <-chan error, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewServeSession", ctx, userID)
 	ret0, _ := ret[0].(chan<- domain.CreateMessageDTO)
 	ret1, _ := ret[1].(<-chan domain.Message)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].(<-chan error)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // NewServeSession indicates an expected call of NewServeSession.
