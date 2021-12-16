@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Mort4lis/scht-backend/internal/utils"
-
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/repository"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
+	"github.com/Mort4lis/scht-backend/internal/utils"
+	pkgErrors "github.com/Mort4lis/scht-backend/pkg/errors"
 )
 
 type chatMemberService struct {
@@ -18,7 +17,6 @@ type chatMemberService struct {
 	messagePubSub       repository.MessagePubSub
 	memberStatusMatrix  utils.StatusMatrix
 	creatorStatusMatrix utils.StatusMatrix
-	logger              logging.Logger
 }
 
 type ChatMemberConfig struct {
@@ -42,14 +40,13 @@ func NewChatMemberService(cfg ChatMemberConfig) ChatMemberService {
 			domain.InChat: utils.NewStatusSet(domain.Kicked),
 			domain.Kicked: utils.NewStatusSet(domain.InChat),
 		},
-		logger: logging.GetLogger(),
 	}
 }
 
 func (s *chatMemberService) List(ctx context.Context, memberKey domain.ChatMemberIdentity) ([]domain.ChatMember, error) {
 	members, err := s.chatMemberRepo.ListByChatID(ctx, memberKey.ChatID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get list of chat members: %w", err)
 	}
 
 	isIn := false
@@ -62,12 +59,7 @@ func (s *chatMemberService) List(ctx context.Context, memberKey domain.ChatMembe
 	}
 
 	if !isIn {
-		s.logger.WithFields(logging.Fields{
-			"user_id": memberKey.UserID,
-			"chat_id": memberKey.ChatID,
-		}).Debug("member isn't in this chat")
-
-		return nil, domain.ErrChatNotFound
+		return nil, fmt.Errorf("member isn't in this chat: %w", domain.ErrChatNotFound)
 	}
 
 	return members, nil
@@ -79,16 +71,11 @@ func (s *chatMemberService) GetByKey(ctx context.Context, memberKey domain.ChatM
 		ChatID: memberKey.ChatID,
 	})
 	if err != nil {
-		return domain.ChatMember{}, err
+		return domain.ChatMember{}, fmt.Errorf("failed to check if authenticated user is in this chat: %w", err)
 	}
 
 	if !ok {
-		s.logger.WithFields(logging.Fields{
-			"user_id": user.UserID,
-			"chat_id": memberKey.ChatID,
-		}).Debug("member isn't in this chat")
-
-		return domain.ChatMember{}, domain.ErrChatNotFound
+		return domain.ChatMember{}, fmt.Errorf("member isn't in this chat: %w", domain.ErrChatNotFound)
 	}
 
 	return s.chatMemberRepo.GetByKey(ctx, memberKey)
@@ -100,25 +87,20 @@ func (s *chatMemberService) JoinToChat(ctx context.Context, memberKey domain.Cha
 		ChatID: memberKey.ChatID,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check if authenticated user is a creator of this chat: %w", err)
 	}
 
 	if !ok {
-		s.logger.WithFields(logging.Fields{
-			"user_id": user.UserID,
-			"chat_id": memberKey.ChatID,
-		}).Debug("can't join member to chat due the authenticated user isn't a creator")
-
-		return domain.ErrChatNotFound
+		return fmt.Errorf("can't join member to chat due the authenticated user isn't a creator: %w", domain.ErrChatNotFound)
 	}
 
 	joinUser, err := s.userService.GetByID(ctx, memberKey.UserID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get joined member: %w", err)
 	}
 
 	if err = s.chatMemberRepo.Create(ctx, memberKey); err != nil {
-		return err
+		return fmt.Errorf("failed to create member in this chat: %w", err)
 	}
 
 	dto := domain.CreateMessageDTO{
@@ -130,28 +112,28 @@ func (s *chatMemberService) JoinToChat(ctx context.Context, memberKey domain.Cha
 
 	message, err := s.messageRepo.Create(ctx, dto)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create message: %w", err)
 	}
 
-	return s.messagePubSub.Publish(ctx, message)
+	if err = s.messagePubSub.Publish(ctx, message); err != nil {
+		return fmt.Errorf("failed to publish message: %w", err)
+	}
+
+	return nil
 }
 
 func (s *chatMemberService) UpdateStatus(ctx context.Context, dto domain.UpdateChatMemberDTO, user domain.AuthUser) error {
-	logger := s.logger.WithFields(logging.Fields{
-		"chat_id": dto.ChatID,
-	})
-
 	isAuthUserCreator, err := s.chatMemberRepo.IsChatCreator(ctx, domain.ChatMemberIdentity{
 		UserID: user.UserID,
 		ChatID: dto.ChatID,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check if authenticated user is a creator of this chat: %w", err)
 	}
 
 	member, err := s.chatMemberRepo.GetByKey(ctx, dto.ChatMemberIdentity)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get member: %w", err)
 	}
 
 	var mx utils.StatusMatrix
@@ -162,21 +144,16 @@ func (s *chatMemberService) UpdateStatus(ctx context.Context, dto domain.UpdateC
 	case isAuthUserCreator:
 		mx = s.creatorStatusMatrix
 	default:
-		logger.WithFields(logging.Fields{
-			"user_id": user.UserID,
-		}).Debug("can't update chat member status due authenticated user isn't a creator of this chat")
-
-		return domain.ErrChatNotFound
+		return fmt.Errorf("can't update chat member status due authenticated user isn't a creator of this chat: %w", domain.ErrChatNotFound)
 	}
 
 	if !mx.IsCorrectTransit(member.StatusID, dto.StatusID) {
-		logger.WithFields(logging.Fields{
-			"user_id":        dto.UserID,
-			"from_status_id": member.StatusID,
-			"to_status_id":   dto.StatusID,
-		}).Debug("wrong chat member transition")
+		ctxFields := pkgErrors.ContextFields{
+			"source.status_id":      member.StatusID,
+			"destination.status_id": dto.StatusID,
+		}
 
-		return domain.ErrChatMemberWrongStatusTransit
+		return pkgErrors.WrapInContextError(domain.ErrChatMemberWrongStatusTransit, "wrong chat member transition", ctxFields)
 	}
 
 	return s.updateStatus(ctx, member, dto)
@@ -184,7 +161,7 @@ func (s *chatMemberService) UpdateStatus(ctx context.Context, dto domain.UpdateC
 
 func (s *chatMemberService) updateStatus(ctx context.Context, member domain.ChatMember, dto domain.UpdateChatMemberDTO) error {
 	if err := s.chatMemberRepo.Update(ctx, dto); err != nil {
-		return err
+		return fmt.Errorf("failed to update chat member: %w", err)
 	}
 
 	msgDTO := domain.CreateMessageDTO{
@@ -203,18 +180,17 @@ func (s *chatMemberService) updateStatus(ctx context.Context, member domain.Chat
 		msgDTO.ActionID = domain.MessageKickAction
 		msgDTO.Text = fmt.Sprintf("%s has been kicked from the chat", member.Username)
 	default:
-		s.logger.WithFields(logging.Fields{
-			"user_id":   dto.UserID,
-			"status_id": dto.StatusID,
-		}).Error("unknown chat member status")
-
-		return domain.ErrChatMemberUnknownStatus
+		return fmt.Errorf("unknown chat member status: %w", domain.ErrChatMemberUnknownStatus)
 	}
 
 	message, err := s.messageRepo.Create(ctx, msgDTO)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create message: %w", err)
 	}
 
-	return s.messagePubSub.Publish(ctx, message)
+	if err = s.messagePubSub.Publish(ctx, message); err != nil {
+		return fmt.Errorf("failed to publish message: %w", err)
+	}
+
+	return nil
 }

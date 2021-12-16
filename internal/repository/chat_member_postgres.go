@@ -3,25 +3,21 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 type chatMemberPostgresRepository struct {
 	dbPool PgxPool
-	logger logging.Logger
 }
 
 func NewChatMemberPostgresRepository(dbPool PgxPool) ChatMemberRepository {
-	return &chatMemberPostgresRepository{
-		dbPool: dbPool,
-		logger: logging.GetLogger(),
-	}
+	return &chatMemberPostgresRepository{dbPool: dbPool}
 }
 
 func (r *chatMemberPostgresRepository) ListByChatID(ctx context.Context, chatID string) ([]domain.ChatMember, error) {
@@ -53,8 +49,7 @@ func (r *chatMemberPostgresRepository) ListByUserID(ctx context.Context, userID 
 func (r *chatMemberPostgresRepository) list(ctx context.Context, query string, args ...interface{}) ([]domain.ChatMember, error) {
 	rows, err := r.dbPool.Query(ctx, query, args...)
 	if err != nil {
-		r.logger.WithError(err).Error("Unable to list chat members from database")
-		return nil, err
+		return nil, fmt.Errorf("an error occured while quering list of chat members from database: %v", err)
 	}
 	defer rows.Close()
 
@@ -67,16 +62,14 @@ func (r *chatMemberPostgresRepository) list(ctx context.Context, query string, a
 			&member.Username, &member.StatusID,
 			&member.IsCreator, &member.UserID, &member.ChatID,
 		); err != nil {
-			r.logger.WithError(err).Error("Unable to scan chat member")
-			return nil, err
+			return nil, fmt.Errorf("an error occurred while scanning chat member: %v", err)
 		}
 
 		members = append(members, member)
 	}
 
 	if err = rows.Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while reading chat members")
-		return nil, err
+		return nil, fmt.Errorf("an error occurred while reading chat members: %v", err)
 	}
 
 	return members, nil
@@ -87,8 +80,7 @@ func (r *chatMemberPostgresRepository) IsInChat(ctx context.Context, memberKey d
 
 	inChat, err := r.exists(ctx, query, memberKey.UserID, memberKey.ChatID)
 	if err != nil {
-		r.logger.WithError(err).Error("An error occurred while checking if member is in the chat")
-		return false, err
+		return false, fmt.Errorf("an error occurred while checking if member is in the chat: %v", err)
 	}
 
 	return inChat, nil
@@ -99,8 +91,7 @@ func (r *chatMemberPostgresRepository) IsChatCreator(ctx context.Context, member
 
 	isCreator, err := r.exists(ctx, query, memberKey.ChatID, memberKey.UserID)
 	if err != nil {
-		r.logger.WithError(err).Error("An error occurred while checking if member is a chat creator")
-		return false, err
+		return false, fmt.Errorf("an error occurred while checking if member is a chat creator: %v", err)
 	}
 
 	return isCreator, nil
@@ -122,23 +113,16 @@ func (r *chatMemberPostgresRepository) Create(ctx context.Context, memberKey dom
 
 	if _, err := r.dbPool.Exec(ctx, query, memberKey.UserID, memberKey.ChatID); err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
-			r.logger.WithError(err).Debug("chat member with such fields is already associated with this chat")
-			return domain.ErrChatMemberUniqueViolation
+			return fmt.Errorf("%w", domain.ErrChatMemberUniqueViolation)
 		}
 
-		r.logger.WithError(err).Error("An error occurred while inserting into chat_members table")
-
-		return err
+		return fmt.Errorf("an error occurred while inserting chat member into the database: %v", err)
 	}
 
 	return nil
 }
 
 func (r *chatMemberPostgresRepository) GetByKey(ctx context.Context, memberKey domain.ChatMemberIdentity) (domain.ChatMember, error) {
-	logger := r.logger.WithFields(logging.Fields{
-		"user_id": memberKey.UserID,
-		"chat_id": memberKey.ChatID,
-	})
 	query := `SELECT users.username, chat_members.status_id, 
 		chat_members.user_id = chats.creator_id, chat_members.user_id, chat_members.chat_id
 	FROM chat_members 
@@ -155,34 +139,25 @@ func (r *chatMemberPostgresRepository) GetByKey(ctx context.Context, memberKey d
 		&member.IsCreator, &member.UserID, &member.ChatID,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			logger.Debug("member is not found")
-			return domain.ChatMember{}, domain.ErrChatMemberNotFound
+			return domain.ChatMember{}, fmt.Errorf("%w", domain.ErrChatMemberNotFound)
 		}
 
-		logger.WithError(err).Error("An error occurred while getting chat member")
-
-		return domain.ChatMember{}, err
+		return domain.ChatMember{}, fmt.Errorf("an error occurred while getting chat member: %v", err)
 	}
 
 	return member, nil
 }
 
 func (r *chatMemberPostgresRepository) Update(ctx context.Context, dto domain.UpdateChatMemberDTO) error {
-	logger := r.logger.WithFields(logging.Fields{
-		"user_id": dto.UserID,
-		"chat_id": dto.ChatID,
-	})
 	query := "UPDATE chat_members SET status_id = $1 WHERE user_id = $2 AND chat_id = $3"
 
 	cmgTag, err := r.dbPool.Exec(ctx, query, dto.StatusID, dto.UserID, dto.ChatID)
 	if err != nil {
-		logger.WithError(err).Error("An error occurred while updating member")
-		return err
+		return fmt.Errorf("an error occurred while updating member: %v", err)
 	}
 
 	if cmgTag.RowsAffected() == 0 {
-		logger.Debugf("member is not found")
-		return domain.ErrChatMemberNotFound
+		return fmt.Errorf("%w", domain.ErrChatMemberNotFound)
 	}
 
 	return nil

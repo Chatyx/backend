@@ -107,4 +107,16 @@ var (
 		StatusCode: http.StatusNotFound,
 		Message:    "chat is not found",
 	}
+	errChatMemberUniqueViolation = ResponseError{
+		StatusCode: http.StatusBadRequest,
+		Message:    "member is already associated with this chat",
+	}
+	errChatMemberNotFound = ResponseError{
+		StatusCode: http.StatusNotFound,
+		Message:    "member is not found",
+	}
+	errChatMemberWrongStatusTransit = ResponseError{
+		StatusCode: http.StatusBadRequest,
+		Message:    "wrong chat member status transition",
+	}
 )

@@ -11,14 +11,12 @@ import (
 type messageCompositeRepository struct {
 	cacheRepo MessageRepository
 	dbRepo    MessageRepository
-	logger    logging.Logger
 }
 
 func NewMessageCompositeRepository(cacheRepo, dbRepo MessageRepository) MessageRepository {
 	return &messageCompositeRepository{
 		cacheRepo: cacheRepo,
 		dbRepo:    dbRepo,
-		logger:    logging.GetLogger(),
 	}
 }
 
@@ -36,7 +34,8 @@ func (r *messageCompositeRepository) List(ctx context.Context, chatID string, ti
 		return messages, err
 	}
 
-	r.logger.Debugf("not found messages into the cache for chat %s, going to the database...", chatID)
+	logger := logging.GetLoggerFromContext(ctx)
+	logger.Debug("not found messages into the cache for chat, going to the database...")
 
 	return r.dbRepo.List(ctx, chatID, timestamp)
 }
