@@ -73,7 +73,7 @@ func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -87,15 +87,15 @@ func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, MessageListResponse{List: messages})
+	respondSuccess(ctx, http.StatusOK, w, MessageListResponse{List: messages})
 }
 
 // @Summary Send message to the chat
@@ -113,7 +113,7 @@ func (h *messageHandler) create(w http.ResponseWriter, req *http.Request) {
 	dto := domain.CreateMessageDTO{}
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONCreateMessageDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (h *messageHandler) create(w http.ResponseWriter, req *http.Request) {
 	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -138,13 +138,13 @@ func (h *messageHandler) create(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusCreated, w, encoding.NewJSONMessageMarshaler(message))
+	respondSuccess(ctx, http.StatusCreated, w, encoding.NewJSONMessageMarshaler(message))
 }

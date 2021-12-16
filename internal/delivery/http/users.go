@@ -64,11 +64,11 @@ func (h *userHandler) register(router *httprouter.Router, authMid Middleware) {
 func (h *userHandler) list(w http.ResponseWriter, req *http.Request) {
 	users, err := h.userService.List(req.Context())
 	if err != nil {
-		respondErrorRefactored(req.Context(), w, err)
+		respondError(req.Context(), w, err)
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, UserListResponse{List: users})
+	respondSuccess(req.Context(), http.StatusOK, w, UserListResponse{List: users})
 }
 
 // @Summary Get user by id
@@ -89,7 +89,7 @@ func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
 	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(userIDParam, userID)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -97,15 +97,15 @@ func (h *userHandler) detail(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserNotFound):
-			respondErrorRefactored(ctx, w, errUserNotFound.Wrap(err))
+			respondError(ctx, w, errUserNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONUserMarshaler(user))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONUserMarshaler(user))
 }
 
 // @Summary Create user
@@ -122,7 +122,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 	dto := domain.CreateUserDTO{}
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONCreateUserDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -155,7 +155,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -163,15 +163,15 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserUniqueViolation):
-			respondErrorRefactored(ctx, w, errUserUniqueViolation.Wrap(err))
+			respondError(ctx, w, errUserUniqueViolation.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusCreated, w, encoding.NewJSONUserMarshaler(user))
+	respondSuccess(ctx, http.StatusCreated, w, encoding.NewJSONUserMarshaler(user))
 }
 
 // @Summary Update current authenticated user
@@ -189,7 +189,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateUserDTO{}
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateUserDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -222,7 +222,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -233,17 +233,17 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserUniqueViolation):
-			respondErrorRefactored(ctx, w, errUserUniqueViolation.Wrap(err))
+			respondError(ctx, w, errUserUniqueViolation.Wrap(err))
 		case errors.Is(err, domain.ErrUserNotFound):
-			respondErrorRefactored(ctx, w, errUserNotFound.Wrap(err))
+			respondError(ctx, w, errUserNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONUserMarshaler(user))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONUserMarshaler(user))
 }
 
 // @Summary Update current authenticated user's password
@@ -261,12 +261,12 @@ func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 	dto := domain.UpdateUserPasswordDTO{}
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateUserPasswordDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -276,17 +276,17 @@ func (h *userHandler) updatePassword(w http.ResponseWriter, req *http.Request) {
 	if err := h.userService.UpdatePassword(ctx, dto); err != nil {
 		switch {
 		case errors.Is(err, domain.ErrWrongCurrentPassword):
-			respondErrorRefactored(ctx, w, errWrongCurrentPassword.Wrap(err))
+			respondError(ctx, w, errWrongCurrentPassword.Wrap(err))
 		case errors.Is(err, domain.ErrUserNotFound):
-			respondErrorRefactored(ctx, w, errUserNotFound.Wrap(err))
+			respondError(ctx, w, errUserNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }
 
 // @Summary Delete current authenticated user
@@ -306,13 +306,13 @@ func (h *userHandler) delete(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserNotFound):
-			respondErrorRefactored(ctx, w, errUserNotFound.Wrap(err))
+			respondError(ctx, w, errUserNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }

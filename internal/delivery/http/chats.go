@@ -62,11 +62,11 @@ func (h *chatHandler) list(w http.ResponseWriter, req *http.Request) {
 
 	chats, err := h.chatService.List(ctx, authUser.UserID)
 	if err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, ChatListResponse{List: chats})
+	respondSuccess(ctx, http.StatusOK, w, ChatListResponse{List: chats})
 }
 
 // @Summary Create chat
@@ -84,7 +84,7 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 	dto := domain.CreateChatDTO{}
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONCreateChatDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -101,7 +101,7 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -110,11 +110,11 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 
 	chat, err := h.chatService.Create(ctx, dto)
 	if err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	respondSuccess(http.StatusCreated, w, encoding.NewJSONChatMarshaler(chat))
+	respondSuccess(ctx, http.StatusCreated, w, encoding.NewJSONChatMarshaler(chat))
 }
 
 // @Summary Get chat by id where user is a member
@@ -134,7 +134,7 @@ func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -148,15 +148,15 @@ func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
 }
 
 // @Summary Update chat where authenticated user is creator
@@ -176,7 +176,7 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 	chatID := httprouter.ParamsFromContext(ctx).ByName(chatIDParam)
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChatDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -198,7 +198,7 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -210,15 +210,15 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
 }
 
 // @Summary Delete chat where authenticated user is creator
@@ -238,7 +238,7 @@ func (h *chatHandler) delete(w http.ResponseWriter, req *http.Request) {
 	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -252,13 +252,13 @@ func (h *chatHandler) delete(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }

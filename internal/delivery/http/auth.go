@@ -59,7 +59,7 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 	dto := domain.SignInDTO{Fingerprint: req.Header.Get("X-Fingerprint")}
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONSignInDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -70,12 +70,12 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 	ctx = logging.NewContextFromLogger(ctx, h.logger.WithFields(logFields))
 
 	if dto.Fingerprint == "" {
-		respondErrorRefactored(ctx, w, errEmptyFingerprintHeader)
+		respondError(ctx, w, errEmptyFingerprintHeader)
 		return
 	}
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -83,9 +83,9 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrWrongCredentials):
-			respondErrorRefactored(ctx, w, errWrongCredentials.Wrap(err))
+			respondError(ctx, w, errWrongCredentials.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
@@ -100,7 +100,7 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 		HttpOnly: true,
 	})
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
 }
 
 // @Summary refresh authorization token
@@ -119,7 +119,7 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 	if cookie, err := req.Cookie(refreshCookieName); err == nil {
 		dto.RefreshToken = cookie.Value
 	} else if err = h.decodeBody(req.Body, encoding.NewJSONRefreshSessionDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(req.Context(), w, err)
+		respondError(req.Context(), w, err)
 		return
 	}
 
@@ -127,12 +127,12 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
 
 	if dto.Fingerprint == "" {
-		respondErrorRefactored(ctx, w, errEmptyFingerprintHeader)
+		respondError(ctx, w, errEmptyFingerprintHeader)
 		return
 	}
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -140,9 +140,9 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidRefreshToken):
-			respondErrorRefactored(ctx, w, errInvalidRefreshToken.Wrap(err))
+			respondError(ctx, w, errInvalidRefreshToken.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
@@ -157,5 +157,5 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 		HttpOnly: true,
 	})
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
 }

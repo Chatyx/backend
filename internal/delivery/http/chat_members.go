@@ -66,7 +66,7 @@ func (h *chatMemberHandler) list(w http.ResponseWriter, req *http.Request) {
 	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -80,15 +80,15 @@ func (h *chatMemberHandler) list(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, MemberListResponse{List: members})
+	respondSuccess(ctx, http.StatusOK, w, MemberListResponse{List: members})
 }
 
 // @Summary Join member to the chat
@@ -119,7 +119,7 @@ func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -132,19 +132,19 @@ func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
 	if err := h.chatMemberService.JoinToChat(ctx, memberKey, authUser); err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		case errors.Is(err, domain.ErrUserNotFound):
-			respondErrorRefactored(ctx, w, errUserNotFound.Wrap(err))
+			respondError(ctx, w, errUserNotFound.Wrap(err))
 		case errors.Is(err, domain.ErrChatMemberUniqueViolation):
-			respondErrorRefactored(ctx, w, errChatMemberUniqueViolation.Wrap(err))
+			respondError(ctx, w, errChatMemberUniqueViolation.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }
 
 // @Summary Get chat member info
@@ -175,7 +175,7 @@ func (h *chatMemberHandler) detail(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -189,17 +189,17 @@ func (h *chatMemberHandler) detail(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		case errors.Is(err, domain.ErrChatMemberNotFound):
-			respondErrorRefactored(ctx, w, errChatMemberNotFound.Wrap(err))
+			respondError(ctx, w, errChatMemberNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
 }
 
 // @Summary Get current authenticated chat member info
@@ -220,7 +220,7 @@ func (h *chatMemberHandler) detailCurrent(w http.ResponseWriter, req *http.Reque
 	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -234,17 +234,17 @@ func (h *chatMemberHandler) detailCurrent(w http.ResponseWriter, req *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		case errors.Is(err, domain.ErrChatMemberNotFound):
-			respondErrorRefactored(ctx, w, errChatMemberNotFound.Wrap(err))
+			respondError(ctx, w, errChatMemberNotFound.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
 }
 
 // @Summary Update current authenticated member status in chat
@@ -265,7 +265,7 @@ func (h *chatMemberHandler) updateStatus(w http.ResponseWriter, req *http.Reques
 	chatID := httprouter.ParamsFromContext(ctx).ByName(chatIDParam)
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChaMemberDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -281,7 +281,7 @@ func (h *chatMemberHandler) updateStatus(w http.ResponseWriter, req *http.Reques
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -292,19 +292,19 @@ func (h *chatMemberHandler) updateStatus(w http.ResponseWriter, req *http.Reques
 	if err := h.chatMemberService.UpdateStatus(ctx, dto, authUser); err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		case errors.Is(err, domain.ErrChatMemberNotFound):
-			respondErrorRefactored(ctx, w, errChatMemberNotFound.Wrap(err))
+			respondError(ctx, w, errChatMemberNotFound.Wrap(err))
 		case errors.Is(err, domain.ErrChatMemberWrongStatusTransit):
-			respondErrorRefactored(ctx, w, errChatMemberWrongStatusTransit.Wrap(err))
+			respondError(ctx, w, errChatMemberWrongStatusTransit.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }
 
 // @Summary Update member status in chat by creator
@@ -327,7 +327,7 @@ func (h *chatMemberHandler) updateStatusByCreator(w http.ResponseWriter, req *ht
 	chatID, userID := ps.ByName(chatIDParam), ps.ByName(userIDParam)
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChaMemberDTOUnmarshaler(&dto)); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -345,7 +345,7 @@ func (h *chatMemberHandler) updateStatusByCreator(w http.ResponseWriter, req *ht
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondErrorRefactored(ctx, w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
@@ -356,17 +356,17 @@ func (h *chatMemberHandler) updateStatusByCreator(w http.ResponseWriter, req *ht
 	if err := h.chatMemberService.UpdateStatus(ctx, dto, authUser); err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChatNotFound):
-			respondErrorRefactored(ctx, w, errChatNotFound.Wrap(err))
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		case errors.Is(err, domain.ErrChatMemberNotFound):
-			respondErrorRefactored(ctx, w, errChatMemberNotFound.Wrap(err))
+			respondError(ctx, w, errChatMemberNotFound.Wrap(err))
 		case errors.Is(err, domain.ErrChatMemberWrongStatusTransit):
-			respondErrorRefactored(ctx, w, errChatMemberWrongStatusTransit.Wrap(err))
+			respondError(ctx, w, errChatMemberWrongStatusTransit.Wrap(err))
 		default:
-			respondErrorRefactored(ctx, w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }

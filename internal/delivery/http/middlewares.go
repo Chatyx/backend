@@ -50,7 +50,7 @@ func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
 
 			accessToken, err := extractTokenFromHeader(req.Header.Get("Authorization"))
 			if err != nil {
-				respondErrorRefactored(ctx, w, err)
+				respondError(ctx, w, err)
 				return
 			}
 
@@ -58,9 +58,9 @@ func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
 			if err != nil {
 				switch {
 				case errors.Is(err, domain.ErrInvalidAccessToken):
-					respondErrorRefactored(ctx, w, errInvalidAccessToken.Wrap(err))
+					respondError(ctx, w, errInvalidAccessToken.Wrap(err))
 				default:
-					respondErrorRefactored(ctx, w, err)
+					respondError(ctx, w, err)
 				}
 
 				return

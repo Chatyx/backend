@@ -77,7 +77,7 @@ func extractTokenFromHeader(header string) (string, error) {
 	return headerParts[1], nil
 }
 
-func respondSuccess(statusCode int, w http.ResponseWriter, marshaler encoding.Marshaler) {
+func respondSuccess(ctx context.Context, statusCode int, w http.ResponseWriter, marshaler encoding.Marshaler) {
 	if marshaler == nil {
 		w.WriteHeader(statusCode)
 		return
@@ -85,9 +85,7 @@ func respondSuccess(statusCode int, w http.ResponseWriter, marshaler encoding.Ma
 
 	respBody, err := marshaler.Marshal()
 	if err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while marshaling response structure")
-		respondError(w, errInternalServer)
-
+		respondError(ctx, w, fmt.Errorf("an error occurred while marshaling response structure: %v", err))
 		return
 	}
 
@@ -95,36 +93,15 @@ func respondSuccess(statusCode int, w http.ResponseWriter, marshaler encoding.Ma
 	w.WriteHeader(statusCode)
 
 	if _, err = w.Write(respBody); err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while writing response body")
+		respondError(ctx, w, fmt.Errorf("an error occurred while writing response body: %v", err))
 		return
 	}
 }
 
-func respondError(w http.ResponseWriter, err error) {
-	appErr, ok := err.(ResponseError)
-	if !ok {
-		respondError(w, errInternalServer)
-		return
-	}
-
-	respBody, err := json.Marshal(appErr)
-	if err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while marshaling application error")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(appErr.StatusCode)
-
-	if _, err = w.Write(respBody); err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while writing response body")
-	}
-}
-
-func respondErrorRefactored(ctx context.Context, w http.ResponseWriter, err error) {
+func respondError(ctx context.Context, w http.ResponseWriter, err error) {
 	respErr, ok := err.(ResponseError)
 	if !ok {
-		respondErrorRefactored(ctx, w, errInternalServer.Wrap(err))
+		respondError(ctx, w, errInternalServer.Wrap(err))
 		return
 	}
 
@@ -168,7 +145,7 @@ func Init(container service.ServiceContainer, cfg *config.Config) http.Handler {
 
 	router.PanicHandler = func(w http.ResponseWriter, req *http.Request, i interface{}) {
 		logging.GetLogger().Errorf("There was a panic: %v", i)
-		respondError(w, errInternalServer)
+		respondError(req.Context(), w, errInternalServer)
 	}
 	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
