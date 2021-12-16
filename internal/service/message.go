@@ -2,18 +2,18 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/repository"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
+	pkgErrors "github.com/Mort4lis/scht-backend/pkg/errors"
 )
 
 type messageService struct {
 	chatMemberRepo repository.ChatMemberRepository
 	messageRepo    repository.MessageRepository
 	pubSub         repository.MessagePubSub
-	logger         logging.Logger
 }
 
 func NewMessageService(chatMemberRepo repository.ChatMemberRepository, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
@@ -21,14 +21,13 @@ func NewMessageService(chatMemberRepo repository.ChatMemberRepository, messageRe
 		chatMemberRepo: chatMemberRepo,
 		messageRepo:    messageRepo,
 		pubSub:         pubSub,
-		logger:         logging.GetLogger(),
 	}
 }
 
-func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, error) {
+func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, <-chan error, error) {
 	members, err := s.chatMemberRepo.ListByUserID(ctx, userID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, fmt.Errorf("failed to get list of chat members by user id: %w", err)
 	}
 
 	chatIDs := make([]string, 0, len(members))
@@ -41,6 +40,7 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 
 	inCh := make(chan domain.CreateMessageDTO)
 	outCh := make(chan domain.Message)
+	errCh := make(chan error)
 
 	session := &messageServeSession{
 		userID:         userID,
@@ -49,11 +49,11 @@ func (s *messageService) NewServeSession(ctx context.Context, userID string) (ch
 		subscriber:     s.pubSub.Subscribe(ctx, chatIDs...),
 		inCh:           inCh,
 		outCh:          outCh,
-		logger:         s.logger,
+		errCh:          errCh,
 	}
 	go session.serve(ctx)
 
-	return inCh, outCh, nil
+	return inCh, outCh, errCh, nil
 }
 
 func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
@@ -62,25 +62,20 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 		ChatID: dto.ChatID,
 	})
 	if err != nil {
-		return domain.Message{}, err
+		return domain.Message{}, fmt.Errorf("failed to check if sender is in the chat: %w", err)
 	}
 
 	if !ok {
-		s.logger.WithFields(logging.Fields{
-			"user_id": dto.SenderID,
-			"chat_id": dto.ChatID,
-		}).Debug("member isn't in this chat")
-
-		return domain.Message{}, domain.ErrChatNotFound
+		return domain.Message{}, fmt.Errorf("member isn't in this chat: %w", domain.ErrChatNotFound)
 	}
 
 	message, err := s.messageRepo.Create(ctx, dto)
 	if err != nil {
-		return domain.Message{}, err
+		return domain.Message{}, fmt.Errorf("failed to create message: %w", err)
 	}
 
 	if err = s.pubSub.Publish(ctx, message); err != nil {
-		return domain.Message{}, err
+		return domain.Message{}, fmt.Errorf("failed to publish message: %w", err)
 	}
 
 	return message, nil
@@ -89,19 +84,19 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 func (s *messageService) List(ctx context.Context, memberKey domain.ChatMemberIdentity, timestamp time.Time) ([]domain.Message, error) {
 	ok, err := s.chatMemberRepo.IsInChat(ctx, memberKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to check if member is in the chat: %w", err)
 	}
 
 	if !ok {
-		s.logger.WithFields(logging.Fields{
-			"user_id": memberKey.UserID,
-			"chat_id": memberKey.ChatID,
-		}).Debug("member isn't in this chat")
-
-		return nil, domain.ErrChatNotFound
+		return nil, fmt.Errorf("member isn't in this chat: %w", domain.ErrChatNotFound)
 	}
 
-	return s.messageRepo.List(ctx, memberKey.ChatID, timestamp)
+	messages, err := s.messageRepo.List(ctx, memberKey.ChatID, timestamp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get list of messages: %w", err)
+	}
+
+	return messages, nil
 }
 
 type messageServeSession struct {
@@ -109,17 +104,18 @@ type messageServeSession struct {
 	messageService MessageService
 	chatMemberRepo repository.ChatMemberRepository
 	subscriber     repository.MessageSubscriber
-	logger         logging.Logger
 
 	inCh  chan domain.CreateMessageDTO
 	outCh chan domain.Message
+	errCh chan error
 }
 
 func (s *messageServeSession) serve(ctx context.Context) {
+	defer close(s.errCh)
 	defer close(s.outCh)
 	defer s.subscriber.Close()
 
-	subCh := s.subscriber.MessageChannel()
+	subCh, subErrCh := s.subscriber.MessageChannel()
 
 	for {
 		select {
@@ -129,6 +125,7 @@ func (s *messageServeSession) serve(ctx context.Context) {
 			}
 
 			if _, err := s.messageService.Create(ctx, dto); err != nil {
+				s.errCh <- fmt.Errorf("failed to create message: %w", err)
 				return
 			}
 		case message, ok := <-subCh:
@@ -138,6 +135,7 @@ func (s *messageServeSession) serve(ctx context.Context) {
 
 			ok, err := s.handleMessage(ctx, message)
 			if err != nil {
+				s.errCh <- fmt.Errorf("failed to handle message: %w", err)
 				return
 			}
 
@@ -146,11 +144,21 @@ func (s *messageServeSession) serve(ctx context.Context) {
 			}
 
 			s.outCh <- message
+		case err := <-subErrCh:
+			s.errCh <- fmt.Errorf("failed to receive message from subscriber: %w", err)
+			return
 		}
 	}
 }
 
 func (s *messageServeSession) handleMessage(ctx context.Context, message domain.Message) (ok bool, err error) {
+	ctxFields := pkgErrors.ContextFields{
+		"message_id": message.ID,
+		"action_id":  message.ActionID,
+		"chat_id":    message.ChatID,
+		"sender_id":  message.SenderID,
+	}
+
 	switch message.ActionID {
 	case domain.MessageSendAction:
 		if message.SenderID == s.userID {
@@ -162,7 +170,7 @@ func (s *messageServeSession) handleMessage(ctx context.Context, message domain.
 			ChatID: message.ChatID,
 		})
 		if err != nil {
-			return false, err
+			return false, pkgErrors.WrapInContextError(err, "failed to check if authenticated user is in the chat", ctxFields)
 		}
 
 		if !ok {
@@ -171,21 +179,20 @@ func (s *messageServeSession) handleMessage(ctx context.Context, message domain.
 
 		if message.SenderID == s.userID {
 			if err = s.subscriber.Subscribe(ctx, message.ChatID); err != nil {
-				return false, err
+				return false, pkgErrors.WrapInContextError(err, "failed to subscribe to chat", ctxFields)
 			}
 		}
 	case domain.MessageLeaveAction, domain.MessageKickAction:
 		if message.SenderID == s.userID {
 			if err = s.subscriber.Unsubscribe(ctx, message.ChatID); err != nil {
-				return false, err
+				return false, pkgErrors.WrapInContextError(err, "failed to unsubscribe from chat", ctxFields)
 			}
 		}
 	default:
-		s.logger.WithFields(logging.Fields{
-			"action_id": message.ActionID,
-		}).Error("Unknown action_id for handling the message")
-
-		return false, nil
+		return false, pkgErrors.ContextError{
+			Message: "unknown action_id for handling the message",
+			Fields:  ctxFields,
+		}
 	}
 
 	return true, nil

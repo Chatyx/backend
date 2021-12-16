@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -22,19 +23,15 @@ const refreshCookieName = "refresh_token"
 type authHandler struct {
 	*baseHandler
 	service service.AuthService
-	logger  logging.Logger
 
 	domain          string
 	refreshTokenTTL time.Duration
 }
 
 func newAuthHandler(as service.AuthService, domain string, refreshTokenTTL time.Duration) *authHandler {
-	logger := logging.GetLogger()
-
 	return &authHandler{
-		baseHandler:     &baseHandler{logger: logger},
+		baseHandler:     &baseHandler{logger: logging.GetLogger()},
 		service:         as,
-		logger:          logger,
 		domain:          domain,
 		refreshTokenTTL: refreshTokenTTL,
 	}
@@ -58,32 +55,37 @@ func (h *authHandler) register(router *httprouter.Router) {
 // @Failure 500 {object} ResponseError
 // @Router /auth/sign-in [post]
 func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
-	var dto domain.SignInDTO
+	ctx := req.Context()
+	dto := domain.SignInDTO{Fingerprint: req.Header.Get("X-Fingerprint")}
+
 	if err := h.decodeBody(req.Body, encoding.NewJSONSignInDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
+		return
+	}
+
+	logFields := logging.Fields{
+		"username":    dto.Username,
+		"fingerprint": dto.Fingerprint,
+	}
+	ctx = logging.NewContextFromLogger(ctx, h.logger.WithFields(logFields))
+
+	if dto.Fingerprint == "" {
+		respondError(ctx, w, errEmptyFingerprintHeader)
 		return
 	}
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	dto.Fingerprint = req.Header.Get("X-Fingerprint")
-	if dto.Fingerprint == "" {
-		h.logger.Debug("X-Fingerprint header is empty")
-		respondError(w, errEmptyFingerprintHeader)
-
-		return
-	}
-
-	pair, err := h.service.SignIn(req.Context(), dto)
+	pair, err := h.service.SignIn(ctx, dto)
 	if err != nil {
-		switch err {
-		case domain.ErrWrongCredentials:
-			respondError(w, ResponseError{StatusCode: http.StatusUnauthorized, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrWrongCredentials):
+			respondError(ctx, w, errWrongCredentials.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondError(ctx, w, err)
 		}
 
 		return
@@ -98,7 +100,7 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 		HttpOnly: true,
 	})
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
 }
 
 // @Summary refresh authorization token
@@ -113,34 +115,34 @@ func (h *authHandler) signIn(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /auth/refresh [post]
 func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
-	var dto domain.RefreshSessionDTO
+	dto := domain.RefreshSessionDTO{Fingerprint: req.Header.Get("X-Fingerprint")}
 	if cookie, err := req.Cookie(refreshCookieName); err == nil {
 		dto.RefreshToken = cookie.Value
 	} else if err = h.decodeBody(req.Body, encoding.NewJSONRefreshSessionDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
+		respondError(req.Context(), w, err)
+		return
+	}
+
+	logFields := logging.Fields{"fingerprint": dto.Fingerprint}
+	ctx := logging.NewContextFromLogger(req.Context(), h.logger.WithFields(logFields))
+
+	if dto.Fingerprint == "" {
+		respondError(ctx, w, errEmptyFingerprintHeader)
 		return
 	}
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondError(w, err)
-		return
-	}
-
-	dto.Fingerprint = req.Header.Get("X-Fingerprint")
-	if dto.Fingerprint == "" {
-		h.logger.Debug("X-Fingerprint header is empty")
-		respondError(w, errEmptyFingerprintHeader)
-
+		respondError(ctx, w, err)
 		return
 	}
 
 	pair, err := h.service.Refresh(req.Context(), dto)
 	if err != nil {
-		switch err {
-		case domain.ErrInvalidRefreshToken:
-			respondError(w, errInvalidRefreshToken)
+		switch {
+		case errors.Is(err, domain.ErrInvalidRefreshToken):
+			respondError(ctx, w, errInvalidRefreshToken.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondError(ctx, w, err)
 		}
 
 		return
@@ -155,5 +157,5 @@ func (h *authHandler) refresh(w http.ResponseWriter, req *http.Request) {
 		HttpOnly: true,
 	})
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONTokenPairMarshaler(pair))
 }

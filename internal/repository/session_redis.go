@@ -7,19 +7,16 @@ import (
 	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-redis/redis/v8"
 )
 
 type sessionRedisRepository struct {
 	redisClient *redis.Client
-	logger      logging.Logger
 }
 
 func NewSessionRedisRepository(redisClient *redis.Client) SessionRepository {
 	return &sessionRedisRepository{
 		redisClient: redisClient,
-		logger:      logging.GetLogger(),
 	}
 }
 
@@ -29,19 +26,15 @@ func (r *sessionRedisRepository) Get(ctx context.Context, refreshToken string) (
 	payload, err := r.redisClient.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
-			r.logger.WithError(err).Debugf("refresh session is not found with key %s", key)
-			return domain.Session{}, domain.ErrSessionNotFound
+			return domain.Session{}, fmt.Errorf("%w", domain.ErrSessionNotFound)
 		}
 
-		r.logger.WithError(err).Error("An error occurred while getting refresh session by key")
-
-		return domain.Session{}, err
+		return domain.Session{}, fmt.Errorf("an error occurred while getting refresh session: %v", err)
 	}
 
 	var session domain.Session
 	if err = json.Unmarshal([]byte(payload), &session); err != nil {
-		r.logger.WithError(err).Error("An error occurred while unmarshalling refresh session payload")
-		return domain.Session{}, err
+		return domain.Session{}, fmt.Errorf("an error occurred while unmarshalling refresh session payload: %v", err)
 	}
 
 	return session, nil
@@ -53,18 +46,15 @@ func (r *sessionRedisRepository) Set(ctx context.Context, session domain.Session
 
 	payload, err := json.Marshal(session)
 	if err != nil {
-		r.logger.WithError(err).Error("An error occurred while marshaling refresh session")
-		return err
+		return fmt.Errorf("an error occurred while marshaling refresh session: %v", err)
 	}
 
 	if err = r.redisClient.Set(ctx, sessionKey, payload, ttl).Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while setting session")
-		return err
+		return fmt.Errorf("an error occurred while setting the session: %v", err)
 	}
 
 	if err = r.redisClient.RPush(ctx, userSessionsKey, sessionKey).Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while pushing session to the list of user's sessions")
-		return err
+		return fmt.Errorf("an error occurred while pushing session to the list of user sessions: %v", err)
 	}
 
 	return nil
@@ -76,18 +66,15 @@ func (r *sessionRedisRepository) Delete(ctx context.Context, refreshToken, userI
 
 	val, err := r.redisClient.Del(ctx, sessionKey).Result()
 	if err != nil {
-		r.logger.WithError(err).Error("An error occurred while deleting session by key")
-		return err
+		return fmt.Errorf("an error occurred while deleting session by key: %v", err)
 	}
 
 	if val == 0 {
-		r.logger.WithError(err).Debugf("refresh session is not found with key %s", sessionKey)
-		return domain.ErrSessionNotFound
+		return fmt.Errorf("%w", domain.ErrSessionNotFound)
 	}
 
 	if err = r.redisClient.LRem(ctx, userSessionsKey, 0, sessionKey).Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while deleting session key from list of user's sessions")
-		return err
+		return fmt.Errorf("an error occurred while deleting session key from list of user sessions: %v", err)
 	}
 
 	return nil
@@ -98,15 +85,13 @@ func (r *sessionRedisRepository) DeleteAllByUserID(ctx context.Context, userID s
 
 	keys, err := r.redisClient.LRange(ctx, userSessionsKey, 0, -1).Result()
 	if err != nil {
-		r.logger.WithError(err).Error("An error occurred while range user's session keys")
-		return err
+		return fmt.Errorf("an error occurred while range user session keys: %v", err)
 	}
 
 	keys = append(keys, userSessionsKey)
 
 	if err = r.redisClient.Del(ctx, keys...).Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while deleting session keys and key which aggregated them")
-		return err
+		return fmt.Errorf("an error occurred while deleting session keys and key which aggregated them: %v", err)
 	}
 
 	return nil

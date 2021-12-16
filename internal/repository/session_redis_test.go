@@ -6,7 +6,6 @@ package repository
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -38,13 +37,12 @@ func TestSessionRedisRepository_Get(t *testing.T) {
 	)
 
 	testTable := []struct {
-		name              string
-		refreshToken      string
-		value             string
-		mockBehavior      mockBehavior
-		strictCheckErrors bool
-		expectedSession   domain.Session
-		expectedErr       error
+		name            string
+		refreshToken    string
+		value           string
+		mockBehavior    mockBehavior
+		expectedSession domain.Session
+		expectedErr     error
 	}{
 		{
 			name:         "Success",
@@ -62,8 +60,7 @@ func TestSessionRedisRepository_Get(t *testing.T) {
 			mockBehavior: func(mock redismock.ClientMock, refreshToken, value string) {
 				mock.ExpectGet("session:" + refreshToken).RedisNil()
 			},
-			strictCheckErrors: true,
-			expectedErr:       domain.ErrSessionNotFound,
+			expectedErr: domain.ErrSessionNotFound,
 		},
 		{
 			name:         "Unexpected error while getting session",
@@ -71,18 +68,7 @@ func TestSessionRedisRepository_Get(t *testing.T) {
 			mockBehavior: func(mock redismock.ClientMock, refreshToken, value string) {
 				mock.ExpectGet("session:" + refreshToken).SetErr(errUnexpected)
 			},
-			strictCheckErrors: true,
-			expectedErr:       errUnexpected,
-		},
-		{
-			name:         "Unexpected error while unmarshalling",
-			refreshToken: "qGVFLRQw37TnSmG0LKFN",
-			value:        `{"UserID":"1","RefreshToken":"qGVFLRQw37TnSmG0LKFN"`,
-			mockBehavior: func(mock redismock.ClientMock, refreshToken, value string) {
-				mock.ExpectGet("session:" + refreshToken).SetVal(value)
-			},
-			strictCheckErrors: false,
-			expectedErr:       errors.New("unmarshalling error"),
+			expectedErr: errUnexpected,
 		},
 	}
 
@@ -103,8 +89,8 @@ func TestSessionRedisRepository_Get(t *testing.T) {
 
 			if testCase.expectedErr != nil {
 				assert.Error(t, err)
-				if testCase.strictCheckErrors {
-					assert.EqualError(t, err, testCase.expectedErr.Error())
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
 				}
 			}
 
@@ -186,7 +172,10 @@ func TestSessionRedisRepository_Set(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			err = mock.ExpectationsWereMet()
@@ -277,7 +266,10 @@ func TestSessionRedisRepository_Delete(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			err = mock.ExpectationsWereMet()
@@ -359,7 +351,10 @@ func TestSessionRedisRepository_DeleteAllByUserID(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			err = mock.ExpectationsWereMet()

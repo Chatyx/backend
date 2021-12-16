@@ -2,22 +2,18 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
 )
 
 type messagePostgresRepository struct {
 	dbPool PgxPool
-	logger logging.Logger
 }
 
 func NewMessagePostgresRepository(dbPool PgxPool) MessageRepository {
-	return &messagePostgresRepository{
-		dbPool: dbPool,
-		logger: logging.GetLogger(),
-	}
+	return &messagePostgresRepository{dbPool: dbPool}
 }
 
 func (r *messagePostgresRepository) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
@@ -34,8 +30,7 @@ func (r *messagePostgresRepository) List(ctx context.Context, chatID string, tim
 
 	rows, err := r.dbPool.Query(ctx, query, chatID, timestamp)
 	if err != nil {
-		r.logger.WithError(err).Error("Unable to list chat's messages from database")
-		return nil, err
+		return nil, fmt.Errorf("an error occurred while querying list of messages from database: %v", err)
 	}
 	defer rows.Close()
 
@@ -48,16 +43,14 @@ func (r *messagePostgresRepository) List(ctx context.Context, chatID string, tim
 			&message.ID, &message.ActionID, &message.Text,
 			&message.SenderID, &message.ChatID, &message.CreatedAt,
 		); err != nil {
-			r.logger.WithError(err).Error("Unable to scan message")
-			return nil, err
+			return nil, fmt.Errorf("an error occurred while scanning message: %v", err)
 		}
 
 		messages = append(messages, message)
 	}
 
 	if err = rows.Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while reading messages")
-		return nil, err
+		return nil, fmt.Errorf("an error occurred while reading messages: %v", err)
 	}
 
 	return messages, nil

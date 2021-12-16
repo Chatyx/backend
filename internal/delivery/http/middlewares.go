@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -45,26 +46,32 @@ func loggingMiddleware(handler http.Handler) http.Handler {
 func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx := req.Context()
+
 			accessToken, err := extractTokenFromHeader(req.Header.Get("Authorization"))
 			if err != nil {
-				respondError(w, err)
+				respondError(ctx, w, err)
 				return
 			}
 
 			claims, err := as.Authorize(accessToken)
 			if err != nil {
-				switch err {
-				case domain.ErrInvalidAccessToken:
-					respondError(w, errInvalidAccessToken)
+				switch {
+				case errors.Is(err, domain.ErrInvalidAccessToken):
+					respondError(ctx, w, errInvalidAccessToken.Wrap(err))
 				default:
-					respondError(w, errInternalServer)
+					respondError(ctx, w, err)
 				}
 
 				return
 			}
 
-			ctx := domain.NewContextFromUserID(req.Context(), claims.Subject) // TODO: delete
-			ctx = domain.NewContextFromAuthUser(ctx, domain.AuthUser{UserID: claims.Subject})
+			authUser := domain.AuthUser{UserID: claims.Subject}
+			logger := logging.GetLogger().WithFields(logging.Fields{
+				"auth.user_id": authUser.UserID,
+			})
+
+			ctx = domain.NewContextFromAuthUser(logging.NewContextFromLogger(ctx, logger), authUser)
 
 			handler.ServeHTTP(w, req.WithContext(ctx))
 		})

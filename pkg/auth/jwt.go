@@ -27,7 +27,7 @@ func (m *JWTTokenManager) NewAccessToken(claims jwt.Claims) (string, error) {
 
 	sigToken, err := token.SignedString(m.signingKey)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%v", err)
 	}
 
 	return sigToken, nil
@@ -50,11 +50,11 @@ func (m *JWTTokenManager) Parse(accessToken string, claims jwt.Claims) error {
 		return m.signingKey, nil
 	})
 	if err != nil {
-		return ErrInvalidTokenParse
+		return fmt.Errorf("%v", err)
 	}
 
 	if err = token.Claims.Valid(jwt.DefaultValidationHelper); err != nil {
-		return ErrInvalidTokenParse
+		return fmt.Errorf("%v", err)
 	}
 
 	return nil

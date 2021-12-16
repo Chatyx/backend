@@ -180,7 +180,10 @@ func TestUserPostgresRepository_List(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			assert.Equal(t, testCase.expectedUsers, users)
@@ -328,7 +331,10 @@ func TestUserPostgresRepository_Create(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			assert.Equal(t, testCase.expectedUser, user)
@@ -424,7 +430,10 @@ func TestUserPostgresRepository_GetByID(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			assert.Equal(t, testCase.expectedUser, user)
@@ -523,7 +532,10 @@ func TestUserPostgresRepository_GetByUsername(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			assert.Equal(t, testCase.expectedUser, user)
@@ -663,7 +675,10 @@ func TestUserPostgresRepository_Update(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			assert.Equal(t, testCase.expectedUser, user)
@@ -746,7 +761,10 @@ func TestUserPostgresRepository_UpdatePassword(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			err = mockPool.ExpectationsWereMet()
@@ -823,7 +841,10 @@ func TestUserPostgresRepository_Delete(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			err = mockPool.ExpectationsWereMet()
@@ -854,11 +875,8 @@ func TestInvalidDateBirthdayParse(t *testing.T) {
 			BirthDate: "invalid-date",
 		})
 
-		assert.Error(t, err)
-		if err != nil {
-			_, ok := err.(*time.ParseError)
-			assert.Truef(t, ok, "Expected parse error, got: %v", err)
-		}
+		parseErr := &time.ParseError{}
+		assert.ErrorAs(t, err, &parseErr, "expected parse error")
 	})
 
 	t.Run("Update user", func(t *testing.T) {
@@ -867,10 +885,7 @@ func TestInvalidDateBirthdayParse(t *testing.T) {
 			BirthDate: "invalid-date",
 		})
 
-		assert.Error(t, err)
-		if err != nil {
-			_, ok := err.(*time.ParseError)
-			assert.Truef(t, ok, "Expected parse error, got: %v", err)
-		}
+		parseErr := &time.ParseError{}
+		assert.ErrorAs(t, err, &parseErr, "expected parse error")
 	})
 }

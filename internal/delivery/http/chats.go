@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
@@ -30,16 +31,12 @@ func (r ChatListResponse) Marshal() ([]byte, error) {
 type chatHandler struct {
 	*baseHandler
 	chatService service.ChatService
-	logger      logging.Logger
 }
 
 func newChatHandler(chatService service.ChatService) *chatHandler {
-	logger := logging.GetLogger()
-
 	return &chatHandler{
-		baseHandler: &baseHandler{logger: logger},
+		baseHandler: &baseHandler{logger: logging.GetLogger()},
 		chatService: chatService,
-		logger:      logger,
 	}
 }
 
@@ -60,15 +57,16 @@ func (h *chatHandler) register(router *httprouter.Router, authMid Middleware) {
 // @Failure 500 {object} ResponseError
 // @Router /chats [get]
 func (h *chatHandler) list(w http.ResponseWriter, req *http.Request) {
-	authUser := domain.AuthUserFromContext(req.Context())
+	ctx := req.Context()
+	authUser := domain.AuthUserFromContext(ctx)
 
-	chats, err := h.chatService.List(req.Context(), authUser.UserID)
+	chats, err := h.chatService.List(ctx, authUser.UserID)
 	if err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, ChatListResponse{List: chats})
+	respondSuccess(ctx, http.StatusOK, w, ChatListResponse{List: chats})
 }
 
 // @Summary Create chat
@@ -82,27 +80,41 @@ func (h *chatHandler) list(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /chats [post]
 func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	dto := domain.CreateChatDTO{}
+
 	if err := h.decodeBody(req.Body, encoding.NewJSONCreateChatDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
+
+	logFields := logging.Fields{}
+	if dto.Name != "" {
+		logFields["name"] = dto.Name
+	}
+
+	if dto.Description != "" {
+		logFields["description"] = dto.Description
+	}
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logFields)
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	dto.CreatorID = authUser.UserID
 
-	chat, err := h.chatService.Create(req.Context(), dto)
+	chat, err := h.chatService.Create(ctx, dto)
 	if err != nil {
-		respondError(w, errInternalServer)
+		respondError(ctx, w, err)
 		return
 	}
 
-	respondSuccess(http.StatusCreated, w, encoding.NewJSONChatMarshaler(chat))
+	respondSuccess(ctx, http.StatusCreated, w, encoding.NewJSONChatMarshaler(chat))
 }
 
 // @Summary Get chat by id where user is a member
@@ -116,33 +128,35 @@ func (h *chatHandler) create(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id} [get]
 func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
-	chatID := ps.ByName(chatIDParam)
+	ctx := req.Context()
+	chatID := httprouter.ParamsFromContext(ctx).ByName(chatIDParam)
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{"chat_id": chatID})
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	memberKey := domain.ChatMemberIdentity{
 		UserID: authUser.UserID,
 		ChatID: chatID,
 	}
 
-	chat, err := h.chatService.Get(req.Context(), memberKey)
+	chat, err := h.chatService.Get(ctx, memberKey)
 	if err != nil {
-		switch err {
-		case domain.ErrChatNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
 }
 
 // @Summary Update chat where authenticated user is creator
@@ -157,14 +171,26 @@ func (h *chatHandler) detail(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id} [put]
 func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	dto := domain.UpdateChatDTO{}
-	ps := httprouter.ParamsFromContext(req.Context())
-	chatID := ps.ByName(chatIDParam)
+	chatID := httprouter.ParamsFromContext(ctx).ByName(chatIDParam)
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChatDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
+
+	logFields := logging.Fields{"chat_id": chatID}
+	if dto.Name != "" {
+		logFields["name"] = dto.Name
+	}
+
+	if dto.Description != "" {
+		logFields["description"] = dto.Description
+	}
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logFields)
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	vl := validator.ChainValidator(
 		validator.StructValidator(dto),
@@ -172,27 +198,27 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	dto.ID = chatID
 	dto.CreatorID = authUser.UserID
 
-	chat, err := h.chatService.Update(req.Context(), dto)
+	chat, err := h.chatService.Update(ctx, dto)
 	if err != nil {
-		switch err {
-		case domain.ErrChatNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONChatMarshaler(chat))
 }
 
 // @Summary Delete chat where authenticated user is creator
@@ -206,31 +232,33 @@ func (h *chatHandler) update(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id} [delete]
 func (h *chatHandler) delete(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
-	chatID := ps.ByName(chatIDParam)
+	ctx := req.Context()
+	chatID := httprouter.ParamsFromContext(ctx).ByName(chatIDParam)
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{"chat_id": chatID})
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	memberKey := domain.ChatMemberIdentity{
 		UserID: authUser.UserID,
 		ChatID: chatID,
 	}
 
-	err := h.chatService.Delete(req.Context(), memberKey)
+	err := h.chatService.Delete(ctx, memberKey)
 	if err != nil {
-		switch err {
-		case domain.ErrChatNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondError(w, errInternalServer)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }

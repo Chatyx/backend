@@ -30,7 +30,7 @@ var (
 )
 
 func TestChatHandler_list(t *testing.T) {
-	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, userID string, returnedChats []domain.Chat)
+	type mockBehaviour func(chs *mockservice.MockChatService, userID string, returnedChats []domain.Chat)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -70,8 +70,8 @@ func TestChatHandler_list(t *testing.T) {
 					CreatedAt: &chatCreatedAt,
 				},
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, userID string, returnedChats []domain.Chat) {
-				chs.EXPECT().List(ctx, userID).Return(returnedChats, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, userID string, returnedChats []domain.Chat) {
+				chs.EXPECT().List(gomock.Any(), userID).Return(returnedChats, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"list":[{"id":"9c3d397b-fb2f-40ef-9b18-e48e2589e844","name":"Test chat name","description":"Test chat description","creator_id":"80323cde-599d-4c25-9f5b-a67357193b1f","created_at":"2021-10-25T18:05:00+03:00","updated_at":"2021-11-17T23:00:42.000000142+03:00"},{"id":"4d575293-f0b2-4cee-94a2-eeea247d9359","name":"Another test chat name","creator_id":"80323cde-599d-4c25-9f5b-a67357193b1f","created_at":"2021-10-25T18:05:00+03:00"}]}`,
@@ -80,8 +80,8 @@ func TestChatHandler_list(t *testing.T) {
 			name:          "Empty list",
 			authUser:      domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
 			returnedChats: make([]domain.Chat, 0),
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, userID string, returnedChats []domain.Chat) {
-				chs.EXPECT().List(ctx, userID).Return(returnedChats, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, userID string, returnedChats []domain.Chat) {
+				chs.EXPECT().List(gomock.Any(), userID).Return(returnedChats, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"list":[]}`,
@@ -89,8 +89,8 @@ func TestChatHandler_list(t *testing.T) {
 		{
 			name:     "Unexpected error",
 			authUser: domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, userID string, returnedChats []domain.Chat) {
-				chs.EXPECT().List(ctx, userID).Return(nil, errors.New("unexpected error"))
+			mockBehaviour: func(chs *mockservice.MockChatService, userID string, returnedChats []domain.Chat) {
+				chs.EXPECT().List(gomock.Any(), userID).Return(nil, errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -110,7 +110,7 @@ func TestChatHandler_list(t *testing.T) {
 			req = req.WithContext(domain.NewContextFromAuthUser(context.Background(), testCase.authUser))
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(chs, req.Context(), testCase.authUser.UserID, testCase.returnedChats)
+				testCase.mockBehaviour(chs, testCase.authUser.UserID, testCase.returnedChats)
 			}
 
 			chh.list(rec, req)
@@ -127,7 +127,7 @@ func TestChatHandler_list(t *testing.T) {
 }
 
 func TestChatHandler_detail(t *testing.T) {
-	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat)
+	type mockBehaviour func(chs *mockservice.MockChatService, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -161,8 +161,8 @@ func TestChatHandler_detail(t *testing.T) {
 				CreatedAt:   &chatCreatedAt,
 				UpdatedAt:   &chatUpdatedAt,
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat) {
-				chs.EXPECT().Get(ctx, memberKey).Return(returnedChat, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat) {
+				chs.EXPECT().Get(gomock.Any(), memberKey).Return(returnedChat, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"id":"9c3d397b-fb2f-40ef-9b18-e48e2589e844","name":"Test chat name","description":"Test chat description","creator_id":"80323cde-599d-4c25-9f5b-a67357193b1f","created_at":"2021-10-25T18:05:00+03:00","updated_at":"2021-11-17T23:00:42.000000142+03:00"}`,
@@ -177,8 +177,8 @@ func TestChatHandler_detail(t *testing.T) {
 				CreatorID: "80323cde-599d-4c25-9f5b-a67357193b1f",
 				CreatedAt: &chatCreatedAt,
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat) {
-				chs.EXPECT().Get(ctx, memberKey).Return(returnedChat, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat) {
+				chs.EXPECT().Get(gomock.Any(), memberKey).Return(returnedChat, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"id":"9c3d397b-fb2f-40ef-9b18-e48e2589e844","name":"Another test chat name","creator_id":"80323cde-599d-4c25-9f5b-a67357193b1f","created_at":"2021-10-25T18:05:00+03:00"}`,
@@ -187,8 +187,8 @@ func TestChatHandler_detail(t *testing.T) {
 			name:     "Not found",
 			chatID:   "9c3d397b-fb2f-40ef-9b18-e48e2589e844",
 			authUser: domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat) {
-				chs.EXPECT().Get(ctx, memberKey).Return(domain.Chat{}, domain.ErrChatNotFound)
+			mockBehaviour: func(chs *mockservice.MockChatService, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat) {
+				chs.EXPECT().Get(gomock.Any(), memberKey).Return(domain.Chat{}, domain.ErrChatNotFound)
 			},
 			expectedStatusCode:   http.StatusNotFound,
 			expectedResponseBody: `{"message":"chat is not found"}`,
@@ -197,8 +197,8 @@ func TestChatHandler_detail(t *testing.T) {
 			name:     "Unexpected error",
 			chatID:   "9c3d397b-fb2f-40ef-9b18-e48e2589e844",
 			authUser: domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat) {
-				chs.EXPECT().Get(ctx, memberKey).Return(domain.Chat{}, errors.New("unexpected error"))
+			mockBehaviour: func(chs *mockservice.MockChatService, memberKey domain.ChatMemberIdentity, returnedChat domain.Chat) {
+				chs.EXPECT().Get(gomock.Any(), memberKey).Return(domain.Chat{}, errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -225,7 +225,7 @@ func TestChatHandler_detail(t *testing.T) {
 			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(chs, req.Context(), domain.ChatMemberIdentity{
+				testCase.mockBehaviour(chs, domain.ChatMemberIdentity{
 					UserID: testCase.authUser.UserID,
 					ChatID: testCase.chatID,
 				}, testCase.returnedChat)
@@ -245,7 +245,7 @@ func TestChatHandler_detail(t *testing.T) {
 }
 
 func TestChatHandler_create(t *testing.T) {
-	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, dto domain.CreateChatDTO, createdChat domain.Chat)
+	type mockBehaviour func(chs *mockservice.MockChatService, dto domain.CreateChatDTO, createdChat domain.Chat)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -282,8 +282,8 @@ func TestChatHandler_create(t *testing.T) {
 				CreatorID: "80323cde-599d-4c25-9f5b-a67357193b1f",
 				CreatedAt: &chatCreatedAt,
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, dto domain.CreateChatDTO, createdChat domain.Chat) {
-				chs.EXPECT().Create(ctx, dto).Return(createdChat, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, dto domain.CreateChatDTO, createdChat domain.Chat) {
+				chs.EXPECT().Create(gomock.Any(), dto).Return(createdChat, nil)
 			},
 			expectedStatusCode:   http.StatusCreated,
 			expectedResponseBody: `{"id":"9c3d397b-fb2f-40ef-9b18-e48e2589e844","name":"Test chat name","creator_id":"80323cde-599d-4c25-9f5b-a67357193b1f","created_at":"2021-10-25T18:05:00+03:00"}`,
@@ -304,8 +304,8 @@ func TestChatHandler_create(t *testing.T) {
 				CreatorID:   "80323cde-599d-4c25-9f5b-a67357193b1f",
 				CreatedAt:   &chatCreatedAt,
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, dto domain.CreateChatDTO, createdChat domain.Chat) {
-				chs.EXPECT().Create(ctx, dto).Return(createdChat, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, dto domain.CreateChatDTO, createdChat domain.Chat) {
+				chs.EXPECT().Create(gomock.Any(), dto).Return(createdChat, nil)
 			},
 			expectedStatusCode:   http.StatusCreated,
 			expectedResponseBody: `{"id":"9c3d397b-fb2f-40ef-9b18-e48e2589e844","name":"Test chat name","description":"Test chat description","creator_id":"80323cde-599d-4c25-9f5b-a67357193b1f","created_at":"2021-10-25T18:05:00+03:00"}`,
@@ -332,8 +332,8 @@ func TestChatHandler_create(t *testing.T) {
 				Name:      "Test chat name",
 				CreatorID: "80323cde-599d-4c25-9f5b-a67357193b1f",
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, dto domain.CreateChatDTO, createdChat domain.Chat) {
-				chs.EXPECT().Create(ctx, dto).Return(domain.Chat{}, errors.New("unexpected error"))
+			mockBehaviour: func(chs *mockservice.MockChatService, dto domain.CreateChatDTO, createdChat domain.Chat) {
+				chs.EXPECT().Create(gomock.Any(), dto).Return(domain.Chat{}, errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -353,7 +353,7 @@ func TestChatHandler_create(t *testing.T) {
 			req = req.WithContext(domain.NewContextFromAuthUser(context.Background(), testCase.authUser))
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(chs, req.Context(), testCase.createChatDTO, testCase.createdChat)
+				testCase.mockBehaviour(chs, testCase.createChatDTO, testCase.createdChat)
 			}
 
 			chh.create(rec, req)
@@ -370,7 +370,7 @@ func TestChatHandler_create(t *testing.T) {
 }
 
 func TestChatHandler_update(t *testing.T) {
-	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, dto domain.UpdateChatDTO, updatedChat domain.Chat)
+	type mockBehaviour func(chs *mockservice.MockChatService, dto domain.UpdateChatDTO, updatedChat domain.Chat)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -411,8 +411,8 @@ func TestChatHandler_update(t *testing.T) {
 				CreatedAt: &chatCreatedAt,
 				UpdatedAt: &chatUpdatedAt,
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, dto domain.UpdateChatDTO, updatedChat domain.Chat) {
-				chs.EXPECT().Update(ctx, dto).Return(updatedChat, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, dto domain.UpdateChatDTO, updatedChat domain.Chat) {
+				chs.EXPECT().Update(gomock.Any(), dto).Return(updatedChat, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"id":"9c3d397b-fb2f-40ef-9b18-e48e2589e844","name":"Test chat name","creator_id":"80323cde-599d-4c25-9f5b-a67357193b1f","created_at":"2021-10-25T18:05:00+03:00","updated_at":"2021-11-17T23:00:42.000000142+03:00"}`,
@@ -436,8 +436,8 @@ func TestChatHandler_update(t *testing.T) {
 				CreatedAt:   &chatCreatedAt,
 				UpdatedAt:   &chatUpdatedAt,
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, dto domain.UpdateChatDTO, updatedChat domain.Chat) {
-				chs.EXPECT().Update(ctx, dto).Return(updatedChat, nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, dto domain.UpdateChatDTO, updatedChat domain.Chat) {
+				chs.EXPECT().Update(gomock.Any(), dto).Return(updatedChat, nil)
 			},
 			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: `{"id":"9c3d397b-fb2f-40ef-9b18-e48e2589e844","name":"Test chat name","description":"Test chat description","creator_id":"80323cde-599d-4c25-9f5b-a67357193b1f","created_at":"2021-10-25T18:05:00+03:00","updated_at":"2021-11-17T23:00:42.000000142+03:00"}`,
@@ -452,8 +452,8 @@ func TestChatHandler_update(t *testing.T) {
 				Name:      "Test chat name",
 				CreatorID: "80323cde-599d-4c25-9f5b-a67357193b1f",
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, dto domain.UpdateChatDTO, updatedChat domain.Chat) {
-				chs.EXPECT().Update(ctx, dto).Return(domain.Chat{}, domain.ErrChatNotFound)
+			mockBehaviour: func(chs *mockservice.MockChatService, dto domain.UpdateChatDTO, updatedChat domain.Chat) {
+				chs.EXPECT().Update(gomock.Any(), dto).Return(domain.Chat{}, domain.ErrChatNotFound)
 			},
 			expectedStatusCode:   http.StatusNotFound,
 			expectedResponseBody: `{"message":"chat is not found"}`,
@@ -484,8 +484,8 @@ func TestChatHandler_update(t *testing.T) {
 				Name:      "Test chat name",
 				CreatorID: "80323cde-599d-4c25-9f5b-a67357193b1f",
 			},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, dto domain.UpdateChatDTO, updatedChat domain.Chat) {
-				chs.EXPECT().Update(ctx, dto).Return(domain.Chat{}, errors.New("unexpected error"))
+			mockBehaviour: func(chs *mockservice.MockChatService, dto domain.UpdateChatDTO, updatedChat domain.Chat) {
+				chs.EXPECT().Update(gomock.Any(), dto).Return(domain.Chat{}, errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -512,7 +512,7 @@ func TestChatHandler_update(t *testing.T) {
 			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(chs, req.Context(), testCase.updateChatDTO, testCase.updatedChat)
+				testCase.mockBehaviour(chs, testCase.updateChatDTO, testCase.updatedChat)
 			}
 
 			chh.update(rec, req)
@@ -529,7 +529,7 @@ func TestChatHandler_update(t *testing.T) {
 }
 
 func TestChatHandler_delete(t *testing.T) {
-	type mockBehaviour func(chs *mockservice.MockChatService, ctx context.Context, memberKey domain.ChatMemberIdentity)
+	type mockBehaviour func(chs *mockservice.MockChatService, memberKey domain.ChatMemberIdentity)
 
 	logging.InitLogger(
 		logging.LogConfig{
@@ -554,8 +554,8 @@ func TestChatHandler_delete(t *testing.T) {
 			name:     "Success",
 			chatID:   "9c3d397b-fb2f-40ef-9b18-e48e2589e844",
 			authUser: domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberKey domain.ChatMemberIdentity) {
-				chs.EXPECT().Delete(ctx, memberKey).Return(nil)
+			mockBehaviour: func(chs *mockservice.MockChatService, memberKey domain.ChatMemberIdentity) {
+				chs.EXPECT().Delete(gomock.Any(), memberKey).Return(nil)
 			},
 			expectedStatusCode: http.StatusNoContent,
 		},
@@ -563,8 +563,8 @@ func TestChatHandler_delete(t *testing.T) {
 			name:     "Not found",
 			chatID:   "9c3d397b-fb2f-40ef-9b18-e48e2589e844",
 			authUser: domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberKey domain.ChatMemberIdentity) {
-				chs.EXPECT().Delete(ctx, memberKey).Return(domain.ErrChatNotFound)
+			mockBehaviour: func(chs *mockservice.MockChatService, memberKey domain.ChatMemberIdentity) {
+				chs.EXPECT().Delete(gomock.Any(), memberKey).Return(domain.ErrChatNotFound)
 			},
 			expectedStatusCode:   http.StatusNotFound,
 			expectedResponseBody: `{"message":"chat is not found"}`,
@@ -573,8 +573,8 @@ func TestChatHandler_delete(t *testing.T) {
 			name:     "Unexpected error",
 			chatID:   "9c3d397b-fb2f-40ef-9b18-e48e2589e844",
 			authUser: domain.AuthUser{UserID: "80323cde-599d-4c25-9f5b-a67357193b1f"},
-			mockBehaviour: func(chs *mockservice.MockChatService, ctx context.Context, memberKey domain.ChatMemberIdentity) {
-				chs.EXPECT().Delete(ctx, memberKey).Return(errors.New("unexpected error"))
+			mockBehaviour: func(chs *mockservice.MockChatService, memberKey domain.ChatMemberIdentity) {
+				chs.EXPECT().Delete(gomock.Any(), memberKey).Return(errors.New("unexpected error"))
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"message":"internal server error"}`,
@@ -601,7 +601,7 @@ func TestChatHandler_delete(t *testing.T) {
 			req = req.WithContext(ctx)
 
 			if testCase.mockBehaviour != nil {
-				testCase.mockBehaviour(chs, req.Context(), domain.ChatMemberIdentity{
+				testCase.mockBehaviour(chs, domain.ChatMemberIdentity{
 					UserID: testCase.authUser.UserID,
 					ChatID: testCase.chatID,
 				})

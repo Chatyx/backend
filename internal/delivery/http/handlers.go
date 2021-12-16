@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +13,7 @@ import (
 	"github.com/Mort4lis/scht-backend/internal/config"
 	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/Mort4lis/scht-backend/internal/service"
+	pkgErrors "github.com/Mort4lis/scht-backend/pkg/errors"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/Mort4lis/scht-backend/pkg/validator"
 	"github.com/julienschmidt/httprouter"
@@ -27,29 +30,23 @@ func (h *baseHandler) decodeBody(body io.ReadCloser, unmarshaler encoding.Unmars
 
 	payload, err := ioutil.ReadAll(body)
 	if err != nil {
-		h.logger.WithError(err).Error("An error occurred while reading body")
-		return err
+		return fmt.Errorf("an error occurred while reading request body: %w", err)
 	}
 
 	if err = unmarshaler.Unmarshal(payload); err != nil {
-		h.logger.WithError(err).Debug("failed to unmarshal body")
-		return errInvalidDecodeBody
+		return errInvalidDecodeBody.Wrap(fmt.Errorf("failed to unmarshal request body: %w", err))
 	}
 
 	return nil
 }
 
-func (h *baseHandler) validate(validator validator.Validator) error {
-	if errFields := validator.Validate(); len(errFields) != 0 {
-		h.logger.WithFields(logging.Fields{
-			"fields": errFields,
-		}).Debug("validation error")
-
-		return ResponseError{
-			StatusCode: http.StatusBadRequest,
-			Message:    "validation error",
-			Fields:     ErrorFields(errFields),
+func (h *baseHandler) validate(vld validator.Validator) error {
+	if err := vld.Validate(); err != nil {
+		if vldErr, ok := err.(validator.ValidationError); ok {
+			return errValidationError.Wrap(err, WithFields(ErrorFields(vldErr.Fields)))
 		}
+
+		return errInternalServer.Wrap(err)
 	}
 
 	return nil
@@ -57,30 +54,26 @@ func (h *baseHandler) validate(validator validator.Validator) error {
 
 func extractTokenFromHeader(header string) (string, error) {
 	if header == "" {
-		logging.GetLogger().Debug("authorization header is empty")
-		return "", errInvalidAuthorizationHeader
+		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header is empty"))
 	}
 
 	headerParts := strings.Split(header, " ")
 	if len(headerParts) != 2 {
-		logging.GetLogger().Debug("authorization header must contains with two parts")
-		return "", errInvalidAuthorizationHeader
+		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header must contains with two parts"))
 	}
 
 	if headerParts[0] != "Bearer" {
-		logging.GetLogger().Debug("authorization header doesn't begin with Bearer")
-		return "", errInvalidAuthorizationHeader
+		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header doesn't begin with Bearer"))
 	}
 
 	if headerParts[1] == "" {
-		logging.GetLogger().Debug("authorization header value is empty")
-		return "", errInvalidAuthorizationHeader
+		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header value is empty"))
 	}
 
 	return headerParts[1], nil
 }
 
-func respondSuccess(statusCode int, w http.ResponseWriter, marshaler encoding.Marshaler) {
+func respondSuccess(ctx context.Context, statusCode int, w http.ResponseWriter, marshaler encoding.Marshaler) {
 	if marshaler == nil {
 		w.WriteHeader(statusCode)
 		return
@@ -88,9 +81,7 @@ func respondSuccess(statusCode int, w http.ResponseWriter, marshaler encoding.Ma
 
 	respBody, err := marshaler.Marshal()
 	if err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while marshaling response structure")
-		respondError(w, errInternalServer)
-
+		respondError(ctx, w, fmt.Errorf("an error occurred while marshaling response structure: %v", err))
 		return
 	}
 
@@ -98,29 +89,39 @@ func respondSuccess(statusCode int, w http.ResponseWriter, marshaler encoding.Ma
 	w.WriteHeader(statusCode)
 
 	if _, err = w.Write(respBody); err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while writing response body")
+		respondError(ctx, w, fmt.Errorf("an error occurred while writing response body: %v", err))
 		return
 	}
 }
 
-func respondError(w http.ResponseWriter, err error) {
-	appErr, ok := err.(ResponseError)
+func respondError(ctx context.Context, w http.ResponseWriter, err error) {
+	respErr, ok := err.(ResponseError)
 	if !ok {
-		respondError(w, errInternalServer)
+		respondError(ctx, w, errInternalServer.Wrap(err))
 		return
 	}
 
-	respBody, err := json.Marshal(appErr)
+	ctxFields := pkgErrors.UnwrapContextFields(err)
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields(ctxFields))
+
+	switch respErr.StatusCode {
+	case http.StatusInternalServerError:
+		logger.WithError(err).Error("response error")
+	default:
+		logger.WithError(err).Debug("response error")
+	}
+
+	respBody, err := json.Marshal(respErr)
 	if err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while marshaling application error")
+		logger.WithError(err).Error("An error occurred while marshaling application error")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(appErr.StatusCode)
+	w.WriteHeader(respErr.StatusCode)
 
 	if _, err = w.Write(respBody); err != nil {
-		logging.GetLogger().WithError(err).Error("An error occurred while writing response body")
+		logger.WithError(err).Error("An error occurred while writing response body")
 	}
 }
 
@@ -140,7 +141,7 @@ func Init(container service.ServiceContainer, cfg *config.Config) http.Handler {
 
 	router.PanicHandler = func(w http.ResponseWriter, req *http.Request, i interface{}) {
 		logging.GetLogger().Errorf("There was a panic: %v", i)
-		respondError(w, errInternalServer)
+		respondError(req.Context(), w, errInternalServer)
 	}
 	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNoContent)

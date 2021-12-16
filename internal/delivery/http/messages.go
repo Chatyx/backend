@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -29,16 +30,12 @@ func (r MessageListResponse) Marshal() ([]byte, error) {
 type messageHandler struct {
 	*baseHandler
 	msgService service.MessageService
-	logger     logging.Logger
 }
 
 func newMessageHandler(ms service.MessageService) *messageHandler {
-	logger := logging.GetLogger()
-
 	return &messageHandler{
-		baseHandler: &baseHandler{logger: logger},
+		baseHandler: &baseHandler{logger: logging.GetLogger()},
 		msgService:  ms,
-		logger:      logger,
 	}
 }
 
@@ -59,8 +56,15 @@ func (h *messageHandler) register(router *httprouter.Router, authMid Middleware)
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/messages [get]
 func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
+	ctx := req.Context()
+	ps := httprouter.ParamsFromContext(ctx)
 	chatID, tsRaw := ps.ByName(chatIDParam), req.URL.Query().Get("timestamp")
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{
+		"chat_id":   chatID,
+		"timestamp": tsRaw,
+	})
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	timeValidator := validator.NewTimeValidator("timestamp", tsRaw, time.RFC3339Nano)
 	vl := validator.ChainValidator(
@@ -69,29 +73,29 @@ func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	memberKey := domain.ChatMemberIdentity{
 		UserID: authUser.UserID,
 		ChatID: chatID,
 	}
 
-	messages, err := h.msgService.List(req.Context(), memberKey, timeValidator.Value())
+	messages, err := h.msgService.List(ctx, memberKey, timeValidator.Value())
 	if err != nil {
-		switch err {
-		case domain.ErrChatNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondError(w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, MessageListResponse{List: messages})
+	respondSuccess(ctx, http.StatusOK, w, MessageListResponse{List: messages})
 }
 
 // @Summary Send message to the chat
@@ -105,32 +109,42 @@ func (h *messageHandler) list(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /messages [post]
 func (h *messageHandler) create(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	dto := domain.CreateMessageDTO{}
+
 	if err := h.decodeBody(req.Body, encoding.NewJSONCreateMessageDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
+
+	logFields := logging.Fields{}
+	if dto.ChatID != "" {
+		logFields["chat_id"] = dto.ChatID
+	}
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logFields)
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.StructValidator(dto)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	dto.ActionID = domain.MessageSendAction
 	dto.SenderID = authUser.UserID
 
-	message, err := h.msgService.Create(req.Context(), dto)
+	message, err := h.msgService.Create(ctx, dto)
 	if err != nil {
-		switch err {
-		case domain.ErrChatNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondError(w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusCreated, w, encoding.NewJSONMessageMarshaler(message))
+	respondSuccess(ctx, http.StatusCreated, w, encoding.NewJSONMessageMarshaler(message))
 }

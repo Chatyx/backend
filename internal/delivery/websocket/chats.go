@@ -25,7 +25,7 @@ func (s *chatSession) Serve() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	inCh, outCh, err := s.msgService.NewServeSession(ctx, s.userID)
+	inCh, outCh, errCh, err := s.msgService.NewServeSession(ctx, s.userID)
 	if err != nil {
 		return
 	}
@@ -33,19 +33,24 @@ func (s *chatSession) Serve() {
 	go s.readMessages(inCh)
 
 	for {
-		msg, ok := <-outCh
-		if !ok {
-			return
-		}
+		select {
+		case msg, ok := <-outCh:
+			if !ok {
+				return
+			}
 
-		payload, err := encoding.NewProtobufMessageMarshaler(msg).Marshal()
-		if err != nil {
-			s.logger.WithError(err).Error("An error occurred while marshaling the message")
-			return
-		}
+			payload, err := encoding.NewProtobufMessageMarshaler(msg).Marshal()
+			if err != nil {
+				s.logger.WithError(err).Error("An error occurred while marshaling the message")
+				return
+			}
 
-		if err = s.conn.WriteMessage(ws.BinaryMessage, payload); err != nil {
-			s.logger.WithError(err).Error("An error occurred while writing the message to websocket")
+			if err = s.conn.WriteMessage(ws.BinaryMessage, payload); err != nil {
+				s.logger.WithError(err).Error("An error occurred while writing the message to websocket")
+				return
+			}
+		case err = <-errCh:
+			s.logger.WithError(err).Error("an error occurred while serving message session")
 			return
 		}
 	}
@@ -57,8 +62,8 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) {
 	for {
 		_, payload, err := s.conn.ReadMessage()
 		if err != nil {
-			if closeErr, ok := err.(*ws.CloseError); ok {
-				s.logger.Infof("User (id=%s) closed the websocket connection (%s)", s.userID, closeErr)
+			if _, ok := err.(*ws.CloseError); ok {
+				s.logger.WithError(err).Info("User closed the websocket connection")
 				return
 			}
 
@@ -73,12 +78,8 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) {
 			return
 		}
 
-		vl := validator.StructValidator(dto)
-		if errFields := vl.Validate(); len(errFields) != 0 {
-			s.logger.WithFields(logging.Fields{
-				"fields": errFields,
-			}).Debug("message validation error")
-
+		if err = validator.StructValidator(dto).Validate(); err != nil {
+			s.logger.WithError(err).Debug("message validation error")
 			return
 		}
 
@@ -92,7 +93,6 @@ func (s *chatSession) readMessages(inCh chan<- domain.CreateMessageDTO) {
 type chatSessionHandler struct {
 	upgrader   *ws.Upgrader
 	msgService service.MessageService
-	logger     logging.Logger
 }
 
 func newChatSessionHandler(msgService service.MessageService) *chatSessionHandler {
@@ -102,30 +102,28 @@ func newChatSessionHandler(msgService service.MessageService) *chatSessionHandle
 			WriteBufferSize: 1024,
 		},
 		msgService: msgService,
-		logger:     logging.GetLogger(),
 	}
 }
 
 func (h *chatSessionHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	logger := logging.GetLoggerFromContext(ctx)
+
 	conn, err := h.upgrader.Upgrade(w, req, nil)
 	if err != nil {
-		h.logger.WithError(err).Error("Failed to upgrade protocol")
-		h.respondError(w)
-
+		logger.WithError(err).Debug("failed to upgrade protocol")
 		return
 	}
 
+	authUser := domain.AuthUserFromContext(ctx)
 	chs := &chatSession{
 		conn:       conn,
-		logger:     h.logger,
+		logger:     logger,
 		msgService: h.msgService,
-		userID:     domain.UserIDFromContext(req.Context()),
+		userID:     authUser.UserID,
 	}
+
 	go chs.Serve()
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h *chatSessionHandler) respondError(w http.ResponseWriter) {
-	http.Error(w, "Failed to upgrade protocol", http.StatusInternalServerError)
 }

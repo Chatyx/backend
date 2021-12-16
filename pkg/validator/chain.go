@@ -2,15 +2,14 @@ package validator
 
 type chainValidator []Validator
 
-func (v chainValidator) Validate() ErrorFields {
+func (v chainValidator) Validate() error {
 	for _, validator := range v {
-		errFields := validator.Validate()
-		if len(errFields) != 0 {
-			return errFields
+		if err := validator.Validate(); err != nil {
+			return err
 		}
 	}
 
-	return ErrorFields{}
+	return nil
 }
 
 func ChainValidator(validators ...Validator) Validator {

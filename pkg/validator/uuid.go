@@ -11,14 +11,16 @@ func isValidUUID(id string) bool {
 	return err == nil
 }
 
-func (v uuidValidator) Validate() ErrorFields {
-	errFields := ErrorFields{}
-
+func (v uuidValidator) Validate() error {
 	if !isValidUUID(v.value) {
-		errFields[v.field] = "must be uuid"
+		return ValidationError{
+			Fields: ErrorFields{
+				v.field: "must be uuid",
+			},
+		}
 	}
 
-	return errFields
+	return nil
 }
 
 func UUIDValidator(field, value string) Validator {

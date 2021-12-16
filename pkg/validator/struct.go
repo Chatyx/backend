@@ -14,26 +14,28 @@ func StructValidator(s interface{}) Validator {
 	return &structValidator{s: s}
 }
 
-func (v *structValidator) Validate() ErrorFields {
+func (v *structValidator) Validate() error {
 	if validate == nil {
 		panic("need to call SetValidate() before this action")
 	}
-
-	errFields := ErrorFields{}
 
 	if err := validate.Struct(v.s); err != nil {
 		switch vErr := err.(type) {
 		case *validator.InvalidValidationError:
 			panic(err)
 		case validator.ValidationErrors:
+			errFields := ErrorFields{}
+
 			for _, fieldErr := range vErr {
 				errFields[fieldErr.Field()] = fmt.Sprintf(
 					"field validation for '%s' failed on the '%s' tag",
 					fieldErr.Field(), fieldErr.Tag(),
 				)
 			}
+
+			return ValidationError{Fields: errFields}
 		}
 	}
 
-	return errFields
+	return nil
 }

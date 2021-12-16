@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
@@ -29,16 +30,12 @@ func (r MemberListResponse) Marshal() ([]byte, error) {
 type chatMemberHandler struct {
 	*baseHandler
 	chatMemberService service.ChatMemberService
-	logger            logging.Logger
 }
 
 func newChatMemberHandler(cms service.ChatMemberService) *chatMemberHandler {
-	logger := logging.GetLogger()
-
 	return &chatMemberHandler{
-		baseHandler:       &baseHandler{logger: logger},
+		baseHandler:       &baseHandler{logger: logging.GetLogger()},
 		chatMemberService: cms,
-		logger:            logger,
 	}
 }
 
@@ -62,33 +59,36 @@ func (h *chatMemberHandler) register(router *httprouter.Router, authMid Middlewa
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/members [get]
 func (h *chatMemberHandler) list(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
-	chatID := ps.ByName(chatIDParam)
+	ctx := req.Context()
+	chatID := httprouter.ParamsFromContext(ctx).ByName(chatIDParam)
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{"chat_id": chatID})
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	memberKey := domain.ChatMemberIdentity{
 		UserID: authUser.UserID,
 		ChatID: chatID,
 	}
 
-	members, err := h.chatMemberService.List(req.Context(), memberKey)
+	members, err := h.chatMemberService.List(ctx, memberKey)
 	if err != nil {
-		switch err {
-		case domain.ErrChatNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
 		default:
-			respondError(w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, MemberListResponse{List: members})
+	respondSuccess(ctx, http.StatusOK, w, MemberListResponse{List: members})
 }
 
 // @Summary Join member to the chat
@@ -103,8 +103,15 @@ func (h *chatMemberHandler) list(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/members [post]
 func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
+	ctx := req.Context()
+	ps := httprouter.ParamsFromContext(ctx)
 	chatID, userID := ps.ByName(chatIDParam), req.URL.Query().Get(userIDParam)
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{
+		"chat_id": chatID,
+		"user_id": userID,
+	})
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	vl := validator.ChainValidator(
 		validator.UUIDValidator(chatIDParam, chatID),
@@ -112,30 +119,32 @@ func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	memberKey := domain.ChatMemberIdentity{
 		UserID: userID,
 		ChatID: chatID,
 	}
 
-	if err := h.chatMemberService.JoinToChat(req.Context(), memberKey, authUser); err != nil {
-		switch err {
-		case domain.ErrChatNotFound, domain.ErrUserNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
-		case domain.ErrChatMemberUniqueViolation:
-			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+	if err := h.chatMemberService.JoinToChat(ctx, memberKey, authUser); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
+		case errors.Is(err, domain.ErrUserNotFound):
+			respondError(ctx, w, errUserNotFound.Wrap(err))
+		case errors.Is(err, domain.ErrChatMemberUniqueViolation):
+			respondError(ctx, w, errChatMemberUniqueViolation.Wrap(err))
 		default:
-			respondError(w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }
 
 // @Summary Get chat member info
@@ -150,8 +159,15 @@ func (h *chatMemberHandler) join(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/members/{user_id} [get]
 func (h *chatMemberHandler) detail(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
+	ctx := req.Context()
+	ps := httprouter.ParamsFromContext(ctx)
 	chatID, userID := ps.ByName(chatIDParam), ps.ByName(userIDParam)
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{
+		"chat_id": chatID,
+		"user_id": userID,
+	})
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	vl := validator.ChainValidator(
 		validator.UUIDValidator(chatIDParam, chatID),
@@ -159,29 +175,31 @@ func (h *chatMemberHandler) detail(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	memberKey := domain.ChatMemberIdentity{
 		UserID: userID,
 		ChatID: chatID,
 	}
 
-	member, err := h.chatMemberService.GetByKey(req.Context(), memberKey, authUser)
+	member, err := h.chatMemberService.GetByKey(ctx, memberKey, authUser)
 	if err != nil {
-		switch err {
-		case domain.ErrChatNotFound, domain.ErrChatMemberNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
+		case errors.Is(err, domain.ErrChatMemberNotFound):
+			respondError(ctx, w, errChatMemberNotFound.Wrap(err))
 		default:
-			respondError(w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
 }
 
 // @Summary Get current authenticated chat member info
@@ -195,33 +213,38 @@ func (h *chatMemberHandler) detail(w http.ResponseWriter, req *http.Request) {
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/member [get]
 func (h *chatMemberHandler) detailCurrent(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
-	chatID := ps.ByName(chatIDParam)
+	ctx := req.Context()
+	chatID := httprouter.ParamsFromContext(ctx).ByName(chatIDParam)
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{"chat_id": chatID})
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	if err := h.validate(validator.UUIDValidator(chatIDParam, chatID)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	memberKey := domain.ChatMemberIdentity{
 		UserID: authUser.UserID,
 		ChatID: chatID,
 	}
 
-	member, err := h.chatMemberService.GetByKey(req.Context(), memberKey, authUser)
+	member, err := h.chatMemberService.GetByKey(ctx, memberKey, authUser)
 	if err != nil {
-		switch err {
-		case domain.ErrChatNotFound, domain.ErrChatMemberNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
+		case errors.Is(err, domain.ErrChatMemberNotFound):
+			respondError(ctx, w, errChatMemberNotFound.Wrap(err))
 		default:
-			respondError(w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
+	respondSuccess(ctx, http.StatusOK, w, encoding.NewJSONChatMemberMarshaler(member))
 }
 
 // @Summary Update current authenticated member status in chat
@@ -237,14 +260,20 @@ func (h *chatMemberHandler) detailCurrent(w http.ResponseWriter, req *http.Reque
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/member [patch]
 func (h *chatMemberHandler) updateStatus(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
-	chatID := ps.ByName(chatIDParam)
+	ctx := req.Context()
 	dto := domain.UpdateChatMemberDTO{}
+	chatID := httprouter.ParamsFromContext(ctx).ByName(chatIDParam)
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChaMemberDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{
+		"chat_id":   chatID,
+		"status_id": dto.StatusID,
+	})
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	vl := validator.ChainValidator(
 		validator.StructValidator(dto),
@@ -252,28 +281,30 @@ func (h *chatMemberHandler) updateStatus(w http.ResponseWriter, req *http.Reques
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	dto.ChatID = chatID
 	dto.UserID = authUser.UserID
 
-	if err := h.chatMemberService.UpdateStatus(req.Context(), dto, authUser); err != nil {
-		switch err {
-		case domain.ErrChatNotFound, domain.ErrChatMemberNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
-		case domain.ErrChatMemberWrongStatusTransit:
-			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+	if err := h.chatMemberService.UpdateStatus(ctx, dto, authUser); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
+		case errors.Is(err, domain.ErrChatMemberNotFound):
+			respondError(ctx, w, errChatMemberNotFound.Wrap(err))
+		case errors.Is(err, domain.ErrChatMemberWrongStatusTransit):
+			respondError(ctx, w, errChatMemberWrongStatusTransit.Wrap(err))
 		default:
-			respondError(w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }
 
 // @Summary Update member status in chat by creator
@@ -290,14 +321,22 @@ func (h *chatMemberHandler) updateStatus(w http.ResponseWriter, req *http.Reques
 // @Failure 500 {object} ResponseError
 // @Router /chats/{chat_id}/members/{user_id} [patch]
 func (h *chatMemberHandler) updateStatusByCreator(w http.ResponseWriter, req *http.Request) {
-	ps := httprouter.ParamsFromContext(req.Context())
-	chatID, userID := ps.ByName(chatIDParam), ps.ByName(userIDParam)
+	ctx := req.Context()
 	dto := domain.UpdateChatMemberDTO{}
+	ps := httprouter.ParamsFromContext(ctx)
+	chatID, userID := ps.ByName(chatIDParam), ps.ByName(userIDParam)
 
 	if err := h.decodeBody(req.Body, encoding.NewJSONUpdateChaMemberDTOUnmarshaler(&dto)); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
+
+	logger := logging.GetLoggerFromContext(ctx).WithFields(logging.Fields{
+		"chat_id":   chatID,
+		"user_id":   userID,
+		"status_id": dto.StatusID,
+	})
+	ctx = logging.NewContextFromLogger(ctx, logger)
 
 	vl := validator.ChainValidator(
 		validator.StructValidator(dto),
@@ -306,26 +345,28 @@ func (h *chatMemberHandler) updateStatusByCreator(w http.ResponseWriter, req *ht
 	)
 
 	if err := h.validate(vl); err != nil {
-		respondError(w, err)
+		respondError(ctx, w, err)
 		return
 	}
 
-	authUser := domain.AuthUserFromContext(req.Context())
+	authUser := domain.AuthUserFromContext(ctx)
 	dto.ChatID = chatID
 	dto.UserID = userID
 
-	if err := h.chatMemberService.UpdateStatus(req.Context(), dto, authUser); err != nil {
-		switch err {
-		case domain.ErrChatMemberNotFound, domain.ErrChatNotFound:
-			respondError(w, ResponseError{StatusCode: http.StatusNotFound, Message: err.Error()})
-		case domain.ErrChatMemberWrongStatusTransit:
-			respondError(w, ResponseError{StatusCode: http.StatusBadRequest, Message: err.Error()})
+	if err := h.chatMemberService.UpdateStatus(ctx, dto, authUser); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrChatNotFound):
+			respondError(ctx, w, errChatNotFound.Wrap(err))
+		case errors.Is(err, domain.ErrChatMemberNotFound):
+			respondError(ctx, w, errChatMemberNotFound.Wrap(err))
+		case errors.Is(err, domain.ErrChatMemberWrongStatusTransit):
+			respondError(ctx, w, errChatMemberWrongStatusTransit.Wrap(err))
 		default:
-			respondError(w, err)
+			respondError(ctx, w, err)
 		}
 
 		return
 	}
 
-	respondSuccess(http.StatusNoContent, w, nil)
+	respondSuccess(ctx, http.StatusNoContent, w, nil)
 }

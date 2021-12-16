@@ -58,6 +58,6 @@ type MessageSubscriber interface {
 	Subscribe(ctx context.Context, chatIDs ...string) error
 	Unsubscribe(ctx context.Context, chatIDs ...string) error
 	ReceiveMessage(ctx context.Context) (domain.Message, error)
-	MessageChannel() <-chan domain.Message
+	MessageChannel() (<-chan domain.Message, <-chan error)
 	Close() error
 }

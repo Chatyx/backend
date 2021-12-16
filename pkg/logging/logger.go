@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -98,6 +99,10 @@ func InitLogger(cfg LogConfig) {
 	})
 }
 
+type loggerCtxKey struct{}
+
+var loggerKey = loggerCtxKey{}
+
 // GetLogger returns logger if it isn't empty. Otherwise, it will panic.
 func GetLogger() Logger {
 	if logger == nil {
@@ -105,4 +110,18 @@ func GetLogger() Logger {
 	}
 
 	return logger
+}
+
+// GetLoggerFromContext gets logger from context if it exists.
+// Otherwise, it will return calling result GetLogger.
+func GetLoggerFromContext(ctx context.Context) Logger {
+	if l, ok := ctx.Value(loggerKey).(Logger); ok {
+		return l
+	}
+
+	return GetLogger()
+}
+
+func NewContextFromLogger(ctx context.Context, l Logger) context.Context {
+	return context.WithValue(ctx, loggerKey, l)
 }

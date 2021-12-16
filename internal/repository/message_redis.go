@@ -9,20 +9,15 @@ import (
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/encoding"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
 	"github.com/go-redis/redis/v8"
 )
 
 type messageRedisRepository struct {
 	redisClient *redis.Client
-	logger      logging.Logger
 }
 
 func NewMessageRedisRepository(redisClient *redis.Client) MessageRepository {
-	return &messageRedisRepository{
-		redisClient: redisClient,
-		logger:      logging.GetLogger(),
-	}
+	return &messageRedisRepository{redisClient: redisClient}
 }
 
 func (r *messageRedisRepository) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
@@ -38,8 +33,7 @@ func (r *messageRedisRepository) Create(ctx context.Context, dto domain.CreateMe
 
 	payload, err := encoding.NewProtobufMessageMarshaler(message).Marshal()
 	if err != nil {
-		r.logger.WithError(err).Error("An error occurred while marshaling the message")
-		return domain.Message{}, err
+		return domain.Message{}, fmt.Errorf("an error occurred while marshaling the message: %v", err)
 	}
 
 	key := fmt.Sprintf("chat:%s:messages", message.ChatID)
@@ -47,8 +41,7 @@ func (r *messageRedisRepository) Create(ctx context.Context, dto domain.CreateMe
 		Score:  float64(message.CreatedAt.UnixNano()),
 		Member: payload,
 	}).Err(); err != nil {
-		r.logger.WithError(err).Error("An error occurred while creating the message into the redis")
-		return domain.Message{}, err
+		return domain.Message{}, fmt.Errorf("an error occurred while creating the message into the cache: %v", err)
 	}
 
 	return message, nil
@@ -62,8 +55,7 @@ func (r *messageRedisRepository) List(ctx context.Context, chatID string, timest
 		Max: "+inf",
 	}).Result()
 	if err != nil {
-		r.logger.WithError(err).Error("An error occurred while getting list of messages")
-		return nil, err
+		return nil, fmt.Errorf("an error occurred while getting list of messages: %v", err)
 	}
 
 	messages := make([]domain.Message, 0, len(payloads))
@@ -72,8 +64,7 @@ func (r *messageRedisRepository) List(ctx context.Context, chatID string, timest
 		var message domain.Message
 
 		if err = encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(payload)); err != nil {
-			r.logger.WithError(err).Error("An error occurred while unmarshal the message")
-			return nil, err
+			return nil, fmt.Errorf("an error occurred while unmarshaling the message: %v", err)
 		}
 
 		messages = append(messages, message)

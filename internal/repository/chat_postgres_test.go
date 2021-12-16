@@ -175,7 +175,10 @@ func TestChatPostgresRepository_List(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			assert.Equal(t, testCase.expectedChats, chats)
@@ -302,7 +305,10 @@ func TestChatPostgresRepository_Create(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			assert.Equal(t, testCase.expectedChat, chat)
@@ -404,7 +410,10 @@ func TestChatPostgresRepository_GetByID(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			assert.Equal(t, testCase.expectedChat, chat)
@@ -502,7 +511,10 @@ func TestChatPostgresRepository_Update(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			assert.Equal(t, testCase.expectedChat, chat)
@@ -591,7 +603,10 @@ func TestChatPostgresRepository_Delete(t *testing.T) {
 			}
 
 			if testCase.expectedErr != nil {
-				assert.EqualError(t, err, testCase.expectedErr.Error())
+				assert.Error(t, err)
+				if testCase.expectedErr != errUnexpected {
+					assert.ErrorIs(t, err, testCase.expectedErr)
+				}
 			}
 
 			err = mockPool.ExpectationsWereMet()
