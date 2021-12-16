@@ -54,24 +54,20 @@ func (h *baseHandler) validate(vld validator.Validator) error {
 
 func extractTokenFromHeader(header string) (string, error) {
 	if header == "" {
-		logging.GetLogger().Debug("authorization header is empty")
-		return "", errInvalidAuthorizationHeader
+		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header is empty"))
 	}
 
 	headerParts := strings.Split(header, " ")
 	if len(headerParts) != 2 {
-		logging.GetLogger().Debug("authorization header must contains with two parts")
-		return "", errInvalidAuthorizationHeader
+		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header must contains with two parts"))
 	}
 
 	if headerParts[0] != "Bearer" {
-		logging.GetLogger().Debug("authorization header doesn't begin with Bearer")
-		return "", errInvalidAuthorizationHeader
+		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header doesn't begin with Bearer"))
 	}
 
 	if headerParts[1] == "" {
-		logging.GetLogger().Debug("authorization header value is empty")
-		return "", errInvalidAuthorizationHeader
+		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header value is empty"))
 	}
 
 	return headerParts[1], nil
