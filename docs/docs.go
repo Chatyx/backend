@@ -252,6 +252,12 @@ var doc = `{
                             "$ref": "#/definitions/domain.Chat"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -356,6 +362,12 @@ var doc = `{
                     "204": {
                         "description": "No Content"
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -402,6 +414,12 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/domain.ChatMember"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
                         }
                     },
                     "404": {
@@ -509,6 +527,12 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/http.MemberListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
                         }
                     },
                     "404": {
@@ -620,6 +644,12 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/domain.ChatMember"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
                         }
                     },
                     "404": {
@@ -1070,6 +1100,12 @@ var doc = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/domain.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ResponseError"
                         }
                     },
                     "404": {
