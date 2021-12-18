@@ -23,7 +23,6 @@ test.unit:
 	go tool cover -func=cover.out
 
 test.integration: infrastructure.test
-	bash ./scripts/wait-for-postgres.sh
 	go test -tags=integration -v ./test/... || true
 	docker-compose -f docker-compose.test.yml down
 
