@@ -1,0 +1,10 @@
+**
+
+!/cmd/**
+!/configs/**
+!/docs/**
+!/internal/**
+!/pkg/**
+
+!go.mod
+!go.sum
