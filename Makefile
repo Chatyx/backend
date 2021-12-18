@@ -11,8 +11,8 @@ generate:
 	go generate ./...
 
 infrastructure.dev:
-	docker-compose -f docker-compose.dev.yml down
-	docker-compose -f docker-compose.dev.yml up -d
+	docker-compose down
+	docker-compose up --remove-orphan postgres redis
 
 infrastructure.test:
 	docker-compose -f docker-compose.test.yml down
