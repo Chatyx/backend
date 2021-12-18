@@ -51,46 +51,42 @@ type App struct {
 
 // NewApp creates new application.
 func NewApp(cfg *config.Config) *App {
-	logger := logging.GetLogger()
-
-	dbPool, err := initPG(cfg.Postgres)
-	if err != nil {
-		logger.WithError(err).Fatal("Unable to connect to postgres")
+	app := &App{
+		cfg:    cfg,
+		logger: logging.GetLogger(),
 	}
 
-	redisClient, err := initRedis(cfg.Redis)
-	if err != nil {
-		logger.WithError(err).Fatal("Unable to connect to redis")
-	}
+	app.initPG(cfg.Postgres)
+	app.initRedis(cfg.Redis)
 
 	hasher := password.BCryptPasswordHasher{}
 
 	tokenManager, err := auth.NewJWTTokenManager(cfg.Auth.SignKey)
 	if err != nil {
-		logger.WithError(err).Fatal("Failed to create new token manager")
+		app.logger.WithError(err).Fatal("Failed to create new token manager")
 	}
 
 	validate, err := inVld.New()
 	if err != nil {
-		logger.WithError(err).Fatal("Failed to init validator")
+		app.logger.WithError(err).Fatal("Failed to init validator")
 	}
 
 	pkgVld.SetValidate(validate)
 
-	msgPubSub := repository.NewMessagePubSub(redisClient)
-	userRepo := repository.NewUserPostgresRepository(dbPool)
+	msgPubSub := repository.NewMessagePubSub(app.redisClient)
+	userRepo := repository.NewUserPostgresRepository(app.dbPool)
 	chatRepo := repository.NewChatCacheRepositoryDecorator(
-		repository.NewChatPostgresRepository(dbPool),
-		redisClient,
+		repository.NewChatPostgresRepository(app.dbPool),
+		app.redisClient,
 	)
 	chatMemberRepo := repository.NewChatMemberCacheRepository(
-		repository.NewChatMemberPostgresRepository(dbPool),
-		redisClient,
+		repository.NewChatMemberPostgresRepository(app.dbPool),
+		app.redisClient,
 	)
-	sessionRepo := repository.NewSessionRedisRepository(redisClient)
+	sessionRepo := repository.NewSessionRedisRepository(app.redisClient)
 	msgRepo := repository.NewMessageCompositeRepository(
-		repository.NewMessageRedisRepository(redisClient),
-		repository.NewMessagePostgresRepository(dbPool),
+		repository.NewMessageRedisRepository(app.redisClient),
+		repository.NewMessagePostgresRepository(app.dbPool),
 	)
 
 	userService := service.NewUserService(userRepo, sessionRepo, hasher)
@@ -120,7 +116,7 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	apiListenCfg := cfg.Listen.API
-	apiServer := server.NewHttpServerWrapper(
+	app.apiServer = server.NewHttpServerWrapper(
 		server.Config{
 			ServerName: "API Server",
 			ListenType: apiListenCfg.Type,
@@ -135,7 +131,7 @@ func NewApp(cfg *config.Config) *App {
 	)
 
 	chatListenCfg := cfg.Listen.Chat
-	chatServer := server.NewHttpServerWrapper(
+	app.chatServer = server.NewHttpServerWrapper(
 		server.Config{
 			ServerName: "Chat Server",
 			ListenType: chatListenCfg.Type,
@@ -149,19 +145,14 @@ func NewApp(cfg *config.Config) *App {
 		},
 	)
 
-	return &App{
-		cfg:         cfg,
-		logger:      logger,
-		dbPool:      dbPool,
-		redisClient: redisClient,
-		apiServer:   apiServer,
-		chatServer:  chatServer,
-	}
+	return app
 }
 
-func initPG(cfg config.PostgresConfig) (*pgxpool.Pool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+func (app *App) initPG(cfg config.PostgresConfig) {
+	var (
+		err  error
+		pool *pgxpool.Pool
+	)
 
 	dsn := fmt.Sprintf(
 		"postgresql://%s:%s@%s:%d/%s",
@@ -169,15 +160,28 @@ func initPG(cfg config.PostgresConfig) (*pgxpool.Pool, error) {
 		cfg.Host, cfg.Port, cfg.Database,
 	)
 
-	pool, err := pgxpool.Connect(ctx, dsn)
+	err = DoWithAttempts(func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		pool, err = pgxpool.Connect(ctx, dsn)
+		if err != nil {
+			app.logger.WithError(err).Warning("Failed to connect to postgres... Going to do the next attempt")
+
+			return err
+		}
+
+		return nil
+	}, cfg.MaxConnectionAttempts, cfg.FailedConnectionDelay)
+
 	if err != nil {
-		return nil, err
+		app.logger.WithError(err).Fatal("All attempts are exceeded. Unable to connect to postgres")
 	}
 
-	return pool, nil
+	app.dbPool = pool
 }
 
-func initRedis(cfg config.RedisConfig) (*redis.Client, error) {
+func (app *App) initRedis(cfg config.RedisConfig) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Username: cfg.Username,
@@ -185,14 +189,23 @@ func initRedis(cfg config.RedisConfig) (*redis.Client, error) {
 		DB:       0, // use default database
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	err := DoWithAttempts(func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		return nil, err
+		if err := rdb.Ping(ctx).Err(); err != nil {
+			app.logger.WithError(err).Warning("Failed to connect to redis... Going to do the next attempt")
+
+			return err
+		}
+
+		return nil
+	}, cfg.MaxConnectionAttempts, cfg.FailedConnectionDelay)
+	if err != nil {
+		app.logger.WithError(err).Fatal("All attempts are exceeded. Unable to connect to redis")
 	}
 
-	return rdb, nil
+	app.redisClient = rdb
 }
 
 func (app *App) Run() error {
@@ -224,4 +237,21 @@ func (app *App) gracefulShutdown() error {
 	}
 
 	return app.apiServer.Stop()
+}
+
+func DoWithAttempts(fn func() error, maxAttempts int, delay time.Duration) error {
+	var err error
+
+	for maxAttempts > 0 {
+		if err = fn(); err != nil {
+			time.Sleep(delay)
+			maxAttempts--
+
+			continue
+		}
+
+		return nil
+	}
+
+	return err
 }

@@ -30,18 +30,22 @@ type AuthConfig struct {
 }
 
 type PostgresConfig struct {
-	Host     string `yaml:"host"     env:"SCHT_PG_HOST"     env-required:"true"`
-	Port     int    `yaml:"port"     env:"SCHT_PG_PORT"     env-required:"true"`
-	Database string `yaml:"database" env:"SCHT_PG_DATABASE" env-required:"true"`
-	Username string `yaml:"username" env:"SCHT_PG_USERNAME" env-required:"true"`
-	Password string `yaml:"password" env:"SCHT_PG_PASSWORD"`
+	Host                  string        `yaml:"host"     env:"SCHT_PG_HOST"     env-required:"true"`
+	Port                  int           `yaml:"port"     env:"SCHT_PG_PORT"     env-required:"true"`
+	Database              string        `yaml:"database" env:"SCHT_PG_DATABASE" env-required:"true"`
+	Username              string        `yaml:"username" env:"SCHT_PG_USERNAME" env-required:"true"`
+	Password              string        `yaml:"password" env:"SCHT_PG_PASSWORD"`
+	MaxConnectionAttempts int           `yaml:"max_conn_attempts" env-default:"3"`
+	FailedConnectionDelay time.Duration `yaml:"failed_conn_delay" env-default:"5"`
 }
 
 type RedisConfig struct {
-	Host     string `yaml:"host"     env:"SCHT_REDIS_HOST"     env-required:"true"`
-	Port     int    `yaml:"port"     env:"SCHT_REDIS_PORT"     env-required:"true"`
-	Username string `yaml:"username" env:"SCHT_REDIS_USERNAME" env-required:"true"`
-	Password string `yaml:"password" env:"SCHT_REDIS_PASSWORD"`
+	Host                  string        `yaml:"host"     env:"SCHT_REDIS_HOST"     env-required:"true"`
+	Port                  int           `yaml:"port"     env:"SCHT_REDIS_PORT"     env-required:"true"`
+	Username              string        `yaml:"username" env:"SCHT_REDIS_USERNAME" env-required:"true"`
+	Password              string        `yaml:"password" env:"SCHT_REDIS_PASSWORD"`
+	MaxConnectionAttempts int           `yaml:"max_conn_attempts" env-default:"3"`
+	FailedConnectionDelay time.Duration `yaml:"failed_conn_delay" env-default:"5"`
 }
 
 type Logging struct {
@@ -89,6 +93,8 @@ func GetConfig(path string) *Config {
 
 		cfg.Auth.AccessTokenTTL *= time.Minute
 		cfg.Auth.RefreshTokenTTL *= time.Minute
+		cfg.Postgres.FailedConnectionDelay *= time.Second
+		cfg.Redis.FailedConnectionDelay *= time.Second
 	})
 
 	return cfg

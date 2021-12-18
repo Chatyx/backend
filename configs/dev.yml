@@ -19,11 +19,15 @@ postgres:
   database: scht_db
   username: scht_user
   password: scht_password
+  max_conn_attempts: 3
+  failed_conn_delay: 5 # seconds
 redis:
   host: 127.0.0.1
   port: 6379
   username: default
   password: ""
+  max_conn_attempts: 3
+  failed_conn_delay: 5 # seconds
 logging:
   level: debug
   filepath: ./logs/all.log
