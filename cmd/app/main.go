@@ -11,7 +11,7 @@ import (
 var cfgPath string
 
 func init() {
-	flag.StringVar(&cfgPath, "config", "./configs/dev.yml", "config file path")
+	flag.StringVar(&cfgPath, "config", "./configs/main.yml", "config file path")
 }
 
 func main() {
