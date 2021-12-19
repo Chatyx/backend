@@ -25,6 +25,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     env:
+      TZ: Europe/Moscow
       DB_USER: scht_user
       DB_PASSWORD: scht_password
       DB_NAME: scht_db_test
