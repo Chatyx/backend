@@ -1,8 +1,16 @@
+BACKEND_BIN = ./build/scht-backend
+MIGRATE_BIN = ./build/migrate
+
 lint:
 	golangci-lint run
 
-build:
-	go build -o ./build/scht-backend ./cmd/app/main.go
+build: clean $(BACKEND_BIN) $(MIGRATE_BIN)
+
+$(BACKEND_BIN):
+	go build -o $(BACKEND_BIN) ./cmd/app/main.go
+
+$(MIGRATE_BIN):
+	go build -o $(MIGRATE_BIN) ./cmd/migrate/main.go
 
 swagger:
 	swag init -g ./internal/app/app.go
@@ -41,3 +49,6 @@ migrate.down:
     	--network host migrate/migrate \
         -path=/migrations/ \
         -database postgres://scht_user:scht_password@localhost:5432/scht_db?sslmode=disable down 1
+
+clean:
+	rm -rf ./build || true
