@@ -1,5 +1,12 @@
 # SCHT Backend
 
+![ci](https://github.com/Mort4lis/scht-backend/actions/workflows/main.yml/badge.svg)
+![license](https://img.shields.io/github/license/Mort4lis/scht-backend)
+![go-version](https://img.shields.io/github/go-mod/go-version/Mort4lis/scht-backend)
+![docker-pulls](https://img.shields.io/docker/pulls/mortalis/scht-backend)
+![code-size](https://img.shields.io/github/languages/code-size/Mort4lis/scht-backend)
+![total-lines](https://img.shields.io/tokei/lines/github/Mort4lis/scht-backend)
+
 ## Description
 
 SCHT Backend is a simple chat implementation in GO.
