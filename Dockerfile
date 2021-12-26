@@ -16,8 +16,9 @@ RUN go mod download
 # Copy application files to the working directory
 COPY . ./
 
-# Build application
-RUN go build -o app ./cmd/app/main.go
+# Build application and other cli utilities
+RUN go build -o app ./cmd/app/main.go && \
+    go build -o migrate ./cmd/migrate/main.go
 
 
 FROM alpine:3.15
@@ -25,15 +26,17 @@ FROM alpine:3.15
 # Add a working directory
 WORKDIR /scht-backend
 
-# Copy built binary from builder to the /scht-backend directory
-COPY --from=builder /scht-backend/app ./
+# Copy built binaries, configs and migrations from builder to the /scht-backend directory
+COPY --from=builder /scht-backend/internal/db/migrations ./internal/db/migrations
 COPY --from=builder /scht-backend/configs ./configs
+COPY --from=builder /scht-backend/app ./
+COPY --from=builder /scht-backend/migrate ./
 
+# Define volumes
 VOLUME ./configs
-VOLUME ./logs
 
 # Expose ports
 EXPOSE 8000 8080
 
-# Execute build binary
+# Execute built binary
 CMD ./app
