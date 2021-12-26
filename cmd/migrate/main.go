@@ -21,6 +21,8 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
+
 	cfg := config.GetConfig(cfgPath)
 
 	dbMigration, err := migrate.New("file://"+migrationsPath, cfg.DBConnectionURL())
