@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 )
@@ -20,7 +19,7 @@ func (r *messagePostgresRepository) Create(ctx context.Context, dto domain.Creat
 	panic("implement me")
 }
 
-func (r *messagePostgresRepository) List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error) {
+func (r *messagePostgresRepository) List(ctx context.Context, chatID string, dto domain.MessageListDTO) (domain.MessageList, error) {
 	query := `SELECT 
 		id, action_id, text, 
 		sender_id, chat_id, created_at 
@@ -28,9 +27,9 @@ func (r *messagePostgresRepository) List(ctx context.Context, chatID string, tim
 	WHERE chat_id = $1 AND created_at > $2 
 	ORDER BY created_at`
 
-	rows, err := r.dbPool.Query(ctx, query, chatID, timestamp)
+	rows, err := r.dbPool.Query(ctx, query, chatID, dto.OffsetDate)
 	if err != nil {
-		return nil, fmt.Errorf("an error occurred while querying list of messages from database: %v", err)
+		return domain.MessageList{}, fmt.Errorf("an error occurred while querying list of messages from database: %v", err)
 	}
 	defer rows.Close()
 
@@ -43,15 +42,15 @@ func (r *messagePostgresRepository) List(ctx context.Context, chatID string, tim
 			&message.ID, &message.ActionID, &message.Text,
 			&message.SenderID, &message.ChatID, &message.CreatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("an error occurred while scanning message: %v", err)
+			return domain.MessageList{}, fmt.Errorf("an error occurred while scanning message: %v", err)
 		}
 
 		messages = append(messages, message)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("an error occurred while reading messages: %v", err)
+		return domain.MessageList{}, fmt.Errorf("an error occurred while reading messages: %v", err)
 	}
 
-	return messages, nil
+	return domain.MessageList{Messages: messages}, nil
 }

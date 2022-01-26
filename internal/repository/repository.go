@@ -46,7 +46,7 @@ type ChatMemberRepository interface {
 
 type MessageRepository interface {
 	Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error)
-	List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error)
+	List(ctx context.Context, chatID string, dto domain.MessageListDTO) (domain.MessageList, error)
 }
 
 type MessagePubSub interface {
