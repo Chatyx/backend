@@ -58,30 +58,24 @@ func (r *messageRedisRepository) List(ctx context.Context, chatID string, dto do
 		max = offsetDateUnixNano
 	}
 
-	total, err := r.redisClient.ZCount(ctx, key, min, max).Result()
-	if err != nil {
-		return domain.MessageList{}, fmt.Errorf("an error occurred while calculating total messages: %v", err)
-	}
-
-	limit, offset := dto.Limit, dto.Offset
-	if dto.Direction == domain.OlderMessages {
-		offset = int(total) - dto.Limit - offset
-		if offset < 0 {
-			offset = 0
-			limit = int(total) - dto.Offset
-		}
-
-		if limit <= 0 {
-			return domain.MessageList{Total: int(total)}, nil
-		}
-	}
-
-	payloads, err := r.redisClient.ZRangeByScore(ctx, key, &redis.ZRangeBy{
+	rangeBy := &redis.ZRangeBy{
 		Min:    min,
 		Max:    max,
-		Offset: int64(offset),
-		Count:  int64(limit),
-	}).Result()
+		Offset: int64(dto.Offset),
+		Count:  int64(dto.Limit),
+	}
+
+	var (
+		payloads []string
+		err      error
+	)
+
+	if dto.Direction == domain.NewerMessages {
+		payloads, err = r.redisClient.ZRangeByScore(ctx, key, rangeBy).Result()
+	} else {
+		payloads, err = r.redisClient.ZRevRangeByScore(ctx, key, rangeBy).Result()
+	}
+
 	if err != nil {
 		return domain.MessageList{}, fmt.Errorf("an error occurred while getting list of messages: %v", err)
 	}
@@ -96,6 +90,11 @@ func (r *messageRedisRepository) List(ctx context.Context, chatID string, dto do
 		}
 
 		messages = append(messages, message)
+	}
+
+	total, err := r.redisClient.ZCount(ctx, key, min, max).Result()
+	if err != nil {
+		return domain.MessageList{}, fmt.Errorf("an error occurred while calculating total messages: %v", err)
 	}
 
 	return domain.MessageList{
