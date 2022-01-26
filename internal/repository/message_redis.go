@@ -94,7 +94,7 @@ func (r *messageRedisRepository) List(ctx context.Context, chatID string, dto do
 
 	total, err := r.redisClient.ZCount(ctx, key, min, max).Result()
 	if err != nil {
-		return domain.MessageList{}, fmt.Errorf("an error occurred while calculating total messages: %v", err)
+		return domain.MessageList{}, fmt.Errorf("an error occurred while getting total messages: %v", err)
 	}
 
 	return domain.MessageList{
