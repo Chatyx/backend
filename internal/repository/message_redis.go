@@ -47,15 +47,37 @@ func (r *messageRedisRepository) Create(ctx context.Context, dto domain.CreateMe
 	return message, nil
 }
 
-func (r *messageRedisRepository) List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error) {
+func (r *messageRedisRepository) List(ctx context.Context, chatID string, dto domain.MessageListDTO) (domain.MessageList, error) {
+	min, max := "-inf", "+inf"
 	key := fmt.Sprintf("chat:%s:messages", chatID)
+	offsetDateUnixNano := fmt.Sprintf("%d", dto.OffsetDate.UnixNano())
 
-	payloads, err := r.redisClient.ZRangeByScore(ctx, key, &redis.ZRangeBy{
-		Min: fmt.Sprintf("(%d", timestamp.UnixNano()),
-		Max: "+inf",
-	}).Result()
+	if dto.Direction == domain.NewerMessages {
+		min = offsetDateUnixNano
+	} else {
+		max = offsetDateUnixNano
+	}
+
+	rangeBy := &redis.ZRangeBy{
+		Min:    min,
+		Max:    max,
+		Offset: int64(dto.Offset),
+		Count:  int64(dto.Limit),
+	}
+
+	var (
+		payloads []string
+		err      error
+	)
+
+	if dto.Direction == domain.NewerMessages {
+		payloads, err = r.redisClient.ZRangeByScore(ctx, key, rangeBy).Result()
+	} else {
+		payloads, err = r.redisClient.ZRevRangeByScore(ctx, key, rangeBy).Result()
+	}
+
 	if err != nil {
-		return nil, fmt.Errorf("an error occurred while getting list of messages: %v", err)
+		return domain.MessageList{}, fmt.Errorf("an error occurred while getting list of messages: %v", err)
 	}
 
 	messages := make([]domain.Message, 0, len(payloads))
@@ -64,11 +86,19 @@ func (r *messageRedisRepository) List(ctx context.Context, chatID string, timest
 		var message domain.Message
 
 		if err = encoding.NewProtobufMessageUnmarshaler(&message).Unmarshal([]byte(payload)); err != nil {
-			return nil, fmt.Errorf("an error occurred while unmarshaling the message: %v", err)
+			return domain.MessageList{}, fmt.Errorf("an error occurred while unmarshaling the message: %v", err)
 		}
 
 		messages = append(messages, message)
 	}
 
-	return messages, nil
+	total, err := r.redisClient.ZCount(ctx, key, min, max).Result()
+	if err != nil {
+		return domain.MessageList{}, fmt.Errorf("an error occurred while getting total messages: %v", err)
+	}
+
+	return domain.MessageList{
+		Total:    int(total),
+		Messages: messages,
+	}, nil
 }

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/pkg/logging"
@@ -24,18 +23,18 @@ func (r *messageCompositeRepository) Create(ctx context.Context, dto domain.Crea
 	return r.cacheRepo.Create(ctx, dto)
 }
 
-func (r *messageCompositeRepository) List(ctx context.Context, chatID string, timestamp time.Time) ([]domain.Message, error) {
-	messages, err := r.cacheRepo.List(ctx, chatID, timestamp)
+func (r *messageCompositeRepository) List(ctx context.Context, chatID string, dto domain.MessageListDTO) (domain.MessageList, error) {
+	messageList, err := r.cacheRepo.List(ctx, chatID, dto)
 	if err != nil {
-		return nil, err
+		return domain.MessageList{}, err
 	}
 
-	if len(messages) != 0 {
-		return messages, err
+	if len(messageList.Messages) != 0 {
+		return messageList, err
 	}
 
 	logger := logging.GetLoggerFromContext(ctx)
 	logger.Debug("not found messages into the cache for chat, going to the database...")
 
-	return r.dbRepo.List(ctx, chatID, timestamp)
+	return r.dbRepo.List(ctx, chatID, dto)
 }

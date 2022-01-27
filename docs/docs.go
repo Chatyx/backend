@@ -760,8 +760,29 @@ var doc = `{
                     },
                     {
                         "type": "string",
-                        "description": "Last timestamp of received message",
-                        "name": "timestamp",
+                        "description": "Date from which pagination will be performed (date format RFC3339Nano)",
+                        "name": "offset_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination direction (newer or older)",
+                        "name": "direction",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of result to return",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of messages to be skipped",
+                        "name": "offset",
                         "in": "query",
                         "required": true
                     }
@@ -1440,11 +1461,20 @@ var doc = `{
         "http.MessageListResponse": {
             "type": "object",
             "properties": {
-                "list": {
+                "has_next": {
+                    "type": "boolean"
+                },
+                "has_prev": {
+                    "type": "boolean"
+                },
+                "result": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/domain.Message"
                     }
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },

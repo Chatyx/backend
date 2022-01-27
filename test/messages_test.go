@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	handlers "github.com/Mort4lis/scht-backend/internal/delivery/http"
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/encoding"
 	"github.com/go-redis/redis/v8"
@@ -168,37 +169,89 @@ func (s *AppTestSuite) TestSendMessageNotInChat() {
 
 func (s *AppTestSuite) TestMessageList() {
 	const (
-		sendMessageLen = 100
-		chatID         = "609fce45-458f-477a-b2bb-e886d75d22ab"
+		sendMessageCount  = 100
+		paginateDirection = "newer"
+		chatID            = "609fce45-458f-477a-b2bb-e886d75d22ab"
 	)
 
-	expectedStoredMessages, err := s.getChatMessagesFromDB(chatID, time.Time{})
-	s.NoError(err, "Failed to get chat's messages from database")
+	mickConn, mickTokenPair := s.newWebsocketConnection("mick47", "helloworld12345", "222")
+	defer mickConn.Close()
 
-	johnTokenPair := s.authenticate("john1967", "qwerty12345", "111")
+	for i := 0; i < sendMessageCount; i++ {
+		s.sendWebsocketMessage(mickConn, "Hi, "+strconv.Itoa(i), chatID)
+	}
+
+	expectedCachedMessages, err := s.getChatMessagesFromCache(chatID, time.Time{})
+	s.NoError(err, "Failed to get chat's messages from cache")
+
+	headers := http.Header{}
+	headers.Add("Authorization", "Bearer "+mickTokenPair.AccessToken)
+
+	cachedMessageList := s.getRequestMessages(chatID, time.Time{}, paginateDirection, sendMessageCount, 0, headers)
+
+	s.Require().Equal(sendMessageCount, cachedMessageList.Total)
+	s.Require().Equal(sendMessageCount, len(cachedMessageList.Result))
+	s.Require().Equal(sendMessageCount, s.messageCountInCache(chatID))
+	s.Require().Equal(expectedCachedMessages, cachedMessageList.Result)
+}
+
+func (s *AppTestSuite) TestMessageListPaginationNewer() {
+	s.testMessageListPagination(time.Time{}, "newer")
+}
+
+func (s *AppTestSuite) TestMessageListPaginationOlder() {
+	futureTime := time.Now().Add(5 * time.Minute)
+
+	s.testMessageListPagination(futureTime, "older")
+}
+
+func (s *AppTestSuite) testMessageListPagination(offsetDate time.Time, paginateDirection string) {
+	const (
+		limit            = 10
+		sendMessageCount = 92
+		chatID           = "92b37e8b-92e9-4c8b-a723-3a2925b62d91"
+	)
+
+	johnConn, johnTokenPair := s.newWebsocketConnection("john1967", "qwerty12345", "111")
+	defer johnConn.Close()
+
+	for i := 0; i < sendMessageCount; i++ {
+		s.sendWebsocketMessage(johnConn, strconv.Itoa(i), chatID)
+	}
 
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+johnTokenPair.AccessToken)
 
-	storedMessages := s.getRequestMessages(chatID, time.Time{}, headers)
-	s.Require().Equal(expectedStoredMessages, storedMessages)
+	offset := 0
+	for ; offset < sendMessageCount; offset += limit {
+		msgList := s.getRequestMessages(chatID, offsetDate, paginateDirection, limit, offset, headers)
 
-	mickConn, _ := s.newWebsocketConnection("mick47", "helloworld12345", "222")
-	defer mickConn.Close()
+		s.Require().Equal(sendMessageCount, msgList.Total)
 
-	beginSendMessages := time.Now()
-	for i := 0; i < sendMessageLen; i++ {
-		s.sendWebsocketMessage(mickConn, "Hi, "+strconv.Itoa(i), chatID)
+		if offset == 0 {
+			s.Require().False(msgList.HasPrev)
+		} else {
+			s.Require().True(msgList.HasPrev)
+		}
+
+		expectedMessageCount := limit
+		if sendMessageCount-offset < limit {
+			s.Require().False(msgList.HasNext)
+
+			expectedMessageCount = sendMessageCount - offset
+		} else {
+			s.Require().True(msgList.HasNext)
+		}
+
+		s.Require().Equal(expectedMessageCount, len(msgList.Result))
 	}
 
-	expectedCachedMessages, err := s.getChatMessagesFromCache(chatID, beginSendMessages)
-	s.NoError(err, "Failed to get chat's messages from cache")
+	msgList := s.getRequestMessages(chatID, offsetDate, paginateDirection, limit, offset, headers)
 
-	cachedMessages := s.getRequestMessages(chatID, beginSendMessages, headers)
-
-	s.Require().Equal(sendMessageLen, len(cachedMessages))
-	s.Require().Equal(sendMessageLen, s.messageCountInCache(chatID))
-	s.Require().Equal(expectedCachedMessages, cachedMessages)
+	s.Require().Equal(sendMessageCount, msgList.Total)
+	s.Require().True(msgList.HasPrev)
+	s.Require().False(msgList.HasNext)
+	s.Require().Equal(0, len(msgList.Result))
 }
 
 func (s *AppTestSuite) TestMessagesAfterChatDelete() {
@@ -294,10 +347,11 @@ func (s *AppTestSuite) receiveWebsocketMessage(conn *ws.Conn) domain.Message {
 	return message
 }
 
-func (s *AppTestSuite) getRequestMessages(chatID string, timestamp time.Time, headers http.Header) []domain.Message {
+func (s *AppTestSuite) getRequestMessages(chatID string, offsetDate time.Time, direction string, limit, offset int, headers http.Header) handlers.MessageListResponse {
 	uri := fmt.Sprintf(
-		"/chats/%s/messages?timestamp=%s",
-		chatID, url.QueryEscape(timestamp.Format(time.RFC3339Nano)),
+		"/chats/%s/messages?direction=%s&limit=%d&offset=%d&offset_date=%s",
+		chatID, direction, limit, offset,
+		url.QueryEscape(offsetDate.Format(time.RFC3339Nano)),
 	)
 
 	req, err := http.NewRequest(http.MethodGet, s.buildURL(uri), nil)
@@ -311,14 +365,12 @@ func (s *AppTestSuite) getRequestMessages(chatID string, timestamp time.Time, he
 	defer resp.Body.Close()
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
-	var responseList struct {
-		Messages []domain.Message `json:"list"`
-	}
+	msgList := handlers.MessageListResponse{}
 
-	err = json.NewDecoder(resp.Body).Decode(&responseList)
+	err = json.NewDecoder(resp.Body).Decode(&msgList)
 	s.NoError(err, "Failed to decode response body")
 
-	return responseList.Messages
+	return msgList
 }
 
 func (s *AppTestSuite) getChatMessagesFromDB(chatID string, timestamp time.Time) ([]domain.Message, error) {
@@ -359,7 +411,7 @@ func (s *AppTestSuite) getChatMessagesFromCache(chatID string, timestamp time.Ti
 	key := fmt.Sprintf("chat:%s:messages", chatID)
 
 	payloads, err := s.redisClient.ZRangeByScore(context.Background(), key, &redis.ZRangeBy{
-		Min: fmt.Sprintf("(%d", timestamp.UnixNano()),
+		Min: fmt.Sprintf("%d", timestamp.UnixNano()),
 		Max: "+inf",
 	}).Result()
 	if err != nil {

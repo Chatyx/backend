@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 )
@@ -50,8 +49,8 @@ type ChatMemberService interface {
 type MessageService interface {
 	NewServeSession(ctx context.Context, userID string) (inCh chan<- domain.CreateMessageDTO, outCh <-chan domain.Message, errCh <-chan error, err error)
 	Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error)
-	// List gets a list of chat messages with timestamp if accepted member consists in this chat.
-	List(ctx context.Context, memberKey domain.ChatMemberIdentity, timestamp time.Time) ([]domain.Message, error)
+	// List gets a list of chat messages if accepted member consists in this chat.
+	List(ctx context.Context, memberKey domain.ChatMemberIdentity, dto domain.MessageListDTO) (domain.MessageList, error)
 }
 
 type ServiceContainer struct {

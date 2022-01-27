@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/Mort4lis/scht-backend/internal/domain"
 	"github.com/Mort4lis/scht-backend/internal/repository"
@@ -81,19 +80,19 @@ func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO
 	return message, nil
 }
 
-func (s *messageService) List(ctx context.Context, memberKey domain.ChatMemberIdentity, timestamp time.Time) ([]domain.Message, error) {
+func (s *messageService) List(ctx context.Context, memberKey domain.ChatMemberIdentity, dto domain.MessageListDTO) (domain.MessageList, error) {
 	ok, err := s.chatMemberRepo.IsInChat(ctx, memberKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check if member is in the chat: %w", err)
+		return domain.MessageList{}, fmt.Errorf("failed to check if member is in the chat: %w", err)
 	}
 
 	if !ok {
-		return nil, fmt.Errorf("member isn't in this chat: %w", domain.ErrChatNotFound)
+		return domain.MessageList{}, fmt.Errorf("member isn't in this chat: %w", domain.ErrChatNotFound)
 	}
 
-	messages, err := s.messageRepo.List(ctx, memberKey.ChatID, timestamp)
+	messages, err := s.messageRepo.List(ctx, memberKey.ChatID, dto)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get list of messages: %w", err)
+		return domain.MessageList{}, fmt.Errorf("failed to get list of messages: %w", err)
 	}
 
 	return messages, nil
