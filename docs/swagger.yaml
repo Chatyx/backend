@@ -213,10 +213,16 @@ definitions:
     type: object
   http.MessageListResponse:
     properties:
-      list:
+      has_next:
+        type: boolean
+      has_prev:
+        type: boolean
+      result:
         items:
           $ref: '#/definitions/domain.Message'
         type: array
+      total:
+        type: integer
     type: object
   http.ResponseError:
     properties:
@@ -705,11 +711,26 @@ paths:
         name: chat_id
         required: true
         type: string
-      - description: Last timestamp of received message
+      - description: Date from which pagination will be performed (date format RFC3339Nano)
         in: query
-        name: timestamp
+        name: offset_date
         required: true
         type: string
+      - description: Pagination direction (newer or older)
+        in: query
+        name: direction
+        required: true
+        type: string
+      - description: Number of result to return
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - description: Number of messages to be skipped
+        in: query
+        name: offset
+        required: true
+        type: integer
       produces:
       - application/json
       responses:

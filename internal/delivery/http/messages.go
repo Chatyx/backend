@@ -62,7 +62,7 @@ func (h *messageHandler) register(router *httprouter.Router, authMid Middleware)
 // @Produce json
 // @Param chat_id path string true "Chat id"
 // @Param offset_date query string true "Date from which pagination will be performed (date format RFC3339Nano)"
-// @Param direction query string true "Direction of pagination towards newer or older messages"
+// @Param direction query string true "Pagination direction (newer or older)"
 // @Param limit query int true "Number of result to return"
 // @Param offset query int true "Number of messages to be skipped"
 // @Success 200 {object} MessageListResponse
