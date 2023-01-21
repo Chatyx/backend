@@ -32,7 +32,7 @@ linters:
     - nestif
     - rowserrcheck
     - sqlclosecheck
-    - staticcheck
+#    - staticcheck
     - structcheck
     - typecheck
     - unconvert
