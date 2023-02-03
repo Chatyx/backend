@@ -153,7 +153,7 @@ func Init(container service.ServiceContainer, cfg *config.Config) http.Handler {
 			http.MethodHead, http.MethodGet, http.MethodPost,
 			http.MethodPut, http.MethodPatch, http.MethodDelete,
 		},
-		AllowedHeaders:   []string{"Content-Type", "X-Fingerprint"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "X-Fingerprint"},
 		MaxAge:           cfg.Cors.MaxAge,
 		AllowCredentials: true,
 		Debug:            cfg.IsDebug,
