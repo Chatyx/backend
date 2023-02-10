@@ -17,6 +17,7 @@ func Init(container service.ServiceContainer, cfg *config.Config) http.Handler {
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins: cfg.Cors.AllowedOrigins,
+		AllowedHeaders: []string{"Authorization"},
 		MaxAge:         cfg.Cors.MaxAge,
 		Debug:          cfg.IsDebug,
 	})
