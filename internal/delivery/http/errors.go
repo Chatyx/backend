@@ -70,9 +70,9 @@ var (
 		StatusCode: http.StatusBadRequest,
 		Message:    "validation error",
 	}
-	errInvalidAuthorizationHeader = ResponseError{
+	errInvalidAuthorization = ResponseError{
 		StatusCode: http.StatusBadRequest,
-		Message:    "invalid Authorization header",
+		Message:    "invalid Authorization header or token query param",
 	}
 	errInvalidAccessToken = ResponseError{
 		StatusCode: http.StatusUnauthorized,

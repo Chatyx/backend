@@ -52,22 +52,29 @@ func (h *baseHandler) validate(vld validator.Validator) error {
 	return nil
 }
 
-func extractTokenFromHeader(header string) (string, error) {
+func extractTokenFromRequest(req *http.Request) (string, error) {
+	header := req.Header.Get("Authorization")
 	if header == "" {
-		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header is empty"))
+		// browser's websocket API doesn't support natively pass http Headers to establish connection
+		token := req.URL.Query().Get("token")
+		if token == "" {
+			return "", errInvalidAuthorization.Wrap(fmt.Errorf("authorization header and token query are both empty"))
+		}
+
+		return token, nil
 	}
 
 	headerParts := strings.Split(header, " ")
 	if len(headerParts) != 2 {
-		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header must contains with two parts"))
+		return "", errInvalidAuthorization.Wrap(fmt.Errorf("authorization header must contains with two parts"))
 	}
 
 	if headerParts[0] != "Bearer" {
-		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header doesn't begin with Bearer"))
+		return "", errInvalidAuthorization.Wrap(fmt.Errorf("authorization header doesn't begin with Bearer"))
 	}
 
 	if headerParts[1] == "" {
-		return "", errInvalidAuthorizationHeader.Wrap(fmt.Errorf("authorization header value is empty"))
+		return "", errInvalidAuthorization.Wrap(fmt.Errorf("authorization header value is empty"))
 	}
 
 	return headerParts[1], nil

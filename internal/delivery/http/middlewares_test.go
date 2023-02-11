@@ -51,28 +51,28 @@ func TestAuthorizationMiddleware(t *testing.T) {
 		{
 			name:                 "Missed Authorization header",
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"message":"invalid Authorization header"}`,
+			expectedResponseBody: `{"message":"invalid Authorization header or token query param"}`,
 		},
 		{
 			name:                     "Wrong Authorization header key",
 			authorizationHeaderKey:   "Authorize",
 			authorizationHeaderValue: "Bearer header.payload.sign",
 			expectedStatusCode:       http.StatusBadRequest,
-			expectedResponseBody:     `{"message":"invalid Authorization header"}`,
+			expectedResponseBody:     `{"message":"invalid Authorization header or token query param"}`,
 		},
 		{
 			name:                     "Wrong Authorization header value",
 			authorizationHeaderKey:   "Authorization",
 			authorizationHeaderValue: "Berer header.payload.sign",
 			expectedStatusCode:       http.StatusBadRequest,
-			expectedResponseBody:     `{"message":"invalid Authorization header"}`,
+			expectedResponseBody:     `{"message":"invalid Authorization header or token query param"}`,
 		},
 		{
 			name:                     "Empty Authorization header value",
 			authorizationHeaderKey:   "Authorization",
 			authorizationHeaderValue: "Bearer ",
 			expectedStatusCode:       http.StatusBadRequest,
-			expectedResponseBody:     `{"message":"invalid Authorization header"}`,
+			expectedResponseBody:     `{"message":"invalid Authorization header or token query param"}`,
 		},
 		{
 			name:                     "Invalid access token",

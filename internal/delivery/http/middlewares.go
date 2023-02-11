@@ -48,7 +48,7 @@ func AuthorizationMiddlewareFactory(as service.AuthService) Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			ctx := req.Context()
 
-			accessToken, err := extractTokenFromHeader(req.Header.Get("Authorization"))
+			accessToken, err := extractTokenFromRequest(req)
 			if err != nil {
 				respondError(ctx, w, err)
 				return
