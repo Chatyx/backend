@@ -100,6 +100,7 @@ func newChatSessionHandler(msgService service.MessageService) *chatSessionHandle
 		upgrader: &ws.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
+			CheckOrigin:     func(r *http.Request) bool { return true }, // TODO: fix it
 		},
 		msgService: msgService,
 	}
