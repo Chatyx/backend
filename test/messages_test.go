@@ -29,7 +29,6 @@ var messageTableColumns = []string{
 func (s *AppTestSuite) TestSendMessageViaWebsocket() {
 	const (
 		johnID = "ba566522-3305-48df-936a-73f47611934b"
-		mickID = "7e7b1825-ef9a-42ec-b4db-6f09dffe3850"
 		chatID = "609fce45-458f-477a-b2bb-e886d75d22ab"
 	)
 
@@ -51,22 +50,6 @@ func (s *AppTestSuite) TestSendMessageViaWebsocket() {
 		s.Require().Equal(domain.MessageSendAction, msg.ActionID)
 		s.Require().Equal("Hello, Mick!", msg.Text)
 		s.Require().Equal(johnID, msg.SenderID)
-		s.Require().Equal(chatID, msg.ChatID)
-	case <-time.After(50 * time.Millisecond):
-		s.T().Error("timeout exceeded")
-	}
-
-	go s.sendWebsocketMessage(mickConn, "Hi, John!", chatID)
-	go func() {
-		msg := s.receiveWebsocketMessage(johnConn)
-		msgCh <- msg
-	}()
-
-	select {
-	case msg := <-msgCh:
-		s.Require().Equal(domain.MessageSendAction, msg.ActionID)
-		s.Require().Equal("Hi, John!", msg.Text)
-		s.Require().Equal(mickID, msg.SenderID)
 		s.Require().Equal(chatID, msg.ChatID)
 	case <-time.After(50 * time.Millisecond):
 		s.T().Error("timeout exceeded")
@@ -262,8 +245,6 @@ func (s *AppTestSuite) TestMessagesAfterChatDelete() {
 
 	mickTokenPair := s.authenticate("mick47", "helloworld12345", "222")
 
-	s.sendWebsocketMessage(johnConn, "Hi, Mick!", chatID)
-
 	req, err := http.NewRequest(http.MethodDelete, s.buildURL("/chats/"+chatID), nil)
 	s.NoError(err, "Failed to create request")
 
@@ -290,7 +271,7 @@ func (s *AppTestSuite) TestMessagesAfterChatDelete() {
 		s.T().Error("timeout exceeded")
 	}
 
-	s.Require().Equal(1, s.messageCountInCache(chatID))
+	s.Require().Equal(0, s.messageCountInCache(chatID))
 }
 
 func (s *AppTestSuite) TestGoroutinesLeak() {

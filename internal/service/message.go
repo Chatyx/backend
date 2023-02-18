@@ -160,9 +160,6 @@ func (s *messageServeSession) handleMessage(ctx context.Context, message domain.
 
 	switch message.ActionID {
 	case domain.MessageSendAction:
-		if message.SenderID == s.userID {
-			return false, nil
-		}
 	case domain.MessageJoinAction:
 		ok, err = s.chatMemberRepo.IsInChat(ctx, domain.ChatMemberIdentity{
 			UserID: s.userID,
