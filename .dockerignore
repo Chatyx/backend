@@ -2,6 +2,7 @@
 
 !/cmd/**
 !/configs/**
+!/db/**
 !/docs/**
 !/internal/**
 !/pkg/**

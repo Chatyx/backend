@@ -2,49 +2,47 @@ version: "3.9"
 
 services:
   backend:
-    image: scht-backend:latest
-    container_name: scht-backend
+    image: chatyx-backend:latest
+    container_name: chatyx-backend
     build:
       context: .
     ports:
       - "8000:8000"
       - "8080:8080"
     volumes:
-      - ./configs:/scht-backend/configs
+      - ./configs:/chatyx-backend/configs
     depends_on:
       - postgres
       - redis
-    env_file:
-      - ".env"
     restart: always
     networks:
-      - scht-backend-network
+      - chatyx-backend-network
 
   postgres:
-    image: postgres:12.1
-    container_name: scht-postgres
+    image: postgres:15.4
+    container_name: chatyx-postgres
     environment:
-      - POSTGRES_DB=scht_db
-      - POSTGRES_USER=scht_user
-      - POSTGRES_PASSWORD=scht_password
+      - POSTGRES_DB=chatyx_db
+      - POSTGRES_USER=chatyx_user
+      - POSTGRES_PASSWORD=chatyx_password
     volumes:
-      - ./.volumes/postgres/data:/var/lib/postgresql/data
+      - ./.data/postgres/data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     restart: always
     networks:
-      - scht-backend-network
+      - chatyx-backend-network
 
   redis:
-    image: redis:6.2.5
-    container_name: scht-redis
+    image: redis:7.2
+    container_name: chatyx-redis
     volumes:
-      - ./.volumes/redis/data:/data
+      - ./.data/redis/data:/data
     ports:
       - "6379:6379"
     restart: always
     networks:
-      - scht-backend-network
+      - chatyx-backend-network
 
 networks:
-  scht-backend-network:
+  chatyx-backend-network:

@@ -1,16 +1,23 @@
-BACKEND_BIN = ./build/scht-backend
-MIGRATE_BIN = ./build/migrate
+BINARY_NAME=chatyx
+BUILD_DIR=./build
+TEST_DIR=${BUILD_DIR}/tests
+BRANCH_NAME="$(shell git name-rev --name-only HEAD)"
+COMMIT_HASH="$(shell git rev-parse --short HEAD)"
+BUILD_TIMESTAMP=$(shell date +"%Y-%m-%d:T%H:%M:%S")
+PACKAGE_SDK=github.com/Chatyx/backend
+LDFLAGS= -X '${PACKAGE_SDK}/version.BranchName=${BRANCH_NAME}' \
+  -X '${PACKAGE_SDK}/version.CommitHash=${COMMIT_HASH}' \
+  -X '${PACKAGE_SDK}/version.BuildTimestamp=${BUILD_TIMESTAMP}' \
+
+all: clean lint test.unit test.integration build
 
 lint:
-	golangci-lint run
+	golangci-lint --version
+	golangci-lint linters
+	golangci-lint run -v
 
-build: clean $(BACKEND_BIN) $(MIGRATE_BIN)
-
-$(BACKEND_BIN):
-	go build -o $(BACKEND_BIN) ./cmd/app/main.go
-
-$(MIGRATE_BIN):
-	go build -o $(MIGRATE_BIN) ./cmd/migrate/main.go
+build:
+	go build -ldflags="${LDFLAGS}" -o ${BUILD_DIR}/${BINARY_NAME} ./cmd/chatyx-backend
 
 swagger:
 	swag init -g ./internal/app/app.go
@@ -18,37 +25,26 @@ swagger:
 generate:
 	go generate ./...
 
-infrastructure.dev:
-	docker-compose down
+infra:
 	docker-compose up --remove-orphan postgres redis
-
-infrastructure.test:
-	docker-compose -f docker-compose.test.yml down
-	docker-compose -f docker-compose.test.yml up -d
 
 test.unit:
 	go test -tags=unit -v -coverprofile=cover.out ./...
 	go tool cover -func=cover.out
 
-test.integration: infrastructure.test
+test.integration: infra
 	go test -tags=integration -v ./test/... || true
-	docker-compose -f docker-compose.test.yml down
 
 migrations:
-	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \
-		migrate/migrate create -ext sql -dir /migrations -seq $(NAME)
+	migrate create -ext sql -dir ./db/migrations $(NAME)
 
 migrate.up:
-	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \
-		--network host migrate/migrate \
-        -path=/migrations/ \
-        -database postgres://scht_user:scht_password@localhost:5432/scht_db?sslmode=disable up
+	migrate -path=./db/migrations/ \
+        -database postgres://chatyx_user:chatyx_password@localhost:5432/chatyx_db?sslmode=disable up
 
 migrate.down:
-	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \
-    	--network host migrate/migrate \
-        -path=/migrations/ \
-        -database postgres://scht_user:scht_password@localhost:5432/scht_db?sslmode=disable down 1
+	migrate -path=./db/migrations/ \
+        -database postgres://chatyx_user:chatyx_password@localhost:5432/chatyx_db?sslmode=disable down 1
 
 clean:
-	rm -rf ./build || true
+	rm -rf ${BUILD_DIR} || true

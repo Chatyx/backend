@@ -1,15 +1,14 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+# IDE files
+.idea/
+
+# VSCode files
+.vscode/
+
+# OS files
+.DS_Store
 
 # Builds
 build/
-
-# Test binary, built with `go test -c`
-*.test
 
 # Output of the go coverage tool
 *.out
@@ -20,8 +19,5 @@ logs/
 # Envfile
 .env
 
-# IDE files
-.idea/
-
-# Volumes
-.volumes/
+# Storage data (postgres, redis, etc.)
+.data/
