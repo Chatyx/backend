@@ -16,8 +16,8 @@ RUN go mod download
 # Copy application files to the working directory
 COPY . ./
 
-# Build application and other cli utilities
-RUN go build -o chatyx ./cmd/chatyx-backend/main.go
+# Build application
+RUN make build PROJECT_BUILD=.
 
 
 FROM alpine:3.18
