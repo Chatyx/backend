@@ -10,6 +10,9 @@
 # Builds
 build/
 
+# Binary files
+bin/
+
 # Output of the go coverage tool
 *.out
 
