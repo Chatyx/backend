@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 )
 
 var confPath string
@@ -13,7 +12,4 @@ func init() {
 
 func main() {
 	flag.Parse()
-
-	fmt.Println("Hello, world")
-	//time.Parse("20060102")
 }
