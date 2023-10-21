@@ -56,37 +56,13 @@ func (l Level) toZap() zapcore.Level {
 	}
 }
 
-type Environment int
-
-const (
-	InvalidEnvironment Environment = iota - 1
-	DevelopmentEnvironment
-	ProductionEnvironment
-)
-
-func ParseEnvironment(s string) (Environment, error) {
-	switch strings.ToLower(s) {
-	case "development":
-		return DevelopmentEnvironment, nil
-	case "production":
-		return ProductionEnvironment, nil
-	default:
-		return InvalidEnvironment, fmt.Errorf("unsupport environment %q", s)
-	}
-}
-
 type Config struct {
-	Level       string
-	Environment string
+	Level          string
+	ProductionMode bool
 }
 
-func Configure(c Config) error {
-	level, err := ParseLevel(c.Level)
-	if err != nil {
-		return err
-	}
-
-	env, err := ParseEnvironment(c.Environment)
+func Configure(conf Config) error {
+	level, err := ParseLevel(conf.Level)
 	if err != nil {
 		return err
 	}
@@ -110,11 +86,11 @@ func Configure(c Config) error {
 
 	var enc zapcore.Encoder
 
-	if env == DevelopmentEnvironment {
+	if conf.ProductionMode {
+		enc = zapcore.NewJSONEncoder(encConf)
+	} else {
 		encConf.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		enc = zapcore.NewConsoleEncoder(encConf)
-	} else {
-		enc = zapcore.NewJSONEncoder(encConf)
 	}
 
 	logger := zap.New(
