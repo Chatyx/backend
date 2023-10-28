@@ -1,1 +1,19 @@
-DROP SCHEMA IF EXISTS test;
+BEGIN;
+
+DROP TABLE IF EXISTS messages;
+
+DROP TABLE IF EXISTS chat_members;
+
+DROP TABLE IF EXISTS chats;
+
+DROP TABLE IF EXISTS group_members;
+
+DROP TABLE IF EXISTS groups;
+
+DROP TABLE IF EXISTS  users;
+
+DROP TYPE IF EXISTS content_type;
+
+DROP TYPE IF EXISTS group_member_status;
+
+COMMIT;
