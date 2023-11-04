@@ -7,6 +7,31 @@ definitions:
       message:
         type: string
     type: object
+  v1.ChatCreate:
+    properties:
+      contact_id:
+        type: integer
+    required:
+    - contact_id
+    type: object
+  v1.ChatDetail:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  v1.ChatList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.ChatDetail'
+        type: array
+      total:
+        type: integer
+    type: object
   v1.Credentials:
     properties:
       password:
@@ -19,6 +44,48 @@ definitions:
     required:
     - password
     - username
+    type: object
+  v1.GroupCreate:
+    properties:
+      description:
+        maxLength: 10000
+        type: string
+      name:
+        maxLength: 255
+        type: string
+    required:
+    - name
+    type: object
+  v1.GroupDetail:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  v1.GroupList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.GroupDetail'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.GroupUpdate:
+    properties:
+      description:
+        maxLength: 10000
+        type: string
+      name:
+        maxLength: 255
+        type: string
+    required:
+    - name
     type: object
   v1.RefreshToken:
     properties:
@@ -203,6 +270,228 @@ paths:
       summary: Refresh authorization token
       tags:
       - auth
+  /chats:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.ChatList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: List all one-on-one chats where user is a member
+      tags:
+      - chats
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Body to create
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.ChatCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.ChatDetail'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Create a one-on-one chat with a specified member
+      tags:
+      - chats
+  /chats/{chat_id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chat identity
+        in: path
+        name: chat_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.ChatDetail'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Get a specified one-on-one chat
+      tags:
+      - chats
+  /groups:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.GroupList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: List all groups where user is a member
+      tags:
+      - groups
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Body to create
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.GroupCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.GroupDetail'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Create a group
+      tags:
+      - groups
+  /groups/{group_id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Delete a specified group
+      tags:
+      - groups
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.GroupDetail'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Get a specified group
+      tags:
+      - groups
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: string
+      - description: Body to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.GroupUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.GroupDetail'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Update a specified group
+      tags:
+      - groups
   /users:
     get:
       consumes:
