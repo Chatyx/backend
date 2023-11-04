@@ -69,7 +69,7 @@ func (uc *UserController) Register(mux *httprouter.Router) {
 //	@Failure	500	{object}	httputil.Error
 //	@Router		/users  [get]
 func (uc *UserController) list(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
 
 // detail gets a specified user
@@ -85,7 +85,7 @@ func (uc *UserController) list(w http.ResponseWriter, req *http.Request) {
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/users/{user_id} [get]
 func (uc *UserController) detail(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
 
 // create creates a new user
@@ -100,7 +100,7 @@ func (uc *UserController) detail(w http.ResponseWriter, req *http.Request) {
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/users [post]
 func (uc *UserController) create(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
 
 // update updates information about the current authenticated user
@@ -116,7 +116,7 @@ func (uc *UserController) create(w http.ResponseWriter, req *http.Request) {
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/users/me [put]
 func (uc *UserController) update(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
 
 // updatePassword updates the current authenticated user's password
@@ -131,7 +131,7 @@ func (uc *UserController) update(w http.ResponseWriter, req *http.Request) {
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/users/me/password [patch]
 func (uc *UserController) updatePassword(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
 
 // delete deletes the current authenticated user
@@ -145,5 +145,5 @@ func (uc *UserController) updatePassword(w http.ResponseWriter, req *http.Reques
 //	@Failure	500	{object}	httputil.Error
 //	@Router		/users/me [delete]
 func (uc *UserController) delete(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }

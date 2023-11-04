@@ -2,13 +2,14 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/Chatyx/backend/pkg/usersrv/transport/http/v1"
-
 	"github.com/julienschmidt/httprouter"
 )
+
+const defaultShutdownTimeout = 15 * time.Second
 
 type Controller interface {
 	Register(mux *httprouter.Router)
@@ -20,7 +21,6 @@ type Server struct {
 
 func NewServer() *Server {
 	mux := httprouter.New()
-	(&v1.UserController{}).Register(mux)
 
 	return &Server{
 		srv: &http.Server{
@@ -47,8 +47,11 @@ func (s *Server) Run() {
 }
 
 func (s *Server) Shutdown() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
 	defer cancel()
 
-	return s.srv.Shutdown(ctx)
+	if err := s.srv.Shutdown(ctx); err != nil {
+		return fmt.Errorf("shutdown: %w", err)
+	}
+	return nil
 }

@@ -8,6 +8,8 @@ import (
 
 const (
 	loginPath = "/auth/login"
+
+	//nolint:gosec // G101: that's not credentials
 	tokenPath = "/auth/token"
 )
 
@@ -49,7 +51,7 @@ func (ac *AuthController) Register(mux *httprouter.Router) {
 //	@Failure		500			{object}	httputil.Error
 //	@Router			/auth/login [post]
 func (ac *AuthController) login(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
 
 // refreshToken refreshes authorization token
@@ -67,5 +69,5 @@ func (ac *AuthController) login(w http.ResponseWriter, req *http.Request) {
 //	@Failure		500			{object}	httputil.Error
 //	@Router			/auth/token [post]
 func (ac *AuthController) refreshToken(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
