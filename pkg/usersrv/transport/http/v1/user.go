@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	listUsersPath   = "/users"
-	detailUserPath  = "/users/:user_id"
-	currentUserPath = "/users/me"
+	userListPath   = "/users"
+	userDetailPath = "/users/:user_id"
+	userMePath     = "/users/me"
 )
 
 type UserDetail struct {
@@ -51,12 +51,12 @@ type UserController struct {
 }
 
 func (uc *UserController) Register(mux *httprouter.Router) {
-	mux.HandlerFunc(http.MethodGet, listUsersPath, uc.list)
-	mux.HandlerFunc(http.MethodGet, detailUserPath, uc.detail)
-	mux.HandlerFunc(http.MethodPost, listUsersPath, uc.create)
-	mux.HandlerFunc(http.MethodPut, currentUserPath, uc.update)
-	mux.HandlerFunc(http.MethodPut, currentUserPath+"/password", uc.updatePassword)
-	mux.HandlerFunc(http.MethodDelete, currentUserPath, uc.delete)
+	mux.HandlerFunc(http.MethodGet, userListPath, uc.list)
+	mux.HandlerFunc(http.MethodGet, userDetailPath, uc.detail)
+	mux.HandlerFunc(http.MethodPost, userListPath, uc.create)
+	mux.HandlerFunc(http.MethodPut, userMePath, uc.update)
+	mux.HandlerFunc(http.MethodPut, userMePath+"/password", uc.updatePassword)
+	mux.HandlerFunc(http.MethodDelete, userMePath, uc.delete)
 }
 
 // list lists all existing users
