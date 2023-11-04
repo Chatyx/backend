@@ -325,7 +325,7 @@ paths:
         in: path
         name: chat_id
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -403,7 +403,7 @@ paths:
         in: path
         name: group_id
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -432,7 +432,7 @@ paths:
         in: path
         name: group_id
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -463,7 +463,7 @@ paths:
         in: path
         name: group_id
         required: true
-        type: string
+        type: integer
       - description: Body to update
         in: body
         name: input
@@ -547,7 +547,7 @@ paths:
         in: path
         name: user_id
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:

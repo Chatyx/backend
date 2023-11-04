@@ -201,7 +201,7 @@
                 "summary": "Get a specified one-on-one chat",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "Chat identity",
                         "name": "chat_id",
                         "in": "path",
@@ -321,7 +321,7 @@
                 "summary": "Get a specified group",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "Group identity",
                         "name": "group_id",
                         "in": "path",
@@ -368,7 +368,7 @@
                 "summary": "Update a specified group",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "Group identity",
                         "name": "group_id",
                         "in": "path",
@@ -424,7 +424,7 @@
                 "summary": "Delete a specified group",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "Group identity",
                         "name": "group_id",
                         "in": "path",
@@ -663,7 +663,7 @@
                 "summary": "Get a specified user",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "User identity",
                         "name": "user_id",
                         "in": "path",

@@ -55,7 +55,7 @@ func (cc *ChatController) list(w http.ResponseWriter, req *http.Request) {
 //	@Tags		chats
 //	@Accept		json
 //	@Produce	json
-//	@Param		chat_id	path		string	true	"Chat identity"
+//	@Param		chat_id	path		int	true	"Chat identity"
 //	@Success	200		{object}	ChatDetail
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	404		{object}	httputil.Error

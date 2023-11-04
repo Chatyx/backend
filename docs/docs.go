@@ -212,7 +212,7 @@ const docTemplate = `{
                 "summary": "Get a specified one-on-one chat",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "Chat identity",
                         "name": "chat_id",
                         "in": "path",
@@ -332,7 +332,7 @@ const docTemplate = `{
                 "summary": "Get a specified group",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "Group identity",
                         "name": "group_id",
                         "in": "path",
@@ -379,7 +379,7 @@ const docTemplate = `{
                 "summary": "Update a specified group",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "Group identity",
                         "name": "group_id",
                         "in": "path",
@@ -435,7 +435,7 @@ const docTemplate = `{
                 "summary": "Delete a specified group",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "Group identity",
                         "name": "group_id",
                         "in": "path",
@@ -674,7 +674,7 @@ const docTemplate = `{
                 "summary": "Get a specified user",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
                         "description": "User identity",
                         "name": "user_id",
                         "in": "path",

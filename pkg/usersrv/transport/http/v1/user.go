@@ -78,7 +78,7 @@ func (uc *UserController) list(w http.ResponseWriter, req *http.Request) {
 //	@Tags		users
 //	@Accept		json
 //	@Produce	json
-//	@Param		user_id	path		string	true	"User identity"
+//	@Param		user_id	path		int	true	"User identity"
 //	@Success	200		{object}	UserDetail
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	404		{object}	httputil.Error

@@ -63,7 +63,7 @@ func (gc *GroupController) list(w http.ResponseWriter, req *http.Request) {
 //	@Tags		groups
 //	@Accept		json
 //	@Produce	json
-//	@Param		group_id	path		string	true	"Group identity"
+//	@Param		group_id	path		int	true	"Group identity"
 //	@Success	200			{object}	GroupDetail
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
@@ -94,7 +94,7 @@ func (gc *GroupController) create(w http.ResponseWriter, req *http.Request) {
 //	@Tags		groups
 //	@Accept		json
 //	@Produce	json
-//	@Param		group_id	path		string		true	"Group identity"
+//	@Param		group_id	path		int			true	"Group identity"
 //	@Param		input		body		GroupUpdate	true	"Body to update"
 //	@Success	200			{object}	GroupDetail
 //	@Failure	400			{object}	httputil.Error
@@ -111,7 +111,7 @@ func (gc *GroupController) update(w http.ResponseWriter, req *http.Request) {
 //	@Tags		groups
 //	@Accept		json
 //	@Produce	json
-//	@Param		group_id	path	string	true	"Group identity"
+//	@Param		group_id	path	int	true	"Group identity"
 //	@Success	204			"No Content"
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
