@@ -13,7 +13,13 @@ const (
 )
 
 type ConversationDetail struct {
-	ID        int       `json:"id"`
+	ID          int `json:"id"`
+	Participant struct {
+		ID        int    `json:"id"`
+		Username  string `json:"username"`
+		IsBlocked bool   `json:"is_blocked"`
+	} `json:"participant"`
+	IsBlocked bool      `json:"is_blocked"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -23,7 +29,15 @@ type ConversationList struct {
 }
 
 type ConversationCreate struct {
-	ContactID int `json:"contact_id" validate:"required"`
+	Participant struct {
+		ID int `json:"id" validate:"required"`
+	} `json:"participant"`
+}
+
+type ConversationUpdate struct {
+	Participant struct {
+		IsBlocked *bool `json:"is_blocked"`
+	} `json:"participant"`
 }
 
 type ConversationController struct {
@@ -76,5 +90,22 @@ func (cc *ConversationController) detail(w http.ResponseWriter, req *http.Reques
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/conversations  [post]
 func (cc *ConversationController) create(w http.ResponseWriter, req *http.Request) {
+	_, _ = w, req
+}
+
+// update updates a specified conversation
+//
+//	@Summary	Update a specified one-on-one conversation
+//	@Tags		conversations
+//	@Accept		json
+//	@Produce	json
+//	@Param		conversation_id	path	int					true	"Conversation identity"
+//	@Param		input			body	ConversationCreate	true	"Body to update"
+//	@Success	204				"No Content"
+//	@Failure	400				{object}	httputil.Error
+//	@Failure	404				{object}	httputil.Error
+//	@Failure	500				{object}	httputil.Error
+//	@Router		/conversations/{conversation_id}  [patch]
+func (cc *ConversationController) update(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
