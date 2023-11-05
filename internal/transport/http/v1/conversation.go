@@ -101,7 +101,7 @@ func (cc *ConversationController) detail(w http.ResponseWriter, req *http.Reques
 //	@Accept		json
 //	@Produce	json
 //	@Param		conversation_id	path	int					true	"Conversation identity"
-//	@Param		input			body	ConversationCreate	true	"Body to update"
+//	@Param		input			body	ConversationUpdate	true	"Body to update"
 //	@Success	204				"No Content"
 //	@Failure	400				{object}	httputil.Error
 //	@Failure	404				{object}	httputil.Error
