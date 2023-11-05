@@ -30,9 +30,9 @@ type MessageList struct {
 }
 
 type MessageCreate struct {
-	ChatID      int    `json:"chat_id" validate:"required"`
-	ChatType    string `json:"chat_type" validate:"required,oneof=conversation group"`
-	Content     []byte `json:"content" validate:"required,max=100000"`
+	ChatID      int    `json:"chat_id"      validate:"required"`
+	ChatType    string `json:"chat_type"    validate:"required,oneof=conversation group"`
+	Content     []byte `json:"content"      validate:"required,max=100000"`
 	ContentType string `json:"content_type" validate:"required,oneof=text file"`
 }
 

@@ -47,6 +47,7 @@ func (cc *ConversationController) Register(mux *httprouter.Router) {
 	mux.HandlerFunc(http.MethodGet, conversationListPath, cc.list)
 	mux.HandlerFunc(http.MethodPost, conversationListPath, cc.create)
 	mux.HandlerFunc(http.MethodGet, conversationDetailPath, cc.detail)
+	mux.HandlerFunc(http.MethodPatch, conversationDetailPath, cc.update)
 }
 
 // list lists all one-on-one conversations

@@ -49,7 +49,7 @@ func (pc *GroupParticipantController) Register(mux *httprouter.Router) {
 //	@Failure	500			{object}	httputil.Error
 //	@Router		/groups/{group_id}/participants  [get]
 func (pc *GroupParticipantController) list(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
 
 // detail gets a specified participant in a group
@@ -66,7 +66,7 @@ func (pc *GroupParticipantController) list(w http.ResponseWriter, req *http.Requ
 //	@Failure	500			{object}	httputil.Error
 //	@Router		/groups/{group_id}/participants/{user_id}  [get]
 func (pc *GroupParticipantController) detail(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
 
 // update updates a specified participant in a group
@@ -85,5 +85,5 @@ func (pc *GroupParticipantController) detail(w http.ResponseWriter, req *http.Re
 //	@Failure		500			{object}	httputil.Error
 //	@Router			/groups/{group_id}/participants/{user_id}  [patch]
 func (pc *GroupParticipantController) update(w http.ResponseWriter, req *http.Request) {
-
+	_, _ = w, req
 }
