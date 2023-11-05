@@ -38,8 +38,8 @@ type GroupController struct {
 
 func (gc *GroupController) Register(mux *httprouter.Router) {
 	mux.HandlerFunc(http.MethodGet, groupListPath, gc.list)
-	mux.HandlerFunc(http.MethodGet, groupDetailPath, gc.detail)
 	mux.HandlerFunc(http.MethodPost, groupListPath, gc.create)
+	mux.HandlerFunc(http.MethodGet, groupDetailPath, gc.detail)
 	mux.HandlerFunc(http.MethodPut, groupDetailPath, gc.update)
 	mux.HandlerFunc(http.MethodDelete, groupDetailPath, gc.delete)
 }
@@ -57,6 +57,21 @@ func (gc *GroupController) list(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 
+// create creates a group
+//
+//	@Summary	Create a group
+//	@Tags		groups
+//	@Accept		json
+//	@Produce	json
+//	@Param		input	body		GroupCreate	true	"Body to create"
+//	@Success	201		{object}	GroupDetail
+//	@Failure	400		{object}	httputil.Error
+//	@Failure	500		{object}	httputil.Error
+//	@Router		/groups  [post]
+func (gc *GroupController) create(w http.ResponseWriter, req *http.Request) {
+	_, _ = w, req
+}
+
 // detail gets a specified group
 //
 //	@Summary	Get a specified group
@@ -70,21 +85,6 @@ func (gc *GroupController) list(w http.ResponseWriter, req *http.Request) {
 //	@Failure	500			{object}	httputil.Error
 //	@Router		/groups/{group_id}  [get]
 func (gc *GroupController) detail(w http.ResponseWriter, req *http.Request) {
-	_, _ = w, req
-}
-
-// create creates a group
-//
-//	@Summary	Create a group
-//	@Tags		groups
-//	@Accept		json
-//	@Produce	json
-//	@Param		input	body		GroupCreate	true	"Body to create"
-//	@Success	201		{object}	GroupDetail
-//	@Failure	400		{object}	httputil.Error
-//	@Failure	500		{object}	httputil.Error
-//	@Router		/groups  [post]
-func (gc *GroupController) create(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 

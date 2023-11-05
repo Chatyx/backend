@@ -52,8 +52,8 @@ type UserController struct {
 
 func (uc *UserController) Register(mux *httprouter.Router) {
 	mux.HandlerFunc(http.MethodGet, userListPath, uc.list)
-	mux.HandlerFunc(http.MethodGet, userDetailPath, uc.detail)
 	mux.HandlerFunc(http.MethodPost, userListPath, uc.create)
+	mux.HandlerFunc(http.MethodGet, userDetailPath, uc.detail)
 	mux.HandlerFunc(http.MethodPut, userMePath, uc.update)
 	mux.HandlerFunc(http.MethodPut, userMePath+"/password", uc.updatePassword)
 	mux.HandlerFunc(http.MethodDelete, userMePath, uc.delete)
@@ -72,6 +72,21 @@ func (uc *UserController) list(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 
+// create creates a new user
+//
+//	@Summary	Create a new user
+//	@Tags		users
+//	@Accept		json
+//	@Produce	json
+//	@Param		input	body		UserCreate	true	"Body to create"
+//	@Success	200		{object}	UserDetail
+//	@Failure	404		{object}	httputil.Error
+//	@Failure	500		{object}	httputil.Error
+//	@Router		/users [post]
+func (uc *UserController) create(w http.ResponseWriter, req *http.Request) {
+	_, _ = w, req
+}
+
 // detail gets a specified user
 //
 //	@Summary	Get a specified user
@@ -85,21 +100,6 @@ func (uc *UserController) list(w http.ResponseWriter, req *http.Request) {
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/users/{user_id} [get]
 func (uc *UserController) detail(w http.ResponseWriter, req *http.Request) {
-	_, _ = w, req
-}
-
-// create creates a new user
-//
-//	@Summary	Create a new user
-//	@Tags		users
-//	@Accept		json
-//	@Produce	json
-//	@Param		input	body		UserCreate	true	"Body to create"
-//	@Success	200		{object}	UserDetail
-//	@Failure	404		{object}	httputil.Error
-//	@Failure	500		{object}	httputil.Error
-//	@Router		/users [post]
-func (uc *UserController) create(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 

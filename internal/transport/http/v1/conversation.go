@@ -45,8 +45,8 @@ type ConversationController struct {
 
 func (cc *ConversationController) Register(mux *httprouter.Router) {
 	mux.HandlerFunc(http.MethodGet, conversationListPath, cc.list)
-	mux.HandlerFunc(http.MethodGet, conversationDetailPath, cc.detail)
 	mux.HandlerFunc(http.MethodPost, conversationListPath, cc.create)
+	mux.HandlerFunc(http.MethodGet, conversationDetailPath, cc.detail)
 }
 
 // list lists all one-on-one conversations
@@ -59,6 +59,21 @@ func (cc *ConversationController) Register(mux *httprouter.Router) {
 //	@Failure	500	{object}	httputil.Error
 //	@Router		/conversations  [get]
 func (cc *ConversationController) list(w http.ResponseWriter, req *http.Request) {
+	_, _ = w, req
+}
+
+// create creates a one-on-one conversation with a specified participant
+//
+//	@Summary	Create a one-on-one conversation with a specified participant
+//	@Tags		conversations
+//	@Accept		json
+//	@Produce	json
+//	@Param		input	body		ConversationCreate	true	"Body to create"
+//	@Success	201		{object}	ConversationDetail
+//	@Failure	400		{object}	httputil.Error
+//	@Failure	500		{object}	httputil.Error
+//	@Router		/conversations  [post]
+func (cc *ConversationController) create(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 
@@ -75,21 +90,6 @@ func (cc *ConversationController) list(w http.ResponseWriter, req *http.Request)
 //	@Failure	500				{object}	httputil.Error
 //	@Router		/conversations/{conversation_id}  [get]
 func (cc *ConversationController) detail(w http.ResponseWriter, req *http.Request) {
-	_, _ = w, req
-}
-
-// create creates a one-on-one conversation with a specified participant
-//
-//	@Summary	Create a one-on-one conversation with a specified participant
-//	@Tags		conversations
-//	@Accept		json
-//	@Produce	json
-//	@Param		input	body		ConversationCreate	true	"Body to create"
-//	@Success	201		{object}	ConversationDetail
-//	@Failure	400		{object}	httputil.Error
-//	@Failure	500		{object}	httputil.Error
-//	@Router		/conversations  [post]
-func (cc *ConversationController) create(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 
