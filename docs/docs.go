@@ -180,7 +180,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/v1.ConversationDetail"
+                            "$ref": "#/definitions/v1.Conversation"
                         }
                     },
                     "400": {
@@ -223,7 +223,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.ConversationDetail"
+                            "$ref": "#/definitions/v1.Conversation"
                         }
                     },
                     "400": {
@@ -353,7 +353,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/v1.GroupDetail"
+                            "$ref": "#/definitions/v1.Group"
                         }
                     },
                     "400": {
@@ -396,7 +396,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.GroupDetail"
+                            "$ref": "#/definitions/v1.Group"
                         }
                     },
                     "400": {
@@ -452,7 +452,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.GroupDetail"
+                            "$ref": "#/definitions/v1.Group"
                         }
                     },
                     "400": {
@@ -601,7 +601,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.GroupParticipantDetail"
+                            "$ref": "#/definitions/v1.GroupParticipant"
                         }
                     },
                     "400": {
@@ -838,10 +838,10 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/v1.UserDetail"
+                            "$ref": "#/definitions/v1.User"
                         }
                     },
                     "404": {
@@ -886,7 +886,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.UserDetail"
+                            "$ref": "#/definitions/v1.User"
                         }
                     },
                     "400": {
@@ -1006,7 +1006,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.UserDetail"
+                            "$ref": "#/definitions/v1.User"
                         }
                     },
                     "400": {
@@ -1044,23 +1044,7 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.ConversationCreate": {
-            "type": "object",
-            "properties": {
-                "participant": {
-                    "type": "object",
-                    "required": [
-                        "id"
-                    ],
-                    "properties": {
-                        "id": {
-                            "type": "integer"
-                        }
-                    }
-                }
-            }
-        },
-        "v1.ConversationDetail": {
+        "v1.Conversation": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1088,13 +1072,29 @@ const docTemplate = `{
                 }
             }
         },
+        "v1.ConversationCreate": {
+            "type": "object",
+            "properties": {
+                "participant": {
+                    "type": "object",
+                    "required": [
+                        "id"
+                    ],
+                    "properties": {
+                        "id": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
         "v1.ConversationList": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/v1.ConversationDetail"
+                        "$ref": "#/definitions/v1.Conversation"
                     }
                 },
                 "total": {
@@ -1120,23 +1120,7 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.GroupCreate": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "description": {
-                    "type": "string",
-                    "maxLength": 10000
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 255
-                }
-            }
-        },
-        "v1.GroupDetail": {
+        "v1.Group": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1153,13 +1137,29 @@ const docTemplate = `{
                 }
             }
         },
+        "v1.GroupCreate": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 10000
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
         "v1.GroupList": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/v1.GroupDetail"
+                        "$ref": "#/definitions/v1.Group"
                     }
                 },
                 "total": {
@@ -1167,7 +1167,7 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.GroupParticipantDetail": {
+        "v1.GroupParticipant": {
             "type": "object",
             "properties": {
                 "is_admin": {
@@ -1190,7 +1190,7 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/v1.GroupParticipantDetail"
+                        "$ref": "#/definitions/v1.GroupParticipant"
                     }
                 },
                 "total": {
@@ -1323,6 +1323,32 @@ const docTemplate = `{
                 }
             }
         },
+        "v1.User": {
+            "type": "object",
+            "properties": {
+                "bio": {
+                    "type": "string"
+                },
+                "birth_date": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "v1.UserCreate": {
             "type": "object",
             "required": [
@@ -1361,39 +1387,13 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.UserDetail": {
-            "type": "object",
-            "properties": {
-                "bio": {
-                    "type": "string"
-                },
-                "birth_date": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "last_name": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
         "v1.UserList": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/v1.UserDetail"
+                        "$ref": "#/definitions/v1.User"
                     }
                 },
                 "total": {

@@ -7,17 +7,7 @@ definitions:
       message:
         type: string
     type: object
-  v1.ConversationCreate:
-    properties:
-      participant:
-        properties:
-          id:
-            type: integer
-        required:
-        - id
-        type: object
-    type: object
-  v1.ConversationDetail:
+  v1.Conversation:
     properties:
       created_at:
         type: string
@@ -35,11 +25,21 @@ definitions:
             type: string
         type: object
     type: object
+  v1.ConversationCreate:
+    properties:
+      participant:
+        properties:
+          id:
+            type: integer
+        required:
+        - id
+        type: object
+    type: object
   v1.ConversationList:
     properties:
       data:
         items:
-          $ref: '#/definitions/v1.ConversationDetail'
+          $ref: '#/definitions/v1.Conversation'
         type: array
       total:
         type: integer
@@ -57,6 +57,17 @@ definitions:
     - password
     - username
     type: object
+  v1.Group:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
   v1.GroupCreate:
     properties:
       description:
@@ -68,27 +79,16 @@ definitions:
     required:
     - name
     type: object
-  v1.GroupDetail:
-    properties:
-      created_at:
-        type: string
-      description:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-    type: object
   v1.GroupList:
     properties:
       data:
         items:
-          $ref: '#/definitions/v1.GroupDetail'
+          $ref: '#/definitions/v1.Group'
         type: array
       total:
         type: integer
     type: object
-  v1.GroupParticipantDetail:
+  v1.GroupParticipant:
     properties:
       is_admin:
         type: boolean
@@ -103,7 +103,7 @@ definitions:
     properties:
       data:
         items:
-          $ref: '#/definitions/v1.GroupParticipantDetail'
+          $ref: '#/definitions/v1.GroupParticipant'
         type: array
       total:
         type: integer
@@ -192,6 +192,23 @@ definitions:
       refresh_token:
         type: string
     type: object
+  v1.User:
+    properties:
+      bio:
+        type: string
+      birth_date:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      username:
+        type: string
+    type: object
   v1.UserCreate:
     properties:
       bio:
@@ -220,28 +237,11 @@ definitions:
     - password
     - username
     type: object
-  v1.UserDetail:
-    properties:
-      bio:
-        type: string
-      birth_date:
-        type: string
-      email:
-        type: string
-      first_name:
-        type: string
-      id:
-        type: integer
-      last_name:
-        type: string
-      username:
-        type: string
-    type: object
   v1.UserList:
     properties:
       data:
         items:
-          $ref: '#/definitions/v1.UserDetail'
+          $ref: '#/definitions/v1.User'
         type: array
       total:
         type: integer
@@ -395,7 +395,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/v1.ConversationDetail'
+            $ref: '#/definitions/v1.Conversation'
         "400":
           description: Bad Request
           schema:
@@ -423,7 +423,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.ConversationDetail'
+            $ref: '#/definitions/v1.Conversation'
         "400":
           description: Bad Request
           schema:
@@ -508,7 +508,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/v1.GroupDetail'
+            $ref: '#/definitions/v1.Group'
         "400":
           description: Bad Request
           schema:
@@ -565,7 +565,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.GroupDetail'
+            $ref: '#/definitions/v1.Group'
         "400":
           description: Bad Request
           schema:
@@ -602,7 +602,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.GroupDetail'
+            $ref: '#/definitions/v1.Group'
         "400":
           description: Bad Request
           schema:
@@ -671,7 +671,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.GroupParticipantDetail'
+            $ref: '#/definitions/v1.GroupParticipant'
         "400":
           description: Bad Request
           schema:
@@ -826,10 +826,10 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
-            $ref: '#/definitions/v1.UserDetail'
+            $ref: '#/definitions/v1.User'
         "404":
           description: Not Found
           schema:
@@ -857,7 +857,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.UserDetail'
+            $ref: '#/definitions/v1.User'
         "400":
           description: Bad Request
           schema:
@@ -909,7 +909,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.UserDetail'
+            $ref: '#/definitions/v1.User'
         "400":
           description: Bad Request
           schema:
