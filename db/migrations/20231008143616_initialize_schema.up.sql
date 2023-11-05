@@ -18,8 +18,7 @@ $$
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'content_type') THEN
             CREATE TYPE content_type as ENUM (
                 'text',
-                'file',
-                'service');
+                'file');
         END IF;
     END
 $$;
@@ -91,6 +90,7 @@ CREATE TABLE IF NOT EXISTS messages
         REFERENCES conversations (id),
     content      VARCHAR(100000)          NOT NULL,
     content_type content_type             NOT NULL,
+    is_service   BOOLEAN DEFAULT FALSE,
     sent_at      TIMESTAMP WITH TIME ZONE NOT NULL,
     delivered_at TIMESTAMP WITH TIME ZONE,
     seen_at      TIMESTAMP WITH TIME ZONE
