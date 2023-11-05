@@ -7,27 +7,39 @@ definitions:
       message:
         type: string
     type: object
-  v1.ChatCreate:
+  v1.ConversationCreate:
     properties:
-      contact_id:
-        type: integer
-    required:
-    - contact_id
+      participant:
+        properties:
+          id:
+            type: integer
+        required:
+        - id
+        type: object
     type: object
-  v1.ChatDetail:
+  v1.ConversationDetail:
     properties:
       created_at:
         type: string
       id:
         type: integer
-      name:
-        type: string
+      is_blocked:
+        type: boolean
+      participant:
+        properties:
+          id:
+            type: integer
+          is_blocked:
+            type: boolean
+          username:
+            type: string
+        type: object
     type: object
-  v1.ChatList:
+  v1.ConversationList:
     properties:
       data:
         items:
-          $ref: '#/definitions/v1.ChatDetail'
+          $ref: '#/definitions/v1.ConversationDetail'
         type: array
       total:
         type: integer
@@ -76,6 +88,26 @@ definitions:
       total:
         type: integer
     type: object
+  v1.GroupParticipantDetail:
+    properties:
+      is_admin:
+        type: boolean
+      status:
+        type: string
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  v1.GroupParticipantList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.GroupParticipantDetail'
+        type: array
+      total:
+        type: integer
+    type: object
   v1.GroupUpdate:
     properties:
       description:
@@ -86,6 +118,65 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  v1.Message:
+    properties:
+      chat_id:
+        type: integer
+      chat_type:
+        type: string
+      content:
+        items:
+          type: integer
+        type: array
+      content_type:
+        type: string
+      delivered_at:
+        type: string
+      id:
+        type: integer
+      is_service:
+        type: boolean
+      seen_at:
+        type: string
+      sender_id:
+        type: integer
+      sent_at:
+        type: string
+    type: object
+  v1.MessageCreate:
+    properties:
+      chat_id:
+        type: integer
+      chat_type:
+        enum:
+        - conversation
+        - group
+        type: string
+      content:
+        items:
+          type: integer
+        maxItems: 100000
+        type: array
+      content_type:
+        enum:
+        - text
+        - file
+        type: string
+    required:
+    - chat_id
+    - chat_type
+    - content
+    - content_type
+    type: object
+  v1.MessageList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.Message'
+        type: array
+      total:
+        type: integer
     type: object
   v1.RefreshToken:
     properties:
@@ -270,7 +361,7 @@ paths:
       summary: Refresh authorization token
       tags:
       - auth
-  /chats:
+  /conversations:
     get:
       consumes:
       - application/json
@@ -280,14 +371,14 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.ChatList'
+            $ref: '#/definitions/v1.ConversationList'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      summary: List all one-on-one chats where user is a member
+      summary: List all one-on-one conversations
       tags:
-      - chats
+      - conversations
     post:
       consumes:
       - application/json
@@ -297,14 +388,14 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/v1.ChatCreate'
+          $ref: '#/definitions/v1.ConversationCreate'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/v1.ChatDetail'
+            $ref: '#/definitions/v1.ConversationDetail'
         "400":
           description: Bad Request
           schema:
@@ -313,17 +404,17 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      summary: Create a one-on-one chat with a specified member
+      summary: Create a one-on-one conversation with a specified participant
       tags:
-      - chats
-  /chats/{chat_id}:
+      - conversations
+  /conversations/{conversation_id}:
     get:
       consumes:
       - application/json
       parameters:
-      - description: Chat identity
+      - description: Conversation identity
         in: path
-        name: chat_id
+        name: conversation_id
         required: true
         type: integer
       produces:
@@ -332,7 +423,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.ChatDetail'
+            $ref: '#/definitions/v1.ConversationDetail'
         "400":
           description: Bad Request
           schema:
@@ -345,9 +436,44 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      summary: Get a specified one-on-one chat
+      summary: Get a specified one-on-one conversation
       tags:
-      - chats
+      - conversations
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Conversation identity
+        in: path
+        name: conversation_id
+        required: true
+        type: integer
+      - description: Body to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.ConversationCreate'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Update a specified one-on-one conversation
+      tags:
+      - conversations
   /groups:
     get:
       consumes:
@@ -363,7 +489,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      summary: List all groups where user is a member
+      summary: List all groups
       tags:
       - groups
     post:
@@ -492,6 +618,183 @@ paths:
       summary: Update a specified group
       tags:
       - groups
+  /groups/{group_id}/participants:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.GroupParticipantList'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: List all participants for a specified group
+      tags:
+      - group-participants
+  /groups/{group_id}/participants/{user_id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      - description: User identity
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.GroupParticipantDetail'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Get a specified participant in a group
+      tags:
+      - group-participants
+    patch:
+      consumes:
+      - application/json
+      description: It can be used to join/kick/leave participant from the group.
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      - description: User identity
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Update a specified participant in a group
+      tags:
+      - group-participants
+  /messages:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chat identity
+        in: query
+        name: chat_id
+        required: true
+        type: integer
+      - description: Chat type (conversation, group)
+        in: query
+        name: chat_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.MessageList'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: List messages for a specified chat
+      tags:
+      - messages
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Body to create
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.MessageCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Send message to the specified chat
+      tags:
+      - messages
   /users:
     get:
       consumes:

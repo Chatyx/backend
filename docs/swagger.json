@@ -116,7 +116,7 @@
                 }
             }
         },
-        "/chats": {
+        "/conversations": {
             "get": {
                 "consumes": [
                     "application/json"
@@ -125,14 +125,14 @@
                     "application/json"
                 ],
                 "tags": [
-                    "chats"
+                    "conversations"
                 ],
-                "summary": "List all one-on-one chats where user is a member",
+                "summary": "List all one-on-one conversations",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.ChatList"
+                            "$ref": "#/definitions/v1.ConversationList"
                         }
                     },
                     "500": {
@@ -151,9 +151,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "chats"
+                    "conversations"
                 ],
-                "summary": "Create a one-on-one chat with a specified member",
+                "summary": "Create a one-on-one conversation with a specified participant",
                 "parameters": [
                     {
                         "description": "Body to create",
@@ -161,7 +161,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.ChatCreate"
+                            "$ref": "#/definitions/v1.ConversationCreate"
                         }
                     }
                 ],
@@ -169,7 +169,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/v1.ChatDetail"
+                            "$ref": "#/definitions/v1.ConversationDetail"
                         }
                     },
                     "400": {
@@ -187,7 +187,7 @@
                 }
             }
         },
-        "/chats/{chat_id}": {
+        "/conversations/{conversation_id}": {
             "get": {
                 "consumes": [
                     "application/json"
@@ -196,14 +196,14 @@
                     "application/json"
                 ],
                 "tags": [
-                    "chats"
+                    "conversations"
                 ],
-                "summary": "Get a specified one-on-one chat",
+                "summary": "Get a specified one-on-one conversation",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Chat identity",
-                        "name": "chat_id",
+                        "description": "Conversation identity",
+                        "name": "conversation_id",
                         "in": "path",
                         "required": true
                     }
@@ -212,8 +212,61 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.ChatDetail"
+                            "$ref": "#/definitions/v1.ConversationDetail"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "conversations"
+                ],
+                "summary": "Update a specified one-on-one conversation",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Conversation identity",
+                        "name": "conversation_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Body to update",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.ConversationCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -247,7 +300,7 @@
                 "tags": [
                     "groups"
                 ],
-                "summary": "List all groups where user is a member",
+                "summary": "List all groups",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -434,6 +487,274 @@
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/groups/{group_id}/participants": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group-participants"
+                ],
+                "summary": "List all participants for a specified group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Group identity",
+                        "name": "group_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.GroupParticipantList"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/groups/{group_id}/participants/{user_id}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group-participants"
+                ],
+                "summary": "Get a specified participant in a group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Group identity",
+                        "name": "group_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "User identity",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.GroupParticipantDetail"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "It can be used to join/kick/leave participant from the group.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group-participants"
+                ],
+                "summary": "Update a specified participant in a group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Group identity",
+                        "name": "group_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "User identity",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/messages": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "messages"
+                ],
+                "summary": "List messages for a specified chat",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chat identity",
+                        "name": "chat_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Chat type (conversation, group)",
+                        "name": "chat_type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.MessageList"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "messages"
+                ],
+                "summary": "Send message to the specified chat",
+                "parameters": [
+                    {
+                        "description": "Body to create",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.MessageCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Message"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -712,18 +1033,23 @@
                 }
             }
         },
-        "v1.ChatCreate": {
+        "v1.ConversationCreate": {
             "type": "object",
-            "required": [
-                "contact_id"
-            ],
             "properties": {
-                "contact_id": {
-                    "type": "integer"
+                "participant": {
+                    "type": "object",
+                    "required": [
+                        "id"
+                    ],
+                    "properties": {
+                        "id": {
+                            "type": "integer"
+                        }
+                    }
                 }
             }
         },
-        "v1.ChatDetail": {
+        "v1.ConversationDetail": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -732,18 +1058,32 @@
                 "id": {
                     "type": "integer"
                 },
-                "name": {
-                    "type": "string"
+                "is_blocked": {
+                    "type": "boolean"
+                },
+                "participant": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "integer"
+                        },
+                        "is_blocked": {
+                            "type": "boolean"
+                        },
+                        "username": {
+                            "type": "string"
+                        }
+                    }
                 }
             }
         },
-        "v1.ChatList": {
+        "v1.ConversationList": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/v1.ChatDetail"
+                        "$ref": "#/definitions/v1.ConversationDetail"
                     }
                 },
                 "total": {
@@ -816,6 +1156,37 @@
                 }
             }
         },
+        "v1.GroupParticipantDetail": {
+            "type": "object",
+            "properties": {
+                "is_admin": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.GroupParticipantList": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1.GroupParticipantDetail"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "v1.GroupUpdate": {
             "type": "object",
             "required": [
@@ -829,6 +1200,93 @@
                 "name": {
                     "type": "string",
                     "maxLength": 255
+                }
+            }
+        },
+        "v1.Message": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "chat_type": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "delivered_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_service": {
+                    "type": "boolean"
+                },
+                "seen_at": {
+                    "type": "string"
+                },
+                "sender_id": {
+                    "type": "integer"
+                },
+                "sent_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.MessageCreate": {
+            "type": "object",
+            "required": [
+                "chat_id",
+                "chat_type",
+                "content",
+                "content_type"
+            ],
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "chat_type": {
+                    "type": "string",
+                    "enum": [
+                        "conversation",
+                        "group"
+                    ]
+                },
+                "content": {
+                    "type": "array",
+                    "maxItems": 100000,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "content_type": {
+                    "type": "string",
+                    "enum": [
+                        "text",
+                        "file"
+                    ]
+                }
+            }
+        },
+        "v1.MessageList": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1.Message"
+                    }
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },
