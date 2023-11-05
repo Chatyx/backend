@@ -271,7 +271,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.ConversationCreate"
+                            "$ref": "#/definitions/v1.ConversationUpdate"
                         }
                     }
                 ],
@@ -1099,6 +1099,19 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "v1.ConversationUpdate": {
+            "type": "object",
+            "properties": {
+                "participant": {
+                    "type": "object",
+                    "properties": {
+                        "is_blocked": {
+                            "type": "boolean"
+                        }
+                    }
                 }
             }
         },

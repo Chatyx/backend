@@ -260,7 +260,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.ConversationCreate"
+                            "$ref": "#/definitions/v1.ConversationUpdate"
                         }
                     }
                 ],
@@ -1088,6 +1088,19 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "v1.ConversationUpdate": {
+            "type": "object",
+            "properties": {
+                "participant": {
+                    "type": "object",
+                    "properties": {
+                        "is_blocked": {
+                            "type": "boolean"
+                        }
+                    }
                 }
             }
         },

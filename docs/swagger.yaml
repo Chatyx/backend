@@ -44,6 +44,14 @@ definitions:
       total:
         type: integer
     type: object
+  v1.ConversationUpdate:
+    properties:
+      participant:
+        properties:
+          is_blocked:
+            type: boolean
+        type: object
+    type: object
   v1.Credentials:
     properties:
       password:
@@ -453,7 +461,7 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/v1.ConversationCreate'
+          $ref: '#/definitions/v1.ConversationUpdate'
       produces:
       - application/json
       responses:
