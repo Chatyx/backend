@@ -44,9 +44,9 @@ func (gc *GroupController) Register(mux *httprouter.Router) {
 	mux.HandlerFunc(http.MethodDelete, groupDetailPath, gc.delete)
 }
 
-// list lists all groups where user is a member
+// list lists all groups
 //
-//	@Summary	List all groups where user is a member
+//	@Summary	List all groups
 //	@Tags		groups
 //	@Accept		json
 //	@Produce	json
@@ -57,7 +57,7 @@ func (gc *GroupController) list(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 
-// detail gets a specified one-on-one chat
+// detail gets a specified group
 //
 //	@Summary	Get a specified group
 //	@Tags		groups
