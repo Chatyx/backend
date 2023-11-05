@@ -3,8 +3,8 @@ BEGIN;
 DO
 $$
     BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'group_member_status') THEN
-            CREATE TYPE group_member_status as ENUM (
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'group_participant_status') THEN
+            CREATE TYPE group_participant_status as ENUM (
                 'joined',
                 'left',
                 'kicked');
@@ -49,35 +49,35 @@ CREATE TABLE IF NOT EXISTS groups
     updated_at  TIMESTAMP WITH TIME ZONE NULL
 );
 
-CREATE TABLE IF NOT EXISTS group_members
+CREATE TABLE IF NOT EXISTS group_participants
 (
     id       BIGSERIAL PRIMARY KEY,
-    user_id  BIGINT              NOT NULL
+    user_id  BIGINT                   NOT NULL
         REFERENCES users (id),
-    group_id BIGINT              NOT NULL
+    group_id BIGINT                   NOT NULL
         REFERENCES groups (id) ON DELETE CASCADE,
-    status   group_member_status NOT NULL,
+    status   group_participant_status NOT NULL,
     is_admin BOOLEAN DEFAULT FALSE,
 
     UNIQUE (user_id, group_id)
 );
 
-CREATE TABLE IF NOT EXISTS chats
+CREATE TABLE IF NOT EXISTS conversations
 (
     id         BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS chat_members
+CREATE TABLE IF NOT EXISTS conversation_participants
 (
     id         BIGSERIAL PRIMARY KEY,
     user_id    BIGINT NOT NULL
         REFERENCES users (id),
-    chat_id    BIGINT NOT NULL
-        REFERENCES chats (id) ON DELETE CASCADE,
+    conv_id    BIGINT NOT NULL
+        REFERENCES conversations (id) ON DELETE CASCADE,
     is_blocked BOOLEAN DEFAULT FALSE,
 
-    UNIQUE (user_id, chat_id)
+    UNIQUE (user_id, conv_id)
 );
 
 CREATE TABLE IF NOT EXISTS messages
@@ -87,8 +87,8 @@ CREATE TABLE IF NOT EXISTS messages
         REFERENCES users (id),
     group_id     BIGINT                   NULL
         REFERENCES groups (id),
-    chat_id      BIGINT                   NULL
-        REFERENCES chats (id),
+    conv_id      BIGINT                   NULL
+        REFERENCES conversations (id),
     content      VARCHAR(100000)          NOT NULL,
     content_type content_type             NOT NULL,
     sent_at      TIMESTAMP WITH TIME ZONE NOT NULL,
