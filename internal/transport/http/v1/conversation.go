@@ -12,7 +12,7 @@ const (
 	conversationDetailPath = "/conversations/:conversation_id"
 )
 
-type ConversationDetail struct {
+type Conversation struct {
 	ID          int `json:"id"`
 	Participant struct {
 		ID        int    `json:"id"`
@@ -24,8 +24,8 @@ type ConversationDetail struct {
 }
 
 type ConversationList struct {
-	Total int                  `json:"total"`
-	Data  []ConversationDetail `json:"data"`
+	Total int            `json:"total"`
+	Data  []Conversation `json:"data"`
 }
 
 type ConversationCreate struct {
@@ -69,7 +69,7 @@ func (cc *ConversationController) list(w http.ResponseWriter, req *http.Request)
 //	@Accept		json
 //	@Produce	json
 //	@Param		input	body		ConversationCreate	true	"Body to create"
-//	@Success	201		{object}	ConversationDetail
+//	@Success	201		{object}	Conversation
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/conversations  [post]
@@ -84,7 +84,7 @@ func (cc *ConversationController) create(w http.ResponseWriter, req *http.Reques
 //	@Accept		json
 //	@Produce	json
 //	@Param		conversation_id	path		int	true	"Conversation identity"
-//	@Success	200				{object}	ConversationDetail
+//	@Success	200				{object}	Conversation
 //	@Failure	400				{object}	httputil.Error
 //	@Failure	404				{object}	httputil.Error
 //	@Failure	500				{object}	httputil.Error

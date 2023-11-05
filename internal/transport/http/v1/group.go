@@ -12,7 +12,7 @@ const (
 	groupDetailPath = "/groups/:group_id"
 )
 
-type GroupDetail struct {
+type Group struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description,omitempty"`
@@ -20,8 +20,8 @@ type GroupDetail struct {
 }
 
 type GroupList struct {
-	Total int           `json:"total"`
-	Data  []GroupDetail `json:"data"`
+	Total int     `json:"total"`
+	Data  []Group `json:"data"`
 }
 
 type GroupUpdate struct {
@@ -64,7 +64,7 @@ func (gc *GroupController) list(w http.ResponseWriter, req *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		input	body		GroupCreate	true	"Body to create"
-//	@Success	201		{object}	GroupDetail
+//	@Success	201		{object}	Group
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/groups  [post]
@@ -79,7 +79,7 @@ func (gc *GroupController) create(w http.ResponseWriter, req *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		group_id	path		int	true	"Group identity"
-//	@Success	200			{object}	GroupDetail
+//	@Success	200			{object}	Group
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
 //	@Failure	500			{object}	httputil.Error
@@ -96,7 +96,7 @@ func (gc *GroupController) detail(w http.ResponseWriter, req *http.Request) {
 //	@Produce	json
 //	@Param		group_id	path		int			true	"Group identity"
 //	@Param		input		body		GroupUpdate	true	"Body to update"
-//	@Success	200			{object}	GroupDetail
+//	@Success	200			{object}	Group
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
 //	@Failure	500			{object}	httputil.Error

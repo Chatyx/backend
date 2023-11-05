@@ -13,7 +13,7 @@ const (
 	userMePath     = "/users/me"
 )
 
-type UserDetail struct {
+type User struct {
 	ID        int       `json:"id"`
 	Username  string    `json:"username"`
 	Email     string    `json:"email"`
@@ -24,8 +24,8 @@ type UserDetail struct {
 }
 
 type UserList struct {
-	Total int          `json:"total"`
-	Data  []UserDetail `json:"data"`
+	Total int    `json:"total"`
+	Data  []User `json:"data"`
 }
 
 type UserUpdate struct {
@@ -79,7 +79,7 @@ func (uc *UserController) list(w http.ResponseWriter, req *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		input	body		UserCreate	true	"Body to create"
-//	@Success	200		{object}	UserDetail
+//	@Success	201		{object}	User
 //	@Failure	404		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/users [post]
@@ -94,7 +94,7 @@ func (uc *UserController) create(w http.ResponseWriter, req *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		user_id	path		int	true	"User identity"
-//	@Success	200		{object}	UserDetail
+//	@Success	200		{object}	User
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	404		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
@@ -110,7 +110,7 @@ func (uc *UserController) detail(w http.ResponseWriter, req *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		input	body		UserUpdate	true	"Body to update"
-//	@Success	200		{object}	UserDetail
+//	@Success	200		{object}	User
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	404		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error

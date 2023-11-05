@@ -11,7 +11,7 @@ const (
 	groupParticipantDetailPath = "/participants/:user_id"
 )
 
-type GroupParticipantDetail struct {
+type GroupParticipant struct {
 	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
 	Status   string `json:"status"`
@@ -19,8 +19,8 @@ type GroupParticipantDetail struct {
 }
 
 type GroupParticipantList struct {
-	Total int                      `json:"total"`
-	Data  []GroupParticipantDetail `json:"data"`
+	Total int                `json:"total"`
+	Data  []GroupParticipant `json:"data"`
 }
 
 type GroupParticipantUpdate struct {
@@ -60,7 +60,7 @@ func (pc *GroupParticipantController) list(w http.ResponseWriter, req *http.Requ
 //	@Produce	json
 //	@Param		group_id	path		int	true	"Group identity"
 //	@Param		user_id		path		int	true	"User identity"
-//	@Success	200			{object}	GroupParticipantDetail
+//	@Success	200			{object}	GroupParticipant
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
 //	@Failure	500			{object}	httputil.Error
