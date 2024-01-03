@@ -9,18 +9,8 @@
 
 ## Description
 
-Chatyx backend is a simple MVP chat application implemented in GO.
-
-## Design application
-
-TBD
-
-## Configuration
-
-Basic configuration defined as a single [YAML-file](./configs/config.yaml):
-
-You can configure part of parameters with environment variables 
-(like these: `CHATYX_POSTGRES_USER`, `CHATYX_POSTGRES_PASSWORD`, etc).
+Chatyx backend is an MVP monolith message service implemented in Go. The project will evolve 
+towards a microservice architecture. The target design is described in [this page](./docs/README.md).
 
 ## Installation
 
@@ -28,14 +18,19 @@ TBD
 
 ## How to use
 
-If you need to substitute config, you can do it very simply:
+Basic configuration defined as a single [YAML file](./configs/config.yaml):
+
+You can configure part of parameters with environment variables
+(like these: `CHATYX_POSTGRES_USER`, `CHATYX_POSTGRES_PASSWORD`, etc).
+
+To run the application with substituted config you should perform:
 
 ```bash
 $ ./chatyx --config=<PATH_TO_THE_CONFIG>
 ```
 
-After running the application you can use REST API for creating groups and dialogs, adding participants
-sending messages and so on. See swagger documentation `http://localhost:8080/docs` for more details.
+After running this one you can use REST API for creating groups and dialogs, adding participants
+sending messages and so on. See swagger documentation `http://localhost:8080/swagger` for more details.
 
 Also, available to you WebSocket API for sending and receiving messages in the real time.
 (by default at `ws://localhost:8081`). For getting that you should generate code for your 
