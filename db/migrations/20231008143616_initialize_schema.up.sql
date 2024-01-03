@@ -3,6 +3,17 @@ BEGIN;
 DO
 $$
     BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'chat_type') THEN
+            CREATE TYPE chat_type as ENUM (
+                'dialog',
+                'group');
+        END IF;
+    END
+$$;
+
+DO
+$$
+    BEGIN
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'group_participant_status') THEN
             CREATE TYPE group_participant_status as ENUM (
                 'joined',
@@ -18,7 +29,7 @@ $$
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'content_type') THEN
             CREATE TYPE content_type as ENUM (
                 'text',
-                'file');
+                'image');
         END IF;
     END
 $$;
@@ -39,10 +50,11 @@ CREATE TABLE IF NOT EXISTS users
     deleted_at TIMESTAMP WITH TIME ZONE NULL
 );
 
-CREATE TABLE IF NOT EXISTS groups
+CREATE TABLE IF NOT EXISTS chats
 (
     id          BIGSERIAL PRIMARY KEY,
-    name        VARCHAR(255)             NOT NULL,
+    type        chat_type                NOT NULL,
+    name        VARCHAR(255)             NULL,
     description VARCHAR(10000)           NULL,
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at  TIMESTAMP WITH TIME ZONE NULL
@@ -50,33 +62,25 @@ CREATE TABLE IF NOT EXISTS groups
 
 CREATE TABLE IF NOT EXISTS group_participants
 (
-    id       BIGSERIAL PRIMARY KEY,
+    chat_id  BIGINT                   NOT NULL
+        REFERENCES chats (id) ON DELETE CASCADE,
     user_id  BIGINT                   NOT NULL
         REFERENCES users (id),
-    group_id BIGINT                   NOT NULL
-        REFERENCES groups (id) ON DELETE CASCADE,
     status   group_participant_status NOT NULL,
     is_admin BOOLEAN DEFAULT FALSE,
 
-    UNIQUE (user_id, group_id)
+    PRIMARY KEY (chat_id, user_id)
 );
 
-CREATE TABLE IF NOT EXISTS conversations
+CREATE TABLE IF NOT EXISTS dialog_participants
 (
-    id         BIGSERIAL PRIMARY KEY,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS conversation_participants
-(
-    id         BIGSERIAL PRIMARY KEY,
+    chat_id    BIGINT NOT NULL
+        REFERENCES chats (id) ON DELETE CASCADE,
     user_id    BIGINT NOT NULL
         REFERENCES users (id),
-    conv_id    BIGINT NOT NULL
-        REFERENCES conversations (id) ON DELETE CASCADE,
     is_blocked BOOLEAN DEFAULT FALSE,
 
-    UNIQUE (user_id, conv_id)
+    PRIMARY KEY (chat_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS messages
@@ -84,16 +88,33 @@ CREATE TABLE IF NOT EXISTS messages
     id           BIGSERIAL PRIMARY KEY,
     sender_id    BIGINT                   NOT NULL
         REFERENCES users (id),
-    group_id     BIGINT                   NULL
-        REFERENCES groups (id),
-    conv_id      BIGINT                   NULL
-        REFERENCES conversations (id),
-    content      VARCHAR(100000)          NOT NULL,
+    chat_id      BIGINT                   NOT NULL
+        REFERENCES chats (id) ON DELETE CASCADE,
+    content      VARCHAR(2000)            NOT NULL,
     content_type content_type             NOT NULL,
     is_service   BOOLEAN DEFAULT FALSE,
     sent_at      TIMESTAMP WITH TIME ZONE NOT NULL,
-    delivered_at TIMESTAMP WITH TIME ZONE,
-    seen_at      TIMESTAMP WITH TIME ZONE
+    delivered_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS read_messages
+(
+    chat_id    BIGINT NOT NULL
+        REFERENCES chats (id) ON DELETE CASCADE,
+    user_id    BIGINT NOT NULL
+        REFERENCES users (id),
+    message_id BIGINT NOT NULL
+        REFERENCES messages (id),
+
+    PRIMARY KEY (chat_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS last_messages
+(
+    chat_id    BIGINT PRIMARY KEY
+        REFERENCES chats (id) ON DELETE CASCADE,
+    message_id BIGINT NOT NULL
+        REFERENCES messages (id)
 );
 
 COMMIT;
