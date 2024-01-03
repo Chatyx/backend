@@ -3,7 +3,7 @@
 !/cmd/**
 !/configs/**
 !/db/**
-!/docs/**
+!/api/**
 !/internal/**
 !/pkg/**
 !Makefile
