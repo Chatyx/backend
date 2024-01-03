@@ -1,4 +1,4 @@
-# Chatyx - System Design
+# [](https://)Chatyx - System Design
 
 This page describes the design of message system.
 
@@ -35,3 +35,48 @@ The system should meet the following requirements:
 - The size of each image is a maximum 1 MB
 - Each message has a maximum 3 images
 - 5% of messages contain images
+- Store messages forever
+
+## Basic estimation
+
+### RPS
+
+#### Sending messages
+
+$$
+\frac{100 \space million \times 10 \space messages \space per \space day}{(24 \space hrs \times 3600 \space seconds)} = \sim 11574 \space requests/second
+$$
+
+#### Reading messages
+
+$$
+\frac{100 \space million \times 20 \space times \space per \space day}{(24 \space hrs \times 3600 \space seconds)} = \sim 23148 \space requests/second
+$$
+
+### Traffic
+
+Sending text messages:
+
+$$
+{11574 \space requests/second \times 2 \times 2000 \space bytes} = \sim 46.3 \space MB/second
+$$
+
+Sending images:
+
+$$
+{11574 \space requests/second \times 0.05 \times 1 \space MB} = \sim 578.7 \space MB/second
+$$
+
+Total:
+
+$$
+{46.3 \space MB/second + 578.7 \space MB/second} = 625 \space MB/second
+$$
+
+### Storage
+
+Database size for storing messages for 10 years (without replication factor and image compression):
+
+$$
+{625 \space MB/second \times (24 \space hrs \times 3600 \space seconds) \times 365 \space days \times 10 \space years} = \sim 197.1 \space PB
+$$
