@@ -1,8 +1,20 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "REST API for Chatyx backend application",
+        "title": "Chatyx REST API",
+        "contact": {
+            "name": "Pavel Korchagin",
+            "email": "mortalis94@gmail.com"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/license/mit/"
+        },
+        "version": "1.0"
     },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
     "paths": {
         "/auth/login": {
             "post": {
@@ -31,7 +43,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.Credentials"
+                            "$ref": "#/definitions/usersrv.Credentials"
                         }
                     }
                 ],
@@ -39,7 +51,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.TokenPair"
+                            "$ref": "#/definitions/usersrv.TokenPair"
                         }
                     },
                     "400": {
@@ -63,8 +75,52 @@
                 }
             }
         },
-        "/auth/token": {
+        "/auth/logout": {
             "post": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
+                "description": "Invalidate session by removing refresh token",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "User logout",
+                "parameters": [
+                    {
+                        "description": "Refresh token body",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usersrv.RefreshToken"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh-tokens": {
+            "post": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "description": "Allows to get a pair of tokens (access and refresh)  by exchanging an existing token.",
                 "consumes": [
                     "application/json"
@@ -75,7 +131,7 @@
                 "tags": [
                     "auth"
                 ],
-                "summary": "Refresh authorization token",
+                "summary": "Refresh access and refresh token",
                 "parameters": [
                     {
                         "type": "string",
@@ -90,7 +146,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.RefreshToken"
+                            "$ref": "#/definitions/usersrv.RefreshToken"
                         }
                     }
                 ],
@@ -98,7 +154,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.TokenPair"
+                            "$ref": "#/definitions/usersrv.TokenPair"
                         }
                     },
                     "400": {
@@ -116,8 +172,13 @@
                 }
             }
         },
-        "/conversations": {
+        "/dialogs": {
             "get": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -125,14 +186,14 @@
                     "application/json"
                 ],
                 "tags": [
-                    "conversations"
+                    "dialogs"
                 ],
-                "summary": "List all one-on-one conversations",
+                "summary": "List all dialogs",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.ConversationList"
+                            "$ref": "#/definitions/v1.DialogList"
                         }
                     },
                     "500": {
@@ -144,6 +205,11 @@
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -151,9 +217,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "conversations"
+                    "dialogs"
                 ],
-                "summary": "Create a one-on-one conversation with a specified participant",
+                "summary": "Create a dialog with a specified participant",
                 "parameters": [
                     {
                         "description": "Body to create",
@@ -161,7 +227,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.ConversationCreate"
+                            "$ref": "#/definitions/v1.DialogCreate"
                         }
                     }
                 ],
@@ -169,7 +235,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/v1.Conversation"
+                            "$ref": "#/definitions/v1.Dialog"
                         }
                     },
                     "400": {
@@ -187,8 +253,13 @@
                 }
             }
         },
-        "/conversations/{conversation_id}": {
+        "/dialogs/{dialog_id}": {
             "get": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -196,14 +267,14 @@
                     "application/json"
                 ],
                 "tags": [
-                    "conversations"
+                    "dialogs"
                 ],
-                "summary": "Get a specified one-on-one conversation",
+                "summary": "Get a specified dialog",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Conversation identity",
-                        "name": "conversation_id",
+                        "description": "Dialog identity",
+                        "name": "dialog_id",
                         "in": "path",
                         "required": true
                     }
@@ -212,7 +283,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.Conversation"
+                            "$ref": "#/definitions/v1.Dialog"
                         }
                     },
                     "400": {
@@ -236,6 +307,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -243,14 +319,14 @@
                     "application/json"
                 ],
                 "tags": [
-                    "conversations"
+                    "dialogs"
                 ],
-                "summary": "Update a specified one-on-one conversation",
+                "summary": "Update a specified dialog",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Conversation identity",
-                        "name": "conversation_id",
+                        "description": "Dialog identity",
+                        "name": "dialog_id",
                         "in": "path",
                         "required": true
                     },
@@ -260,7 +336,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.ConversationUpdate"
+                            "$ref": "#/definitions/v1.DialogUpdate"
                         }
                     }
                 ],
@@ -291,6 +367,11 @@
         },
         "/groups": {
             "get": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -317,6 +398,11 @@
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -362,6 +448,11 @@
         },
         "/groups/{group_id}": {
             "get": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -409,6 +500,11 @@
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -465,6 +561,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -511,6 +612,11 @@
         },
         "/groups/{group_id}/participants": {
             "get": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -560,6 +666,11 @@
         },
         "/groups/{group_id}/participants/{user_id}": {
             "get": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -614,6 +725,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "description": "It can be used to join/kick/leave participant from the group.",
                 "consumes": [
                     "application/json"
@@ -674,6 +790,11 @@
         },
         "/messages": {
             "get": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -684,22 +805,6 @@
                     "messages"
                 ],
                 "summary": "List messages for a specified chat",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Chat identity",
-                        "name": "chat_id",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Chat type (conversation, group)",
-                        "name": "chat_type",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -728,6 +833,11 @@
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -779,6 +889,11 @@
         },
         "/users": {
             "get": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -850,6 +965,11 @@
         },
         "/users/me": {
             "put": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -899,6 +1019,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -930,6 +1055,11 @@
         },
         "/users/me/password": {
             "patch": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -972,6 +1102,11 @@
         },
         "/users/{user_id}": {
             "get": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1033,78 +1168,7 @@
                 }
             }
         },
-        "v1.Conversation": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "is_blocked": {
-                    "type": "boolean"
-                },
-                "participant": {
-                    "type": "object",
-                    "properties": {
-                        "id": {
-                            "type": "integer"
-                        },
-                        "is_blocked": {
-                            "type": "boolean"
-                        },
-                        "username": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "v1.ConversationCreate": {
-            "type": "object",
-            "properties": {
-                "participant": {
-                    "type": "object",
-                    "required": [
-                        "id"
-                    ],
-                    "properties": {
-                        "id": {
-                            "type": "integer"
-                        }
-                    }
-                }
-            }
-        },
-        "v1.ConversationList": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/v1.Conversation"
-                    }
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "v1.ConversationUpdate": {
-            "type": "object",
-            "properties": {
-                "participant": {
-                    "type": "object",
-                    "properties": {
-                        "is_blocked": {
-                            "type": "boolean"
-                        }
-                    }
-                }
-            }
-        },
-        "v1.Credentials": {
+        "usersrv.Credentials": {
             "type": "object",
             "required": [
                 "password",
@@ -1119,6 +1183,99 @@
                 "username": {
                     "type": "string",
                     "maxLength": 50
+                }
+            }
+        },
+        "usersrv.RefreshToken": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "usersrv.TokenPair": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.Dialog": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_blocked": {
+                    "type": "boolean"
+                },
+                "participant": {
+                    "type": "object",
+                    "properties": {
+                        "is_blocked": {
+                            "type": "boolean"
+                        },
+                        "user_id": {
+                            "type": "integer"
+                        },
+                        "username": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "v1.DialogCreate": {
+            "type": "object",
+            "properties": {
+                "participant": {
+                    "type": "object",
+                    "required": [
+                        "user_id"
+                    ],
+                    "properties": {
+                        "user_id": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        "v1.DialogList": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1.Dialog"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.DialogUpdate": {
+            "type": "object",
+            "properties": {
+                "participant": {
+                    "type": "object",
+                    "properties": {
+                        "is_blocked": {
+                            "type": "boolean"
+                        }
+                    }
                 }
             }
         },
@@ -1219,12 +1376,6 @@
         "v1.Message": {
             "type": "object",
             "properties": {
-                "chat_id": {
-                    "type": "integer"
-                },
-                "chat_type": {
-                    "type": "string"
-                },
                 "content": {
                     "type": "array",
                     "items": {
@@ -1243,9 +1394,6 @@
                 "is_service": {
                     "type": "boolean"
                 },
-                "seen_at": {
-                    "type": "string"
-                },
                 "sender_id": {
                     "type": "integer"
                 },
@@ -1258,7 +1406,6 @@
             "type": "object",
             "required": [
                 "chat_id",
-                "chat_type",
                 "content",
                 "content_type"
             ],
@@ -1266,16 +1413,9 @@
                 "chat_id": {
                     "type": "integer"
                 },
-                "chat_type": {
-                    "type": "string",
-                    "enum": [
-                        "conversation",
-                        "group"
-                    ]
-                },
                 "content": {
                     "type": "array",
-                    "maxItems": 100000,
+                    "maxItems": 2000,
                     "items": {
                         "type": "integer"
                     }
@@ -1284,7 +1424,7 @@
                     "type": "string",
                     "enum": [
                         "text",
-                        "file"
+                        "image"
                     ]
                 }
             }
@@ -1300,28 +1440,6 @@
                 },
                 "total": {
                     "type": "integer"
-                }
-            }
-        },
-        "v1.RefreshToken": {
-            "type": "object",
-            "required": [
-                "refresh_token"
-            ],
-            "properties": {
-                "refresh_token": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.TokenPair": {
-            "type": "object",
-            "properties": {
-                "access_token": {
-                    "type": "string"
-                },
-                "refresh_token": {
-                    "type": "string"
                 }
             }
         },
@@ -1453,6 +1571,13 @@
                     "minLength": 8
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "JWTAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }

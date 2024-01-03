@@ -38,7 +38,7 @@ lint: .install-linter
 
 .PHONY: swagger
 swagger: .install-swagger
-	${SWAG} init -g ./internal/app/app.go
+	${SWAG} init -g ./internal/transport/http/entry.go -o ./api
 
 .PHONY: build
 build:

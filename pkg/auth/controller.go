@@ -1,4 +1,4 @@
-package v1
+package usersrv
 
 import (
 	"net/http"
@@ -9,8 +9,10 @@ import (
 const (
 	loginPath = "/auth/login"
 
+	logoutPath = "/auth/logout"
+
 	//nolint:gosec // G101: that's not credentials
-	tokenPath = "/auth/token"
+	refreshTokensPath = "/auth/refresh-tokens"
 )
 
 type Credentials struct {
@@ -32,7 +34,8 @@ type AuthController struct {
 
 func (ac *AuthController) Register(mux *httprouter.Router) {
 	mux.HandlerFunc(http.MethodPost, loginPath, ac.login)
-	mux.HandlerFunc(http.MethodPost, tokenPath, ac.refreshToken)
+	mux.HandlerFunc(http.MethodPost, logoutPath, ac.logout)
+	mux.HandlerFunc(http.MethodPost, refreshTokensPath, ac.refreshTokens)
 }
 
 // login performs user authentication
@@ -54,9 +57,24 @@ func (ac *AuthController) login(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 
-// refreshToken refreshes authorization token
+// logout performs user logout
 //
-//	@Summary		Refresh authorization token
+//	@Summary		User logout
+//	@Tags			auth
+//	@Description	Invalidate session by removing refresh token
+//	@Produce		json
+//	@Param			input	body	RefreshToken	true	"Refresh token body"
+//	@Success		204		"No Content"
+//	@Failure		500		{object}	httputil.Error
+//	@Security		JWTAuth
+//	@Router			/auth/logout [post]
+func (ac *AuthController) logout(w http.ResponseWriter, req *http.Request) {
+	_, _ = w, req
+}
+
+// refreshTokens refresh access and refresh tokens
+//
+//	@Summary		Refresh access and refresh token
 //	@Tags			auth
 //	@Description	Allows to get a pair of tokens (access and refresh)  by exchanging an existing token.
 //	 Successful response includes http-only cookie with refresh token.
@@ -67,7 +85,8 @@ func (ac *AuthController) login(w http.ResponseWriter, req *http.Request) {
 //	@Success		200			{object}	TokenPair
 //	@Failure		400			{object}	httputil.Error
 //	@Failure		500			{object}	httputil.Error
-//	@Router			/auth/token [post]
-func (ac *AuthController) refreshToken(w http.ResponseWriter, req *http.Request) {
+//	@Security		JWTAuth
+//	@Router			/auth/refresh-tokens [post]
+func (ac *AuthController) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }

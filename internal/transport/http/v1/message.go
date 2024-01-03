@@ -13,15 +13,12 @@ const (
 
 type Message struct {
 	ID          int        `json:"id"`
-	ChatID      int        `json:"chat_id"`
-	ChatType    string     `json:"chat_type"`
 	SenderID    int        `json:"sender_id"`
 	Content     []byte     `json:"content"`
 	ContentType string     `json:"content_type"`
 	IsService   bool       `json:"is_service"`
 	SentAt      time.Time  `json:"sent_at"`
 	DeliveredAt *time.Time `json:"delivered_at"`
-	SeenAt      *time.Time `json:"seen_at"`
 }
 
 type MessageList struct {
@@ -31,9 +28,8 @@ type MessageList struct {
 
 type MessageCreate struct {
 	ChatID      int    `json:"chat_id"      validate:"required"`
-	ChatType    string `json:"chat_type"    validate:"required,oneof=conversation group"`
-	Content     []byte `json:"content"      validate:"required,max=100000"`
-	ContentType string `json:"content_type" validate:"required,oneof=text file"`
+	Content     []byte `json:"content"      validate:"required,max=2000"`
+	ContentType string `json:"content_type" validate:"required,oneof=text image"`
 }
 
 type MessageController struct {
@@ -50,12 +46,11 @@ func (mc *MessageController) Register(mux *httprouter.Router) {
 //	@Tags		messages
 //	@Accept		json
 //	@Produce	json
-//	@Param		chat_id		query		int		true	"Chat identity"
-//	@Param		chat_type	query		string	true	"Chat type (conversation, group)"
-//	@Success	200			{object}	MessageList
-//	@Failure	400			{object}	httputil.Error
-//	@Failure	404			{object}	httputil.Error
-//	@Failure	500			{object}	httputil.Error
+//	@Success	200	{object}	MessageList
+//	@Failure	400	{object}	httputil.Error
+//	@Failure	404	{object}	httputil.Error
+//	@Failure	500	{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/messages  [get]
 func (mc *MessageController) list(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -72,6 +67,7 @@ func (mc *MessageController) list(w http.ResponseWriter, req *http.Request) {
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	404		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/messages  [post]
 func (mc *MessageController) create(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req

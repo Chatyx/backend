@@ -47,6 +47,7 @@ func (pc *GroupParticipantController) Register(mux *httprouter.Router) {
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
 //	@Failure	500			{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/groups/{group_id}/participants  [get]
 func (pc *GroupParticipantController) list(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -64,6 +65,7 @@ func (pc *GroupParticipantController) list(w http.ResponseWriter, req *http.Requ
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
 //	@Failure	500			{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/groups/{group_id}/participants/{user_id}  [get]
 func (pc *GroupParticipantController) detail(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -83,6 +85,7 @@ func (pc *GroupParticipantController) detail(w http.ResponseWriter, req *http.Re
 //	@Failure		403			{object}	httputil.Error
 //	@Failure		404			{object}	httputil.Error
 //	@Failure		500			{object}	httputil.Error
+//	@Security		JWTAuth
 //	@Router			/groups/{group_id}/participants/{user_id}  [patch]
 func (pc *GroupParticipantController) update(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req

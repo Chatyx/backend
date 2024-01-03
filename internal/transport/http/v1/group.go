@@ -52,6 +52,7 @@ func (gc *GroupController) Register(mux *httprouter.Router) {
 //	@Produce	json
 //	@Success	200	{object}	GroupList
 //	@Failure	500	{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/groups  [get]
 func (gc *GroupController) list(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -67,6 +68,7 @@ func (gc *GroupController) list(w http.ResponseWriter, req *http.Request) {
 //	@Success	201		{object}	Group
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/groups  [post]
 func (gc *GroupController) create(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -83,6 +85,7 @@ func (gc *GroupController) create(w http.ResponseWriter, req *http.Request) {
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
 //	@Failure	500			{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/groups/{group_id}  [get]
 func (gc *GroupController) detail(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -100,6 +103,7 @@ func (gc *GroupController) detail(w http.ResponseWriter, req *http.Request) {
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
 //	@Failure	500			{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/groups/{group_id}  [put]
 func (gc *GroupController) update(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -116,6 +120,7 @@ func (gc *GroupController) update(w http.ResponseWriter, req *http.Request) {
 //	@Failure	400			{object}	httputil.Error
 //	@Failure	404			{object}	httputil.Error
 //	@Failure	500			{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/groups/{group_id}  [delete]
 func (gc *GroupController) delete(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req

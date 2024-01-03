@@ -19,6 +19,24 @@ type Server struct {
 	srv *http.Server
 }
 
+// NewServer creates a new http server
+//
+//	@title						Chatyx REST API
+//	@version					1.0
+//	@description				REST API for Chatyx backend application
+//
+//	@contact.name				Pavel Korchagin
+//	@contact.email				mortalis94@gmail.com
+//
+//	@license.name				MIT
+//	@license.url				https://opensource.org/license/mit/
+//
+//	@host						localhost:8080
+//	@BasePath					/api/v1
+//
+//	@securityDefinitions.apikey	JWTAuth
+//	@in							header
+//	@name						Authorization
 func NewServer() *Server {
 	mux := httprouter.New()
 

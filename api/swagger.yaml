@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   httputil.Error:
     properties:
@@ -7,52 +8,7 @@ definitions:
       message:
         type: string
     type: object
-  v1.Conversation:
-    properties:
-      created_at:
-        type: string
-      id:
-        type: integer
-      is_blocked:
-        type: boolean
-      participant:
-        properties:
-          id:
-            type: integer
-          is_blocked:
-            type: boolean
-          username:
-            type: string
-        type: object
-    type: object
-  v1.ConversationCreate:
-    properties:
-      participant:
-        properties:
-          id:
-            type: integer
-        required:
-        - id
-        type: object
-    type: object
-  v1.ConversationList:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/v1.Conversation'
-        type: array
-      total:
-        type: integer
-    type: object
-  v1.ConversationUpdate:
-    properties:
-      participant:
-        properties:
-          is_blocked:
-            type: boolean
-        type: object
-    type: object
-  v1.Credentials:
+  usersrv.Credentials:
     properties:
       password:
         maxLength: 27
@@ -64,6 +20,65 @@ definitions:
     required:
     - password
     - username
+    type: object
+  usersrv.RefreshToken:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  usersrv.TokenPair:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  v1.Dialog:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_blocked:
+        type: boolean
+      participant:
+        properties:
+          is_blocked:
+            type: boolean
+          user_id:
+            type: integer
+          username:
+            type: string
+        type: object
+    type: object
+  v1.DialogCreate:
+    properties:
+      participant:
+        properties:
+          user_id:
+            type: integer
+        required:
+        - user_id
+        type: object
+    type: object
+  v1.DialogList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.Dialog'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.DialogUpdate:
+    properties:
+      participant:
+        properties:
+          is_blocked:
+            type: boolean
+        type: object
     type: object
   v1.Group:
     properties:
@@ -129,10 +144,6 @@ definitions:
     type: object
   v1.Message:
     properties:
-      chat_id:
-        type: integer
-      chat_type:
-        type: string
       content:
         items:
           type: integer
@@ -145,8 +156,6 @@ definitions:
         type: integer
       is_service:
         type: boolean
-      seen_at:
-        type: string
       sender_id:
         type: integer
       sent_at:
@@ -156,24 +165,18 @@ definitions:
     properties:
       chat_id:
         type: integer
-      chat_type:
-        enum:
-        - conversation
-        - group
-        type: string
       content:
         items:
           type: integer
-        maxItems: 100000
+        maxItems: 2000
         type: array
       content_type:
         enum:
         - text
-        - file
+        - image
         type: string
     required:
     - chat_id
-    - chat_type
     - content
     - content_type
     type: object
@@ -185,20 +188,6 @@ definitions:
         type: array
       total:
         type: integer
-    type: object
-  v1.RefreshToken:
-    properties:
-      refresh_token:
-        type: string
-    required:
-    - refresh_token
-    type: object
-  v1.TokenPair:
-    properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
     type: object
   v1.User:
     properties:
@@ -291,8 +280,17 @@ definitions:
     - current_password
     - new_password
     type: object
+host: localhost:8080
 info:
-  contact: {}
+  contact:
+    email: mortalis94@gmail.com
+    name: Pavel Korchagin
+  description: REST API for Chatyx backend application
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit/
+  title: Chatyx REST API
+  version: "1.0"
 paths:
   /auth/login:
     post:
@@ -310,14 +308,14 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/v1.Credentials'
+          $ref: '#/definitions/usersrv.Credentials'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.TokenPair'
+            $ref: '#/definitions/usersrv.TokenPair'
         "400":
           description: Bad Request
           schema:
@@ -333,7 +331,31 @@ paths:
       summary: User authentication
       tags:
       - auth
-  /auth/token:
+  /auth/logout:
+    post:
+      description: Invalidate session by removing refresh token
+      parameters:
+      - description: Refresh token body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/usersrv.RefreshToken'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: User logout
+      tags:
+      - auth
+  /auth/refresh-tokens:
     post:
       consumes:
       - application/json
@@ -350,14 +372,14 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/v1.RefreshToken'
+          $ref: '#/definitions/usersrv.RefreshToken'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.TokenPair'
+            $ref: '#/definitions/usersrv.TokenPair'
         "400":
           description: Bad Request
           schema:
@@ -366,10 +388,12 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      summary: Refresh authorization token
+      security:
+      - JWTAuth: []
+      summary: Refresh access and refresh token
       tags:
       - auth
-  /conversations:
+  /dialogs:
     get:
       consumes:
       - application/json
@@ -379,14 +403,16 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.ConversationList'
+            $ref: '#/definitions/v1.DialogList'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      summary: List all one-on-one conversations
+      security:
+      - JWTAuth: []
+      summary: List all dialogs
       tags:
-      - conversations
+      - dialogs
     post:
       consumes:
       - application/json
@@ -396,14 +422,14 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/v1.ConversationCreate'
+          $ref: '#/definitions/v1.DialogCreate'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/v1.Conversation'
+            $ref: '#/definitions/v1.Dialog'
         "400":
           description: Bad Request
           schema:
@@ -412,17 +438,19 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      summary: Create a one-on-one conversation with a specified participant
+      security:
+      - JWTAuth: []
+      summary: Create a dialog with a specified participant
       tags:
-      - conversations
-  /conversations/{conversation_id}:
+      - dialogs
+  /dialogs/{dialog_id}:
     get:
       consumes:
       - application/json
       parameters:
-      - description: Conversation identity
+      - description: Dialog identity
         in: path
-        name: conversation_id
+        name: dialog_id
         required: true
         type: integer
       produces:
@@ -431,7 +459,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.Conversation'
+            $ref: '#/definitions/v1.Dialog'
         "400":
           description: Bad Request
           schema:
@@ -444,16 +472,18 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      summary: Get a specified one-on-one conversation
+      security:
+      - JWTAuth: []
+      summary: Get a specified dialog
       tags:
-      - conversations
+      - dialogs
     patch:
       consumes:
       - application/json
       parameters:
-      - description: Conversation identity
+      - description: Dialog identity
         in: path
-        name: conversation_id
+        name: dialog_id
         required: true
         type: integer
       - description: Body to update
@@ -461,7 +491,7 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/v1.ConversationUpdate'
+          $ref: '#/definitions/v1.DialogUpdate'
       produces:
       - application/json
       responses:
@@ -479,9 +509,11 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      summary: Update a specified one-on-one conversation
+      security:
+      - JWTAuth: []
+      summary: Update a specified dialog
       tags:
-      - conversations
+      - dialogs
   /groups:
     get:
       consumes:
@@ -497,6 +529,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: List all groups
       tags:
       - groups
@@ -525,6 +559,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Create a group
       tags:
       - groups
@@ -555,6 +591,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Delete a specified group
       tags:
       - groups
@@ -586,6 +624,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Get a specified group
       tags:
       - groups
@@ -623,6 +663,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Update a specified group
       tags:
       - groups
@@ -655,6 +697,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: List all participants for a specified group
       tags:
       - group-participants
@@ -692,6 +736,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Get a specified participant in a group
       tags:
       - group-participants
@@ -731,6 +777,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Update a specified participant in a group
       tags:
       - group-participants
@@ -738,17 +786,6 @@ paths:
     get:
       consumes:
       - application/json
-      parameters:
-      - description: Chat identity
-        in: query
-        name: chat_id
-        required: true
-        type: integer
-      - description: Chat type (conversation, group)
-        in: query
-        name: chat_type
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -768,6 +805,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: List messages for a specified chat
       tags:
       - messages
@@ -800,6 +839,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Send message to the specified chat
       tags:
       - messages
@@ -818,6 +859,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: List all existing users
       tags:
       - users
@@ -878,6 +921,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Get a specified user
       tags:
       - users
@@ -898,6 +943,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Delete the current authenticated user
       tags:
       - users
@@ -930,6 +977,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Update information about the current authenticated user
       tags:
       - users
@@ -957,7 +1006,14 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
       summary: Update the current authenticated user's password
       tags:
       - users
+securityDefinitions:
+  JWTAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

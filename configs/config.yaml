@@ -4,11 +4,11 @@ listen:
   api:
     type: port
     bind_ip: 0.0.0.0
-    bind_port: 8000
+    bind_port: 8080
   chat:
     type: port
     bind_ip: 0.0.0.0
-    bind_port: 8080
+    bind_port: 8081
 auth:
   sign_key: xNN3f9M9vZLtqHJwX2wtTbCBMpR
   access_token_ttl: 15      # 15 minutes

@@ -67,6 +67,7 @@ func (uc *UserController) Register(mux *httprouter.Router) {
 //	@Produce	json
 //	@Success	200	{object}	UserList
 //	@Failure	500	{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/users  [get]
 func (uc *UserController) list(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -98,6 +99,7 @@ func (uc *UserController) create(w http.ResponseWriter, req *http.Request) {
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	404		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/users/{user_id} [get]
 func (uc *UserController) detail(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -114,6 +116,7 @@ func (uc *UserController) detail(w http.ResponseWriter, req *http.Request) {
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	404		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/users/me [put]
 func (uc *UserController) update(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -129,6 +132,7 @@ func (uc *UserController) update(w http.ResponseWriter, req *http.Request) {
 //	@Success	204		"No Content"
 //	@Failure	400		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/users/me/password [patch]
 func (uc *UserController) updatePassword(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
@@ -143,6 +147,7 @@ func (uc *UserController) updatePassword(w http.ResponseWriter, req *http.Reques
 //	@Success	204	"No Content"
 //	@Failure	404	{object}	httputil.Error
 //	@Failure	500	{object}	httputil.Error
+//	@Security	JWTAuth
 //	@Router		/users/me [delete]
 func (uc *UserController) delete(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
