@@ -1,4 +1,4 @@
-# [](https://)Chatyx - System Design
+# Chatyx - System Design
 
 This page describes the design of message system.
 
@@ -44,13 +44,15 @@ The system should meet the following requirements:
 #### Sending messages
 
 $$
-\frac{100 \space million \times 10 \space messages \space per \space day}{(24 \space hrs \times 3600 \space seconds)} = \sim 11574 \space requests/second
+\frac{100 \space million \times 10 \space messages \space per \space day}{(24 \space hrs \times 3600 \space seconds)} =
+\sim 11574 \space requests/second
 $$
 
 #### Reading messages
 
 $$
-\frac{100 \space million \times 20 \space times \space per \space day}{(24 \space hrs \times 3600 \space seconds)} = \sim 23148 \space requests/second
+\frac{100 \space million \times 20 \space times \space per \space day}{(24 \space hrs \times 3600 \space seconds)} =
+\sim 23148 \space requests/second
 $$
 
 ### Traffic
@@ -78,5 +80,6 @@ $$
 Database size for storing messages for 10 years (without replication factor and image compression):
 
 $$
-{625 \space MB/second \times (24 \space hrs \times 3600 \space seconds) \times 365 \space days \times 10 \space years} = \sim 197.1 \space PB
+{625 \space MB/second \times (24 \space hrs \times 3600 \space seconds) \times 365 \space days \times 10 \space years} =
+\sim 197.1 \space PB
 $$
