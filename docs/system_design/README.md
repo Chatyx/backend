@@ -1,4 +1,4 @@
-# Chatyx - System Design
+# [](https://)Chatyx - System Design
 
 This page describes the design of message system.
 
@@ -83,3 +83,37 @@ $$
 {625 \space MB/second \times (24 \space hrs \times 3600 \space seconds) \times 365 \space days \times 10 \space years} =
 \sim 197.1 \space PB
 $$
+
+## Design overview
+
+<p align="center">
+  <img alt="System context diagram" src="./images/context.svg"/>
+</p>
+
+<p align="center">
+    <b>Level 1.</b> System context diagram
+</p>
+
+<p align="center">
+  <img alt="Profile system container diagram" src="./images/containers/message_system.svg"/>
+</p>
+
+<p align="center">
+    <b>Level 2.</b> Message system container diagram
+</p>
+
+<p align="center">
+  <img alt="Media system container diagram" src="./images/containers/media_system.svg"/>
+</p>
+
+<p align="center">
+    <b>Level 2.</b> Media system container diagram
+</p>
+
+<p align="center">
+  <img alt="Presence system container diagram" src="./images/containers/presence_system.svg"/>
+</p>
+
+<p align="center">
+    <b>Level 2.</b> Presence system container diagram
+</p>
