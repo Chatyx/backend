@@ -35,4 +35,5 @@ Rel(messageService, messageQueue, "Sends notification event if participant is of
 
 Rel(chatService, chatDatabase, "Creates and reads chats, participants")
 Rel(notificationSystem, messageQueue, "Subscribes on notification events")
+Rel(notificationSystem, user, "Notifies users about different events")
 @enduml
