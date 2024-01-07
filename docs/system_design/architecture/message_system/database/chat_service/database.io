@@ -1,5 +1,5 @@
 // Replication:
-// - master-less (async)
+// - master-slave (async)
 // - replication factor 2
 
 Enum chat_type {
