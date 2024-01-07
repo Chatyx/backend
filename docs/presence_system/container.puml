@@ -1,0 +1,20 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "User")
+Container(loadBalancer, "Load Balancer", "Nginx", "Uses round-robin")
+Container(apiGateway, "API Gateway", "Istio", "Aggregates info about user")
+Container(userSystem, "User System", "Software system", "Stores info about users")
+
+System_Boundary(presenceSystem, "Presence System") {
+    Container(presenceService, "Presence Service", "Go", "Handles getting and setting last seen date for users")
+    ContainerDb(presenceCache, "Presence cache", "Redis", "Stores last seen date for users")
+}
+
+Rel(user, loadBalancer, "Gets info about a user", "REST")
+Rel(loadBalancer, apiGateway, "Gets info about a user", "REST")
+Rel(apiGateway, userSystem, "Gets info about a user", "GRPC")
+Rel(apiGateway, presenceService, "Gets last seen date", "GRPC")
+Rel(presenceService, presenceCache, "Gets and sets last seen date")
+
+@enduml

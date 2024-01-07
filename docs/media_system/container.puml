@@ -1,0 +1,20 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "User")
+Container(loadBalancer, "Load Balancer", "Nginx", "Uses round-robin")
+Container(apiGateway, "API Gateway", "Istio")
+Container(cdn, "CDN", "Software system", "Pull model")
+
+System_Boundary(mediaSystem, "Media System") {
+    Container(mediaService, "Media Service", "Go", "Handles uploading media files")
+    ContainerDb(s3, "S3", "MinIO", "Blob storage")
+}
+
+Rel(user, loadBalancer, "Uploads media files", "REST")
+Rel(user, cdn, "Downloads media")
+Rel(loadBalancer, apiGateway, "Uploads media files", "REST")
+Rel(apiGateway, mediaService, "Uploads media files", "REST")
+Rel(mediaService, s3, "Uploads media files")
+Rel(cdn, s3, "Downloads media from origin")
+@enduml
