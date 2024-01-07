@@ -10,7 +10,7 @@
 ## Description
 
 Chatyx backend is an MVP monolith message service implemented in Go. The project will evolve 
-towards a microservice architecture. The target design is described in [this page](./docs/README.md).
+towards a microservice architecture. The target design is described in [this page](./docs/system_design/README.md).
 
 ## Installation
 
