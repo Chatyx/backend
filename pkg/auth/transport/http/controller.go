@@ -1,4 +1,4 @@
-package usersrv
+package http
 
 import (
 	"net/http"
@@ -29,10 +29,10 @@ type RefreshToken struct {
 	Token string `json:"refresh_token" validate:"required"`
 }
 
-type AuthController struct {
+type Controller struct {
 }
 
-func (ac *AuthController) Register(mux *httprouter.Router) {
+func (ac *Controller) Register(mux *httprouter.Router) {
 	mux.HandlerFunc(http.MethodPost, loginPath, ac.login)
 	mux.HandlerFunc(http.MethodPost, logoutPath, ac.logout)
 	mux.HandlerFunc(http.MethodPost, refreshTokensPath, ac.refreshTokens)
@@ -53,7 +53,7 @@ func (ac *AuthController) Register(mux *httprouter.Router) {
 //	@Failure		401			{object}	httputil.Error
 //	@Failure		500			{object}	httputil.Error
 //	@Router			/auth/login [post]
-func (ac *AuthController) login(w http.ResponseWriter, req *http.Request) {
+func (ac *Controller) login(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 
@@ -68,7 +68,7 @@ func (ac *AuthController) login(w http.ResponseWriter, req *http.Request) {
 //	@Failure		500		{object}	httputil.Error
 //	@Security		JWTAuth
 //	@Router			/auth/logout [post]
-func (ac *AuthController) logout(w http.ResponseWriter, req *http.Request) {
+func (ac *Controller) logout(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }
 
@@ -87,6 +87,6 @@ func (ac *AuthController) logout(w http.ResponseWriter, req *http.Request) {
 //	@Failure		500			{object}	httputil.Error
 //	@Security		JWTAuth
 //	@Router			/auth/refresh-tokens [post]
-func (ac *AuthController) refreshTokens(w http.ResponseWriter, req *http.Request) {
+func (ac *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	_, _ = w, req
 }

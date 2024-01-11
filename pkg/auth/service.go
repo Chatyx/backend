@@ -1,0 +1,252 @@
+package auth
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"time"
+
+	"github.com/Chatyx/backend/pkg/token"
+)
+
+const (
+	defaultRefreshTokenSize = 32
+)
+
+const (
+	defaultAccessTokenTTL = 15 * time.Minute
+	defaultRefreshTokeTTL = 60 * 24 * time.Hour
+)
+
+type CheckPasswordFunc func(user, password string) (userID string, ok bool, err error)
+
+type EnrichClaimsFunc func(claims token.Claims)
+
+type ServiceConfig struct {
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
+	Issuer          string
+	SignedKey       any
+	CheckPassword   CheckPasswordFunc
+	EnrichClaims    EnrichClaimsFunc
+	Logger          Logger
+}
+
+type ServiceOption func(conf *ServiceConfig)
+
+func WithAccessTokenTTL(d time.Duration) ServiceOption {
+	return func(conf *ServiceConfig) {
+		conf.AccessTokenTTL = d
+	}
+}
+
+func WithRefreshTokenTTL(d time.Duration) ServiceOption {
+	return func(conf *ServiceConfig) {
+		conf.RefreshTokenTTL = d
+	}
+}
+
+func WithIssuer(iss string) ServiceOption {
+	return func(conf *ServiceConfig) {
+		conf.Issuer = iss
+	}
+}
+
+func WithSignedKey(key any) ServiceOption {
+	return func(conf *ServiceConfig) {
+		conf.SignedKey = key
+	}
+}
+
+func WithCheckPassword(fn CheckPasswordFunc) ServiceOption {
+	return func(conf *ServiceConfig) {
+		conf.CheckPassword = fn
+	}
+}
+
+func WithEnrichClaims(fn EnrichClaimsFunc) ServiceOption {
+	return func(conf *ServiceConfig) {
+		conf.EnrichClaims = fn
+	}
+}
+
+func WithLogger(logger Logger) ServiceOption {
+	return func(conf *ServiceConfig) {
+		conf.Logger = logger
+	}
+}
+
+type Meta struct {
+	IP net.IP
+}
+
+type MetaOption func(meta *Meta)
+
+func WithIP(ip net.IP) MetaOption {
+	return func(meta *Meta) {
+		meta.IP = ip
+	}
+}
+
+type SessionStorage interface {
+	Set(ctx context.Context, s Session) error
+	GetWithDelete(ctx context.Context, userID, refreshToken string) (Session, error)
+	DeleteAllByUserID(ctx context.Context, userID string) error
+}
+
+type Service struct {
+	issuer              string
+	checkPassword       CheckPasswordFunc
+	enrichClaims        EnrichClaimsFunc
+	storage             SessionStorage
+	accessTokenManager  token.JWT
+	refreshTokenManager token.Hex
+	refreshTokenTTL     time.Duration
+	logger              Logger
+}
+
+func NewService(storage SessionStorage, opts ...ServiceOption) *Service {
+	conf := &ServiceConfig{
+		AccessTokenTTL:  defaultAccessTokenTTL,
+		RefreshTokenTTL: defaultRefreshTokeTTL,
+		Issuer:          "pkg/auth",
+		CheckPassword: func(user, password string) (userID string, ok bool, err error) {
+			if user == "root" && password == "root" {
+				return "1", true, nil
+			}
+			return "", false, nil
+		},
+		Logger: noOpLogger{},
+	}
+	for _, opt := range opts {
+		opt(conf)
+	}
+
+	s := &Service{
+		refreshTokenTTL:     conf.RefreshTokenTTL,
+		issuer:              conf.Issuer,
+		checkPassword:       conf.CheckPassword,
+		enrichClaims:        conf.EnrichClaims,
+		logger:              conf.Logger,
+		storage:             storage,
+		accessTokenManager:  token.NewJWT(conf.Issuer, conf.SignedKey, conf.AccessTokenTTL),
+		refreshTokenManager: token.Hex{},
+	}
+
+	return s
+}
+
+func (s *Service) Login(ctx context.Context, cred Credentials, opts ...MetaOption) (TokenPair, error) {
+	var pair TokenPair
+
+	userID, ok, err := s.checkPassword(cred.Username, cred.Password)
+	if err != nil {
+		return pair, fmt.Errorf("check password: %w", err)
+	}
+	if !ok {
+		return pair, ErrUserNotFound
+	}
+
+	var claims token.Claims
+	if s.enrichClaims != nil {
+		s.enrichClaims(claims)
+	}
+
+	accessToken, err := s.accessTokenManager.Token(userID, claims)
+	if err != nil {
+		return pair, fmt.Errorf("create access token: %w", err)
+	}
+
+	refreshToken, err := s.refreshTokenManager.Token(defaultRefreshTokenSize)
+	if err != nil {
+		return pair, fmt.Errorf("create refresh token: %w", err)
+	}
+
+	meta := &Meta{}
+	for _, opt := range opts {
+		opt(meta)
+	}
+
+	sess := Session{
+		UserID:       userID,
+		RefreshToken: refreshToken,
+		Fingerprint:  cred.Fingerprint,
+		IP:           meta.IP,
+		CreatedAt:    time.Now(),
+		ExpiresAt:    time.Now().Add(s.refreshTokenTTL),
+	}
+	if err = s.storage.Set(ctx, sess); err != nil {
+		return pair, fmt.Errorf("set session to storage: %w", err)
+	}
+
+	return TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (s *Service) Logout(ctx context.Context, userID, refreshToken string) error {
+	if _, err := s.storage.GetWithDelete(ctx, userID, refreshToken); err != nil {
+		return fmt.Errorf("delete session: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) RefreshSession(ctx context.Context, rs RefreshSession, opts ...MetaOption) (TokenPair, error) {
+	var pair TokenPair
+
+	sess, err := s.storage.GetWithDelete(ctx, rs.UserID, rs.RefreshToken)
+	if errors.Is(err, ErrSessionNotFound) {
+		s.logger.Warnf("Probably refresh token and fingerprint are compromised for user with id `%s`", rs.UserID)
+
+		if delErr := s.storage.DeleteAllByUserID(ctx, rs.UserID); delErr != nil {
+			s.logger.Errorf("Failed to delete all session for user with id `%s`: %v", rs.UserID, err)
+		}
+
+		return pair, fmt.Errorf("%w: %v", ErrInvalidRefreshToken, ErrSessionNotFound)
+	}
+	if err != nil {
+		return pair, fmt.Errorf("get session with delete: %w", err)
+	}
+
+	if sess.Fingerprint != rs.Fingerprint {
+		s.logger.Warnf("Refresh token is compromised for user with id `%s`", sess.UserID)
+		return pair, fmt.Errorf("%w: refresh token is compromised", ErrInvalidRefreshToken)
+	}
+
+	var claims token.Claims
+	if s.enrichClaims != nil {
+		s.enrichClaims(claims)
+	}
+
+	accessToken, err := s.accessTokenManager.Token(sess.UserID, claims)
+	if err != nil {
+		return pair, fmt.Errorf("create access token: %w", err)
+	}
+
+	refreshToken, err := s.refreshTokenManager.Token(defaultRefreshTokenSize)
+	if err != nil {
+		return pair, fmt.Errorf("create refresh token: %w", err)
+	}
+
+	meta := &Meta{}
+	for _, opt := range opts {
+		opt(meta)
+	}
+
+	sess.IP = meta.IP
+	sess.RefreshToken = refreshToken
+	sess.CreatedAt = time.Now()
+	sess.ExpiresAt = time.Now().Add(s.refreshTokenTTL)
+
+	if err = s.storage.Set(ctx, sess); err != nil {
+		return pair, fmt.Errorf("set session to storage: %w", err)
+	}
+
+	return TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
