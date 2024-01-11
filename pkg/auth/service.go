@@ -2,11 +2,11 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"time"
 
+	"github.com/Chatyx/backend/pkg/auth/model"
 	"github.com/Chatyx/backend/pkg/token"
 )
 
@@ -90,9 +90,8 @@ func WithIP(ip net.IP) MetaOption {
 }
 
 type SessionStorage interface {
-	Set(ctx context.Context, s Session) error
-	GetWithDelete(ctx context.Context, userID, refreshToken string) (Session, error)
-	DeleteAllByUserID(ctx context.Context, userID string) error
+	Set(ctx context.Context, sess model.Session) error
+	GetWithDelete(ctx context.Context, refreshToken string) (model.Session, error)
 }
 
 type Service struct {
@@ -137,14 +136,15 @@ func NewService(storage SessionStorage, opts ...ServiceOption) *Service {
 	return s
 }
 
-func (s *Service) Login(ctx context.Context, cred Credentials, opts ...MetaOption) (TokenPair, error) {
-	var pair TokenPair
+func (s *Service) Login(ctx context.Context, cred model.Credentials, opts ...MetaOption) (model.TokenPair, error) {
+	var pair model.TokenPair
 
 	userID, ok, err := s.checkPassword(cred.Username, cred.Password)
 	if err != nil {
 		return pair, fmt.Errorf("check password: %w", err)
 	}
 	if !ok {
+		s.logger.Warnf("User `%s` failed to login", cred.Username)
 		return pair, ErrUserNotFound
 	}
 
@@ -168,7 +168,7 @@ func (s *Service) Login(ctx context.Context, cred Credentials, opts ...MetaOptio
 		opt(meta)
 	}
 
-	sess := Session{
+	sess := model.Session{
 		UserID:       userID,
 		RefreshToken: refreshToken,
 		Fingerprint:  cred.Fingerprint,
@@ -180,40 +180,33 @@ func (s *Service) Login(ctx context.Context, cred Credentials, opts ...MetaOptio
 		return pair, fmt.Errorf("set session to storage: %w", err)
 	}
 
-	return TokenPair{
+	s.logger.Infof("User `%s` login successfully", cred.Username)
+
+	return model.TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
 }
 
-func (s *Service) Logout(ctx context.Context, userID, refreshToken string) error {
-	if _, err := s.storage.GetWithDelete(ctx, userID, refreshToken); err != nil {
+func (s *Service) Logout(ctx context.Context, refreshToken string) error {
+	if _, err := s.storage.GetWithDelete(ctx, refreshToken); err != nil {
 		return fmt.Errorf("delete session: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Service) RefreshSession(ctx context.Context, rs RefreshSession, opts ...MetaOption) (TokenPair, error) {
-	var pair TokenPair
+func (s *Service) RefreshSession(ctx context.Context, rs model.RefreshSession, opts ...MetaOption) (model.TokenPair, error) {
+	var pair model.TokenPair
 
-	sess, err := s.storage.GetWithDelete(ctx, rs.UserID, rs.RefreshToken)
-	if errors.Is(err, ErrSessionNotFound) {
-		s.logger.Warnf("Probably refresh token and fingerprint are compromised for user with id `%s`", rs.UserID)
-
-		if delErr := s.storage.DeleteAllByUserID(ctx, rs.UserID); delErr != nil {
-			s.logger.Errorf("Failed to delete all session for user with id `%s`: %v", rs.UserID, err)
-		}
-
-		return pair, fmt.Errorf("%w: %v", ErrInvalidRefreshToken, ErrSessionNotFound)
-	}
+	sess, err := s.storage.GetWithDelete(ctx, rs.RefreshToken)
 	if err != nil {
 		return pair, fmt.Errorf("get session with delete: %w", err)
 	}
 
 	if sess.Fingerprint != rs.Fingerprint {
-		s.logger.Warnf("Refresh token is compromised for user with id `%s`", sess.UserID)
-		return pair, fmt.Errorf("%w: refresh token is compromised", ErrInvalidRefreshToken)
+		s.logger.Warnf("Fingerprints don't match for user with id `%s` while refreshing session", sess.UserID)
+		return pair, fmt.Errorf("%w: fingerprints don't match", ErrInvalidRefreshToken)
 	}
 
 	var claims token.Claims
@@ -245,7 +238,7 @@ func (s *Service) RefreshSession(ctx context.Context, rs RefreshSession, opts ..
 		return pair, fmt.Errorf("set session to storage: %w", err)
 	}
 
-	return TokenPair{
+	return model.TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
