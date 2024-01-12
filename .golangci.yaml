@@ -138,6 +138,9 @@ linters-settings:
               - github.com/google/uuid
             reason: "gofrs' package is not go module"
 
+  lll:
+    line-length: 140
+
   nakedret:
     # Make an issue if func has more lines of code than this setting, and it has naked returns.
     # Default: 30
