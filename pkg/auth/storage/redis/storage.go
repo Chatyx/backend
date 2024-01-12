@@ -9,6 +9,7 @@ import (
 
 	"github.com/Chatyx/backend/pkg/auth"
 	"github.com/Chatyx/backend/pkg/auth/model"
+
 	"github.com/redis/go-redis/v9"
 )
 
