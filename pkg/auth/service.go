@@ -2,11 +2,13 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"time"
 
 	"github.com/Chatyx/backend/pkg/auth/model"
+	"github.com/Chatyx/backend/pkg/auth/storage"
 	"github.com/Chatyx/backend/pkg/token"
 )
 
@@ -91,7 +93,7 @@ func WithIP(ip net.IP) MetaOption {
 
 type SessionStorage interface {
 	Set(ctx context.Context, sess model.Session) error
-	GetWithDelete(ctx context.Context, refreshToken string) (model.Session, error)
+	GetWithDelete(ctx context.Context, userID, refreshToken string) (model.Session, error)
 }
 
 type Service struct {
@@ -188,8 +190,11 @@ func (s *Service) Login(ctx context.Context, cred model.Credentials, opts ...Met
 	}, nil
 }
 
-func (s *Service) Logout(ctx context.Context, refreshToken string) error {
-	if _, err := s.storage.GetWithDelete(ctx, refreshToken); err != nil {
+func (s *Service) Logout(ctx context.Context, userID, refreshToken string) error {
+	if _, err := s.storage.GetWithDelete(ctx, userID, refreshToken); err != nil {
+		if errors.Is(err, storage.ErrSessionNotFound) {
+			return fmt.Errorf("%w: %v", ErrInvalidRefreshToken, storage.ErrSessionNotFound)
+		}
 		return fmt.Errorf("delete session: %w", err)
 	}
 
@@ -199,9 +204,15 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 func (s *Service) RefreshSession(ctx context.Context, rs model.RefreshSession, opts ...MetaOption) (model.TokenPair, error) {
 	var pair model.TokenPair
 
-	sess, err := s.storage.GetWithDelete(ctx, rs.RefreshToken)
+	sess, err := s.storage.GetWithDelete(ctx, rs.UserID, rs.RefreshToken)
 	if err != nil {
+		if errors.Is(err, storage.ErrSessionNotFound) {
+			return pair, fmt.Errorf("%w: %v", ErrInvalidRefreshToken, storage.ErrSessionNotFound)
+		}
 		return pair, fmt.Errorf("get session with delete: %w", err)
+	}
+	if sess.ExpiresAt.Before(time.Now()) {
+		return pair, fmt.Errorf("%w: session is expired", ErrInvalidRefreshToken)
 	}
 
 	if sess.Fingerprint != rs.Fingerprint {

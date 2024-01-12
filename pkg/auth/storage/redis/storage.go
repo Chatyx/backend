@@ -7,8 +7,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/Chatyx/backend/pkg/auth"
 	"github.com/Chatyx/backend/pkg/auth/model"
+	"github.com/Chatyx/backend/pkg/auth/storage"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -46,6 +46,7 @@ func NewStorage(conf Config) (*Storage, error) {
 
 func (s *Storage) Set(ctx context.Context, sess model.Session) error {
 	sessKey := "session:" + sess.RefreshToken
+	userSessKey := fmt.Sprintf("user:%s:sessions", sess.UserID)
 
 	cmds, err := s.cli.Pipelined(ctx, func(pipe redis.Pipeliner) error {
 		pipe.HSet(ctx, sessKey, Session{
@@ -55,7 +56,7 @@ func (s *Storage) Set(ctx context.Context, sess model.Session) error {
 			ExpiresAt:   sess.ExpiresAt.Unix(),
 			CreatedAt:   sess.CreatedAt.Unix(),
 		})
-		pipe.Expire(ctx, sessKey, time.Until(sess.ExpiresAt))
+		pipe.SAdd(ctx, userSessKey, sess.RefreshToken)
 
 		return nil
 	})
@@ -77,16 +78,19 @@ func (s *Storage) Set(ctx context.Context, sess model.Session) error {
 	return nil
 }
 
-func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (model.Session, error) {
+func (s *Storage) GetWithDelete(ctx context.Context, userID, refreshToken string) (model.Session, error) {
 	var (
 		sess   model.Session
 		mapCmd *redis.MapStringStringCmd
 	)
 
 	sessKey := "session:" + refreshToken
+	userSessKey := fmt.Sprintf("user:%s:sessions", userID)
+
 	cmds, err := s.cli.Pipelined(ctx, func(pipe redis.Pipeliner) error {
 		mapCmd = pipe.HGetAll(ctx, sessKey)
 		pipe.Del(ctx, sessKey)
+		pipe.SRem(ctx, userSessKey, refreshToken)
 
 		return nil
 	})
@@ -98,7 +102,7 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (model
 
 	if err = mapCmd.Scan(&rawSess); err != nil {
 		if errors.Is(err, redis.Nil) {
-			return sess, auth.ErrSessionNotFound
+			return sess, storage.ErrSessionNotFound
 		}
 		return sess, fmt.Errorf("scan map cmd: %v", err)
 	}
@@ -119,7 +123,7 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (model
 		RefreshToken: refreshToken,
 		Fingerprint:  rawSess.Fingerprint,
 		IP:           net.ParseIP(rawSess.IP),
-		ExpiresAt:    time.Unix(rawSess.ExpiresAt, 0),
-		CreatedAt:    time.Unix(rawSess.CreatedAt, 0),
+		ExpiresAt:    time.Unix(rawSess.ExpiresAt, 0).Local(),
+		CreatedAt:    time.Unix(rawSess.CreatedAt, 0).Local(),
 	}, nil
 }
