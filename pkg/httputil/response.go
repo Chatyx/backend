@@ -10,6 +10,11 @@ import (
 )
 
 func RespondSuccess(ctx context.Context, w http.ResponseWriter, statusCode int, v any) {
+	if statusCode == http.StatusNoContent || v == nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	respBody, err := json.Marshal(v)
 	if err != nil {
 		RespondError(ctx, w, ErrInternalServer.Wrap(err))
