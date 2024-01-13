@@ -11,6 +11,10 @@ type Validate struct {
 	validate *validator.Validate
 }
 
+func NewValidate(v *validator.Validate) Validate {
+	return Validate{validate: v}
+}
+
 func (v Validate) Struct(val any) error {
 	if err := v.validate.Struct(val); err != nil {
 		vErrs := validator.ValidationErrors{}

@@ -19,6 +19,10 @@ type BodyParser struct {
 	validate validator.Validate
 }
 
+func NewBodyParser(v validator.Validate) BodyParser {
+	return BodyParser{validate: v}
+}
+
 func (p BodyParser) Parse(ctx context.Context, req *http.Request, dst any) error {
 	logger := log.FromContext(ctx)
 	defer req.Body.Close()
@@ -115,6 +119,17 @@ type HeaderParser struct {
 	baseParser singleValueParser
 }
 
+func NewHeaderParser(v validator.Validate, key, tag string) HeaderParser {
+	return HeaderParser{
+		key: key,
+		baseParser: singleValueParser{
+			key:      key,
+			tag:      tag,
+			validate: v,
+		},
+	}
+}
+
 func (p HeaderParser) Parse(ctx context.Context, req *http.Request, dst any) error {
 	val := req.Header.Get(p.key)
 	return p.baseParser.parse(ctx, val, dst)
@@ -125,6 +140,17 @@ type QueryParser struct {
 	baseParser singleValueParser
 }
 
+func NewQueryParser(v validator.Validate, key, tag string) QueryParser {
+	return QueryParser{
+		key: key,
+		baseParser: singleValueParser{
+			key:      key,
+			tag:      tag,
+			validate: v,
+		},
+	}
+}
+
 func (p QueryParser) Parse(ctx context.Context, req *http.Request, dst any) error {
 	val := req.URL.Query().Get(p.key)
 	return p.baseParser.parse(ctx, val, dst)
@@ -133,6 +159,17 @@ func (p QueryParser) Parse(ctx context.Context, req *http.Request, dst any) erro
 type PathParser struct {
 	key        string
 	baseParser singleValueParser
+}
+
+func NewPathParser(v validator.Validate, key, tag string) PathParser {
+	return PathParser{
+		key: key,
+		baseParser: singleValueParser{
+			key:      key,
+			tag:      tag,
+			validate: v,
+		},
+	}
 }
 
 func (p PathParser) Parse(ctx context.Context, req *http.Request, dst any) error {
