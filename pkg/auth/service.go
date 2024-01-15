@@ -7,8 +7,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/Chatyx/backend/pkg/auth/model"
-	"github.com/Chatyx/backend/pkg/auth/storage"
 	"github.com/Chatyx/backend/pkg/token"
 )
 
@@ -92,8 +90,8 @@ func WithIP(ip net.IP) MetaOption {
 }
 
 type SessionStorage interface {
-	Set(ctx context.Context, sess model.Session) error
-	GetWithDelete(ctx context.Context, refreshToken string) (model.Session, error)
+	Set(ctx context.Context, sess Session) error
+	GetWithDelete(ctx context.Context, refreshToken string) (Session, error)
 }
 
 type Service struct {
@@ -138,8 +136,8 @@ func NewService(storage SessionStorage, opts ...ServiceOption) *Service {
 	return s
 }
 
-func (s *Service) Login(ctx context.Context, cred model.Credentials, opts ...MetaOption) (model.TokenPair, error) {
-	var pair model.TokenPair
+func (s *Service) Login(ctx context.Context, cred Credentials, opts ...MetaOption) (TokenPair, error) {
+	var pair TokenPair
 
 	userID, ok, err := s.checkPassword(cred.Username, cred.Password)
 	if err != nil {
@@ -170,7 +168,7 @@ func (s *Service) Login(ctx context.Context, cred model.Credentials, opts ...Met
 		opt(meta)
 	}
 
-	sess := model.Session{
+	sess := Session{
 		UserID:       userID,
 		RefreshToken: refreshToken,
 		Fingerprint:  cred.Fingerprint,
@@ -184,7 +182,7 @@ func (s *Service) Login(ctx context.Context, cred model.Credentials, opts ...Met
 
 	s.logger.Infof("User `%s` login successfully", cred.Username)
 
-	return model.TokenPair{
+	return TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
@@ -192,8 +190,8 @@ func (s *Service) Login(ctx context.Context, cred model.Credentials, opts ...Met
 
 func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	if _, err := s.storage.GetWithDelete(ctx, refreshToken); err != nil {
-		if errors.Is(err, storage.ErrSessionNotFound) {
-			return fmt.Errorf("%w: %v", ErrInvalidRefreshToken, storage.ErrSessionNotFound)
+		if errors.Is(err, ErrSessionNotFound) {
+			return fmt.Errorf("%w: %v", ErrInvalidRefreshToken, ErrSessionNotFound)
 		}
 		return fmt.Errorf("delete session: %w", err)
 	}
@@ -201,13 +199,13 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	return nil
 }
 
-func (s *Service) RefreshSession(ctx context.Context, rs model.RefreshSession, opts ...MetaOption) (model.TokenPair, error) {
-	var pair model.TokenPair
+func (s *Service) RefreshSession(ctx context.Context, rs RefreshSession, opts ...MetaOption) (TokenPair, error) {
+	var pair TokenPair
 
 	sess, err := s.storage.GetWithDelete(ctx, rs.RefreshToken)
 	if err != nil {
-		if errors.Is(err, storage.ErrSessionNotFound) {
-			return pair, fmt.Errorf("%w: %v", ErrInvalidRefreshToken, storage.ErrSessionNotFound)
+		if errors.Is(err, ErrSessionNotFound) {
+			return pair, fmt.Errorf("%w: %v", ErrInvalidRefreshToken, ErrSessionNotFound)
 		}
 		return pair, fmt.Errorf("get session with delete: %w", err)
 	}
@@ -249,7 +247,7 @@ func (s *Service) RefreshSession(ctx context.Context, rs model.RefreshSession, o
 		return pair, fmt.Errorf("set session to storage: %w", err)
 	}
 
-	return model.TokenPair{
+	return TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil

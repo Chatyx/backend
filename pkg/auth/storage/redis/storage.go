@@ -7,8 +7,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/Chatyx/backend/pkg/auth/model"
-	"github.com/Chatyx/backend/pkg/auth/storage"
+	core "github.com/Chatyx/backend/pkg/auth"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -44,7 +43,7 @@ func NewStorage(conf Config) (*Storage, error) {
 	return &Storage{cli: cli}, nil
 }
 
-func (s *Storage) Set(ctx context.Context, sess model.Session) error {
+func (s *Storage) Set(ctx context.Context, sess core.Session) error {
 	sessKey := "session:" + sess.RefreshToken
 	userSessKey := fmt.Sprintf("user:%s:sessions", sess.UserID)
 
@@ -78,9 +77,9 @@ func (s *Storage) Set(ctx context.Context, sess model.Session) error {
 	return nil
 }
 
-func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (model.Session, error) {
+func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (core.Session, error) {
 	var (
-		sess    model.Session
+		sess    core.Session
 		rawSess Session
 		hGetCmd *redis.MapStringStringCmd
 	)
@@ -98,7 +97,7 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (model
 
 	if err = hGetCmd.Scan(&rawSess); err != nil {
 		if errors.Is(err, redis.Nil) {
-			return sess, storage.ErrSessionNotFound
+			return sess, core.ErrSessionNotFound
 		}
 		return sess, fmt.Errorf("scan map cmd: %v", err)
 	}
@@ -119,7 +118,7 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (model
 		return sess, fmt.Errorf("remove element from set: %v", err)
 	}
 
-	return model.Session{
+	return core.Session{
 		UserID:       rawSess.UserID,
 		RefreshToken: refreshToken,
 		Fingerprint:  rawSess.Fingerprint,

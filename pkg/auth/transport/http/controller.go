@@ -7,8 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Chatyx/backend/pkg/auth"
-	"github.com/Chatyx/backend/pkg/auth/model"
+	core "github.com/Chatyx/backend/pkg/auth"
 	"github.com/Chatyx/backend/pkg/httputil"
 	"github.com/Chatyx/backend/pkg/log"
 	"github.com/Chatyx/backend/pkg/validator"
@@ -87,8 +86,8 @@ type Controller struct {
 }
 
 type Service interface {
-	Login(ctx context.Context, cred model.Credentials, opts ...auth.MetaOption) (model.TokenPair, error)
-	RefreshSession(ctx context.Context, rs model.RefreshSession, opts ...auth.MetaOption) (model.TokenPair, error)
+	Login(ctx context.Context, cred core.Credentials, opts ...core.MetaOption) (core.TokenPair, error)
+	RefreshSession(ctx context.Context, rs core.RefreshSession, opts ...core.MetaOption) (core.TokenPair, error)
 	Logout(ctx context.Context, refreshToken string) error
 }
 
@@ -161,16 +160,16 @@ func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 
 	pair, err := c.service.Login(
 		ctx,
-		model.Credentials{
+		core.Credentials{
 			Username:    dto.Username,
 			Password:    dto.Password,
 			Fingerprint: fingerprint,
 		},
-		auth.WithIP(net.ParseIP(req.RemoteAddr)),
+		core.WithIP(net.ParseIP(req.RemoteAddr)),
 	)
 	if err != nil {
 		switch {
-		case errors.Is(err, auth.ErrUserNotFound):
+		case errors.Is(err, core.ErrUserNotFound):
 			httputil.RespondError(ctx, w, ErrFailedLogin.Wrap(err))
 		default:
 			httputil.RespondError(ctx, w, err)
@@ -233,7 +232,7 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 
 	if err = c.service.Logout(ctx, dto.Token); err != nil {
 		switch {
-		case errors.Is(err, auth.ErrInvalidRefreshToken):
+		case errors.Is(err, core.ErrInvalidRefreshToken):
 			httputil.RespondError(ctx, w, ErrInvalidRefreshToken.Wrap(err))
 		default:
 			httputil.RespondError(ctx, w, err)
@@ -297,15 +296,15 @@ func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 
 	pair, err := c.service.RefreshSession(
 		ctx,
-		model.RefreshSession{
+		core.RefreshSession{
 			RefreshToken: dto.Token,
 			Fingerprint:  fingerprint,
 		},
-		auth.WithIP(net.ParseIP(req.RemoteAddr)),
+		core.WithIP(net.ParseIP(req.RemoteAddr)),
 	)
 	if err != nil {
 		switch {
-		case errors.Is(err, auth.ErrInvalidRefreshToken):
+		case errors.Is(err, core.ErrInvalidRefreshToken):
 			httputil.RespondError(ctx, w, ErrInvalidRefreshToken.Wrap(err))
 		default:
 			httputil.RespondError(ctx, w, err)
