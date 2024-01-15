@@ -89,7 +89,7 @@ type Controller struct {
 type Service interface {
 	Login(ctx context.Context, cred model.Credentials, opts ...auth.MetaOption) (model.TokenPair, error)
 	RefreshSession(ctx context.Context, rs model.RefreshSession, opts ...auth.MetaOption) (model.TokenPair, error)
-	Logout(ctx context.Context, userID, refreshToken string) error
+	Logout(ctx context.Context, refreshToken string) error
 }
 
 func NewController(srv Service, v validator.Validator, opts ...Option) *Controller {
@@ -207,7 +207,6 @@ func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 //	@Param			input	body	RefreshToken	true	"Refresh token body"
 //	@Success		204		"No Content"
 //	@Failure		500		{object}	httputil.Error
-//	@Security		JWTAuth
 //	@Router			/auth/logout [post]
 func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
@@ -232,8 +231,7 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO set userID
-	if err = c.service.Logout(ctx, "", dto.Token); err != nil {
+	if err = c.service.Logout(ctx, dto.Token); err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidRefreshToken):
 			httputil.RespondError(ctx, w, ErrInvalidRefreshToken.Wrap(err))
@@ -268,7 +266,6 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 //	@Success		200			{object}	TokenPair
 //	@Failure		400			{object}	httputil.Error
 //	@Failure		500			{object}	httputil.Error
-//	@Security		JWTAuth
 //	@Router			/auth/refresh-tokens [post]
 func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
@@ -301,7 +298,6 @@ func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	pair, err := c.service.RefreshSession(
 		ctx,
 		model.RefreshSession{
-			UserID:       "", // TODO
 			RefreshToken: dto.Token,
 			Fingerprint:  fingerprint,
 		},

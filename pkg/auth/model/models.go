@@ -17,7 +17,6 @@ type TokenPair struct {
 }
 
 type RefreshSession struct {
-	UserID       string
 	RefreshToken string
 	Fingerprint  string
 }

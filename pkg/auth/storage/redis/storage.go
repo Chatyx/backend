@@ -78,19 +78,17 @@ func (s *Storage) Set(ctx context.Context, sess model.Session) error {
 	return nil
 }
 
-func (s *Storage) GetWithDelete(ctx context.Context, userID, refreshToken string) (model.Session, error) {
+func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (model.Session, error) {
 	var (
-		sess   model.Session
-		mapCmd *redis.MapStringStringCmd
+		sess    model.Session
+		rawSess Session
+		hGetCmd *redis.MapStringStringCmd
 	)
 
 	sessKey := "session:" + refreshToken
-	userSessKey := fmt.Sprintf("user:%s:sessions", userID)
-
 	cmds, err := s.cli.Pipelined(ctx, func(pipe redis.Pipeliner) error {
-		mapCmd = pipe.HGetAll(ctx, sessKey)
+		hGetCmd = pipe.HGetAll(ctx, sessKey)
 		pipe.Del(ctx, sessKey)
-		pipe.SRem(ctx, userSessKey, refreshToken)
 
 		return nil
 	})
@@ -98,9 +96,7 @@ func (s *Storage) GetWithDelete(ctx context.Context, userID, refreshToken string
 		return sess, fmt.Errorf("before exec pipeline: %v", err)
 	}
 
-	var rawSess Session
-
-	if err = mapCmd.Scan(&rawSess); err != nil {
+	if err = hGetCmd.Scan(&rawSess); err != nil {
 		if errors.Is(err, redis.Nil) {
 			return sess, storage.ErrSessionNotFound
 		}
@@ -116,6 +112,11 @@ func (s *Storage) GetWithDelete(ctx context.Context, userID, refreshToken string
 
 	if len(errs) != 0 {
 		return sess, fmt.Errorf("after exec pipeline: %v", errors.Join(errs...))
+	}
+
+	userSessKey := fmt.Sprintf("user:%s:sessions", sess.UserID)
+	if err = s.cli.SRem(ctx, userSessKey, refreshToken).Err(); err != nil {
+		return sess, fmt.Errorf("remove element from set: %v", err)
 	}
 
 	return model.Session{

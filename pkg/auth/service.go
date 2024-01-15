@@ -93,7 +93,7 @@ func WithIP(ip net.IP) MetaOption {
 
 type SessionStorage interface {
 	Set(ctx context.Context, sess model.Session) error
-	GetWithDelete(ctx context.Context, userID, refreshToken string) (model.Session, error)
+	GetWithDelete(ctx context.Context, refreshToken string) (model.Session, error)
 }
 
 type Service struct {
@@ -190,8 +190,8 @@ func (s *Service) Login(ctx context.Context, cred model.Credentials, opts ...Met
 	}, nil
 }
 
-func (s *Service) Logout(ctx context.Context, userID, refreshToken string) error {
-	if _, err := s.storage.GetWithDelete(ctx, userID, refreshToken); err != nil {
+func (s *Service) Logout(ctx context.Context, refreshToken string) error {
+	if _, err := s.storage.GetWithDelete(ctx, refreshToken); err != nil {
 		if errors.Is(err, storage.ErrSessionNotFound) {
 			return fmt.Errorf("%w: %v", ErrInvalidRefreshToken, storage.ErrSessionNotFound)
 		}
@@ -204,7 +204,7 @@ func (s *Service) Logout(ctx context.Context, userID, refreshToken string) error
 func (s *Service) RefreshSession(ctx context.Context, rs model.RefreshSession, opts ...MetaOption) (model.TokenPair, error) {
 	var pair model.TokenPair
 
-	sess, err := s.storage.GetWithDelete(ctx, rs.UserID, rs.RefreshToken)
+	sess, err := s.storage.GetWithDelete(ctx, rs.RefreshToken)
 	if err != nil {
 		if errors.Is(err, storage.ErrSessionNotFound) {
 			return pair, fmt.Errorf("%w: %v", ErrInvalidRefreshToken, storage.ErrSessionNotFound)
