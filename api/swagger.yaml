@@ -1,14 +1,6 @@
 basePath: /api/v1
 definitions:
-  httputil.Error:
-    properties:
-      code:
-        type: integer
-      data: {}
-      message:
-        type: string
-    type: object
-  usersrv.Credentials:
+  http.Credentials:
     properties:
       password:
         maxLength: 27
@@ -21,18 +13,29 @@ definitions:
     - password
     - username
     type: object
-  usersrv.RefreshToken:
+  http.RefreshToken:
     properties:
       refresh_token:
         type: string
     required:
     - refresh_token
     type: object
-  usersrv.TokenPair:
+  http.TokenPair:
     properties:
       access_token:
         type: string
       refresh_token:
+        type: string
+    type: object
+  httputil.Error:
+    properties:
+      code:
+        type: string
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      message:
         type: string
     type: object
   v1.Dialog:
@@ -308,14 +311,14 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/usersrv.Credentials'
+          $ref: '#/definitions/http.Credentials'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/usersrv.TokenPair'
+            $ref: '#/definitions/http.TokenPair'
         "400":
           description: Bad Request
           schema:
@@ -340,7 +343,7 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/usersrv.RefreshToken'
+          $ref: '#/definitions/http.RefreshToken'
       produces:
       - application/json
       responses:
@@ -350,8 +353,6 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      security:
-      - JWTAuth: []
       summary: User logout
       tags:
       - auth
@@ -372,14 +373,14 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/usersrv.RefreshToken'
+          $ref: '#/definitions/http.RefreshToken'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/usersrv.TokenPair'
+            $ref: '#/definitions/http.TokenPair'
         "400":
           description: Bad Request
           schema:
@@ -388,8 +389,6 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/httputil.Error'
-      security:
-      - JWTAuth: []
       summary: Refresh access and refresh token
       tags:
       - auth

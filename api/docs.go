@@ -49,7 +49,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersrv.Credentials"
+                            "$ref": "#/definitions/http.Credentials"
                         }
                     }
                 ],
@@ -57,7 +57,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/usersrv.TokenPair"
+                            "$ref": "#/definitions/http.TokenPair"
                         }
                     },
                     "400": {
@@ -83,11 +83,6 @@ const docTemplate = `{
         },
         "/auth/logout": {
             "post": {
-                "security": [
-                    {
-                        "JWTAuth": []
-                    }
-                ],
                 "description": "Invalidate session by removing refresh token",
                 "produces": [
                     "application/json"
@@ -103,7 +98,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersrv.RefreshToken"
+                            "$ref": "#/definitions/http.RefreshToken"
                         }
                     }
                 ],
@@ -122,11 +117,6 @@ const docTemplate = `{
         },
         "/auth/refresh-tokens": {
             "post": {
-                "security": [
-                    {
-                        "JWTAuth": []
-                    }
-                ],
                 "description": "Allows to get a pair of tokens (access and refresh)  by exchanging an existing token.",
                 "consumes": [
                     "application/json"
@@ -152,7 +142,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersrv.RefreshToken"
+                            "$ref": "#/definitions/http.RefreshToken"
                         }
                     }
                 ],
@@ -160,7 +150,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/usersrv.TokenPair"
+                            "$ref": "#/definitions/http.TokenPair"
                         }
                     },
                     "400": {
@@ -1162,19 +1152,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "httputil.Error": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "usersrv.Credentials": {
+        "http.Credentials": {
             "type": "object",
             "required": [
                 "password",
@@ -1192,7 +1170,7 @@ const docTemplate = `{
                 }
             }
         },
-        "usersrv.RefreshToken": {
+        "http.RefreshToken": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -1203,13 +1181,30 @@ const docTemplate = `{
                 }
             }
         },
-        "usersrv.TokenPair": {
+        "http.TokenPair": {
             "type": "object",
             "properties": {
                 "access_token": {
                     "type": "string"
                 },
                 "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "httputil.Error": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
                     "type": "string"
                 }
             }
