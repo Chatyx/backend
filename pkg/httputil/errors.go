@@ -6,11 +6,11 @@ import (
 )
 
 type Error struct {
-	Err        error          `json:"-"`
-	Code       string         `json:"code"`
-	StatusCode int            `json:"-"`
-	Message    string         `json:"message"`
-	Data       map[string]any `json:"data,omitempty"`
+	Err        error             `json:"-"`
+	Code       string            `json:"code"`
+	StatusCode int               `json:"-"`
+	Message    string            `json:"message"`
+	Data       map[string]string `json:"data,omitempty"`
 }
 
 func (e Error) Wrap(err error) Error {
@@ -23,7 +23,7 @@ func (e Error) Wrap(err error) Error {
 	}
 }
 
-func (e Error) WithData(data map[string]any) Error {
+func (e Error) WithData(data map[string]string) Error {
 	return Error{
 		Err:        e.Err,
 		Code:       e.Code,

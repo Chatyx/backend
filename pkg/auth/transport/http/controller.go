@@ -25,6 +25,10 @@ const (
 	refreshTokensPath = "/auth/refresh-tokens"
 )
 
+const (
+	fingerprintHeaderKey = "X-Fingerprint"
+)
+
 type Credentials struct {
 	Username string `json:"username" validate:"required,max=50"`
 	Password string `json:"password" validate:"required,min=8,max=27"`
@@ -39,11 +43,47 @@ type RefreshToken struct {
 	Token string `json:"refresh_token" validate:"required"`
 }
 
+type RTCookieSettings struct {
+	Name       string
+	Domain     string
+	PrefixPath string
+	TTL        time.Duration
+}
+
+type Config struct {
+	RTCookieSettings RTCookieSettings
+}
+
+type Option func(c *Config)
+
+func WithRTCookieName(s string) Option {
+	return func(c *Config) {
+		c.RTCookieSettings.Name = s
+	}
+}
+
+func WithRTCookieDomain(s string) Option {
+	return func(c *Config) {
+		c.RTCookieSettings.Domain = s
+	}
+}
+
+func WithRTCookiePrefixPath(s string) Option {
+	return func(c *Config) {
+		c.RTCookieSettings.PrefixPath = s
+	}
+}
+
+func WithRTCookieTTL(d time.Duration) Option {
+	return func(c *Config) {
+		c.RTCookieSettings.TTL = d
+	}
+}
+
 type Controller struct {
-	service                 Service
-	bodyParser              httputil.BodyParser
-	fingerprintHeaderParser httputil.HeaderParser
-	refreshTokenTTL         time.Duration
+	service   Service
+	validator validator.Validator
+	rtc       RTCookieSettings
 }
 
 type Service interface {
@@ -52,12 +92,22 @@ type Service interface {
 	Logout(ctx context.Context, userID, refreshToken string) error
 }
 
-func NewController(v validator.Validate, srv Service, refreshTokenTTL time.Duration) *Controller {
+func NewController(srv Service, v validator.Validator, opts ...Option) *Controller {
+	conf := Config{
+		RTCookieSettings: RTCookieSettings{
+			Name:   "refresh_token",
+			Domain: "localhost:8080",
+			TTL:    60 * 24 * time.Hour,
+		},
+	}
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
 	return &Controller{
-		service:                 srv,
-		bodyParser:              httputil.NewBodyParser(v),
-		fingerprintHeaderParser: httputil.NewHeaderParser(v, "X-Fingerprint", "required"),
-		refreshTokenTTL:         refreshTokenTTL,
+		service:   srv,
+		validator: v,
+		rtc:       conf.RTCookieSettings,
 	}
 }
 
@@ -85,16 +135,24 @@ func (c *Controller) Register(mux *httprouter.Router) {
 func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
-	var (
-		dto         Credentials
-		fingerprint string
-	)
+	var dto Credentials
 
-	if err := c.bodyParser.Parse(ctx, req, &dto); err != nil {
+	if err := httputil.DecodeBody(req.Body, &dto); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
-	if err := c.fingerprintHeaderParser.Parse(ctx, req, &fingerprint); err != nil {
+
+	fingerprint := req.Header.Get(fingerprintHeaderKey)
+
+	if err := validator.MergeResults(
+		c.validator.Struct(dto),
+		c.validator.Var(fingerprint, "required"),
+	); err != nil {
+		ve := validator.Error{}
+		if errors.As(err, &ve) {
+			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
+		}
+
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -120,6 +178,15 @@ func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 
 		return
 	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     c.rtc.Name,
+		Value:    pair.RefreshToken,
+		Path:     c.rtc.PrefixPath + "/auth",
+		Domain:   c.rtc.Domain,
+		Expires:  time.Now().Add(c.rtc.TTL),
+		HttpOnly: true,
+	})
 
 	httputil.RespondSuccess(
 		ctx, w,
@@ -147,10 +214,20 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 
 	var dto RefreshToken
 
-	cookie, err := req.Cookie("refresh_token")
+	cookie, err := req.Cookie(c.rtc.Name)
 	if err == nil {
 		dto.Token = cookie.Value
-	} else if err = c.bodyParser.Parse(ctx, req, &dto); err != nil {
+	} else if err = httputil.DecodeBody(req.Body, &dto); err != nil {
+		httputil.RespondError(ctx, w, err)
+		return
+	}
+
+	if err = c.validator.Struct(dto); err != nil {
+		ve := validator.Error{}
+		if errors.As(err, &ve) {
+			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
+		}
+
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -168,11 +245,10 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    "",
-		Path:     "/api/v1/auth",
-		Domain:   "localhost:8080", // TODO
-		MaxAge:   0,
+		Name:     c.rtc.Name,
+		Path:     c.rtc.PrefixPath + "/auth",
+		Domain:   c.rtc.Domain,
+		MaxAge:   -1,
 		HttpOnly: true,
 	})
 
@@ -197,20 +273,27 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
-	var (
-		dto         RefreshToken
-		fingerprint string
-	)
+	var dto RefreshToken
 
-	cookie, err := req.Cookie("refresh_token")
+	cookie, err := req.Cookie(c.rtc.Name)
 	if err == nil {
 		dto.Token = cookie.Value
-	} else if err = c.bodyParser.Parse(ctx, req, &dto); err != nil {
+	} else if err = httputil.DecodeBody(req.Body, &dto); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
 
-	if err = c.fingerprintHeaderParser.Parse(ctx, req, &fingerprint); err != nil {
+	fingerprint := req.Header.Get(fingerprintHeaderKey)
+
+	if err = validator.MergeResults(
+		c.validator.Struct(dto),
+		c.validator.Var(fingerprint, "required"),
+	); err != nil {
+		ve := validator.Error{}
+		if errors.As(err, &ve) {
+			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
+		}
+
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -236,11 +319,11 @@ func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
+		Name:     c.rtc.Name,
 		Value:    pair.RefreshToken,
-		Path:     "/api/v1/auth",
-		Domain:   "localhost:8080", // TODO
-		Expires:  time.Now().Add(c.refreshTokenTTL),
+		Path:     c.rtc.PrefixPath + "/auth",
+		Domain:   c.rtc.Domain,
+		Expires:  time.Now().Add(c.rtc.TTL),
 		HttpOnly: true,
 	})
 

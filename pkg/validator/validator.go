@@ -7,15 +7,15 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type Validate struct {
+type Validator struct {
 	validate *validator.Validate
 }
 
-func NewValidate(v *validator.Validate) Validate {
-	return Validate{validate: v}
+func NewValidator(v *validator.Validate) Validator {
+	return Validator{validate: v}
 }
 
-func (v Validate) Struct(val any) error {
+func (v Validator) Struct(val any) error {
 	if err := v.validate.Struct(val); err != nil {
 		vErrs := validator.ValidationErrors{}
 
@@ -34,7 +34,7 @@ func (v Validate) Struct(val any) error {
 	return nil
 }
 
-func (v Validate) Var(val any, tag string) error {
+func (v Validator) Var(val any, tag string) error {
 	if err := v.validate.Var(val, tag); err != nil {
 		vErrs := validator.ValidationErrors{}
 
@@ -48,5 +48,29 @@ func (v Validate) Var(val any, tag string) error {
 		return fmt.Errorf("validate variable: %w", err)
 	}
 
+	return nil
+}
+
+func MergeResults(errs ...error) error {
+	fields := make(ErrorFields)
+
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+
+		ve := Error{}
+		if !errors.As(err, &ve) {
+			return err
+		}
+
+		for k, v := range ve.Fields {
+			fields[k] = v
+		}
+	}
+
+	if len(fields) != 0 {
+		return Error{Fields: fields}
+	}
 	return nil
 }
