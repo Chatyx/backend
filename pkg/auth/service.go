@@ -145,7 +145,7 @@ func (s *Service) Login(ctx context.Context, cred Credentials, opts ...MetaOptio
 	}
 	if !ok {
 		s.logger.Warnf("User `%s` failed to login", cred.Username)
-		return pair, ErrUserNotFound
+		return pair, ErrWrongCredentials
 	}
 
 	var claims token.Claims
@@ -163,9 +163,9 @@ func (s *Service) Login(ctx context.Context, cred Credentials, opts ...MetaOptio
 		return pair, fmt.Errorf("create refresh token: %w", err)
 	}
 
-	meta := &Meta{}
+	var meta Meta
 	for _, opt := range opts {
-		opt(meta)
+		opt(&meta)
 	}
 
 	sess := Session{
@@ -233,9 +233,9 @@ func (s *Service) RefreshSession(ctx context.Context, rs RefreshSession, opts ..
 		return pair, fmt.Errorf("create refresh token: %w", err)
 	}
 
-	meta := &Meta{}
+	var meta Meta
 	for _, opt := range opts {
-		opt(meta)
+		opt(&meta)
 	}
 
 	sess.IP = meta.IP

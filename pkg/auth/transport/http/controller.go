@@ -150,6 +150,7 @@ func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 		ve := validator.Error{}
 		if errors.As(err, &ve) {
 			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
+			return
 		}
 
 		httputil.RespondError(ctx, w, err)
@@ -169,8 +170,8 @@ func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 	)
 	if err != nil {
 		switch {
-		case errors.Is(err, core.ErrUserNotFound):
-			httputil.RespondError(ctx, w, ErrFailedLogin.Wrap(err))
+		case errors.Is(err, core.ErrWrongCredentials):
+			httputil.RespondError(ctx, w, ErrLoginFailed.Wrap(err))
 		default:
 			httputil.RespondError(ctx, w, err)
 		}
@@ -224,6 +225,7 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 		ve := validator.Error{}
 		if errors.As(err, &ve) {
 			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
+			return
 		}
 
 		httputil.RespondError(ctx, w, err)
@@ -288,6 +290,7 @@ func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 		ve := validator.Error{}
 		if errors.As(err, &ve) {
 			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
+			return
 		}
 
 		httputil.RespondError(ctx, w, err)

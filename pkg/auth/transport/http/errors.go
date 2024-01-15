@@ -7,6 +7,6 @@ import (
 )
 
 var (
-	ErrFailedLogin         = httputil.Error{Code: "AU0001", Message: "failed login", StatusCode: http.StatusUnauthorized}
+	ErrLoginFailed         = httputil.Error{Code: "AU0001", Message: "login failed", StatusCode: http.StatusUnauthorized}
 	ErrInvalidRefreshToken = httputil.Error{Code: "AU0002", Message: "invalid refresh token", StatusCode: http.StatusBadRequest}
 )
