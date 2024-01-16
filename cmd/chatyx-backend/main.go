@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+
+	"github.com/Chatyx/backend/internal/app"
 )
 
 var confPath string
@@ -12,4 +14,5 @@ func init() {
 
 func main() {
 	flag.Parse()
+	app.NewApp(confPath).Run()
 }

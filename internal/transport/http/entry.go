@@ -2,9 +2,13 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/Chatyx/backend/internal/config"
+	"github.com/Chatyx/backend/pkg/log"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -37,34 +41,35 @@ type Server struct {
 //	@securityDefinitions.apikey	JWTAuth
 //	@in							header
 //	@name						Authorization
-func NewServer() *Server {
+func NewServer(conf config.Server, cs ...Controller) *Server {
 	mux := httprouter.New()
+	for _, c := range cs {
+		c.Register(mux)
+	}
 
 	return &Server{
 		srv: &http.Server{
-			Addr:                         ":8080",
-			Handler:                      mux,
-			DisableGeneralOptionsHandler: false,
-			TLSConfig:                    nil,
-			ReadTimeout:                  0,
-			ReadHeaderTimeout:            0,
-			WriteTimeout:                 0,
-			IdleTimeout:                  0,
-			MaxHeaderBytes:               0,
-			TLSNextProto:                 nil,
-			ConnState:                    nil,
-			ErrorLog:                     nil,
-			BaseContext:                  nil,
-			ConnContext:                  nil,
+			Addr:         conf.Listen,
+			Handler:      mux,
+			ReadTimeout:  conf.ReadTimeout,
+			WriteTimeout: conf.WriteTimeout,
 		},
 	}
 }
 
 func (s *Server) Run() {
+	go func() {
+		if err := s.srv.ListenAndServe(); err != nil {
+			if !errors.Is(err, http.ErrServerClosed) {
+				log.WithError(err).Fatalf("Failed listen and serve %s", s.srv.Addr)
+			}
+		}
+	}()
 
+	log.Infof("Server successfully started! Listen %s", s.srv.Addr)
 }
 
-func (s *Server) Shutdown() error {
+func (s *Server) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
 	defer cancel()
 

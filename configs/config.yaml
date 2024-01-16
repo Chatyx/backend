@@ -1,41 +1,44 @@
-is_debug: false
 domain: localhost
-listen:
-  api:
-    type: port
-    bind_ip: 0.0.0.0
-    bind_port: 8080
-  chat:
-    type: port
-    bind_ip: 0.0.0.0
-    bind_port: 8081
-auth:
-  sign_key: xNN3f9M9vZLtqHJwX2wtTbCBMpR
-  access_token_ttl: 15      # 15 minutes
-  refresh_token_ttl: 43200  # 30 days
-postgres:
-  host: 127.0.0.1
-  port: 5432
-  database: scht_db
-  username: scht_user
-  password: scht_password
-  max_conn_attempts: 3
-  failed_conn_delay: 5 # seconds
-redis:
-  host: 127.0.0.1
-  port: 6379
-  username: default
-  password: ""
-  max_conn_attempts: 3
-  failed_conn_delay: 5 # seconds
-logging:
+debug: true
+
+log:
   level: debug
-  filepath: ./logs/all.log
-  rotate: true
-  max_size: 100   # MB
-  max_backups: 5  # max files
+
+api:
+  listen: ":8080"
+  read_timeout: 15s
+  write_timeout: 15s
+
+chat:
+  listen: ":8081"
+
 cors:
   allowed_origins:
     - http://127.0.0.1:3000
     - http://localhost:3000
-  max_age: 600 # 10 minutes
+  max_age: 10m
+
+auth:
+  issuer: chatyx
+  sign_key: xNN3f9M9vZLtqHJwX2wtTbCBMpR
+  access_token_ttl: 15m
+  refresh_token_ttl: 720h # 30 days
+
+postgres:
+  conn:
+    host: localhost
+    port: 5432
+    database: chatyx_db
+    user: chatyx_user
+    password: chatyx_password
+  max_open_conns: 10
+  max_idle_conns: 10
+  conn_max_idle_time: 5m
+
+redis:
+  conn:
+    host: localhost
+    port: 6379
+    database: 1
+    user: default
+    password: ""
