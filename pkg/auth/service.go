@@ -89,6 +89,7 @@ func WithIP(ip net.IP) MetaOption {
 	}
 }
 
+//go:generate mockery --inpackage --testonly --case underscore --name SessionStorage
 type SessionStorage interface {
 	Set(ctx context.Context, sess Session) error
 	GetWithDelete(ctx context.Context, refreshToken string) (Session, error)
@@ -148,7 +149,7 @@ func (s *Service) Login(ctx context.Context, cred Credentials, opts ...MetaOptio
 		return pair, ErrWrongCredentials
 	}
 
-	var claims token.Claims
+	claims := token.Claims{}
 	if s.enrichClaims != nil {
 		s.enrichClaims(claims)
 	}
@@ -218,7 +219,7 @@ func (s *Service) RefreshSession(ctx context.Context, rs RefreshSession, opts ..
 		return pair, fmt.Errorf("%w: fingerprints don't match", ErrInvalidRefreshToken)
 	}
 
-	var claims token.Claims
+	claims := token.Claims{}
 	if s.enrichClaims != nil {
 		s.enrichClaims(claims)
 	}

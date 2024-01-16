@@ -15,6 +15,9 @@ LDFLAGS = -X '${PACKAGE}/version.BranchName=${BRANCH_NAME}' \
 GOLANGCI_LINT = ${PROJECT_BIN}/golangci-lint
 SWAG = ${PROJECT_BIN}/swag
 MIGRATE = ${PROJECT_BIN}/migrate
+MOCKERY = ${PROJECT_BIN}/mockery
+
+export PATH := ${PROJECT_BIN}:${PATH}
 
 all: clean lint test.unit test.integration build
 
@@ -29,6 +32,10 @@ all: clean lint test.unit test.integration build
 .PHONY: .install-migrate
 .install-migrate:
 	[ -f ${MIGRATE} ] || GOBIN=${PROJECT_BIN} go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.16.2
+
+.PHONY: .install-mockery
+.install-mockery:
+	[-f ${MOCKERY} ] || GOBIN=${PROJECT_BIN} go install github.com/vektra/mockery/v2@v2.40.1
 
 .PHONY: lint
 lint: .install-linter
@@ -49,7 +56,7 @@ build:
 	go build -ldflags="${LDFLAGS}" -o ${PROJECT_BUILD}/${BINARY_NAME} ./cmd/chatyx-backend
 
 .PHONY: generate
-generate:
+generate: .install-mockery
 	go generate ./...
 
 .PHONY: infra
@@ -59,6 +66,11 @@ infra:
 .PHONY: test.unit
 test.unit:
 	go test -tags=unit -v -coverprofile=cover.out ./...
+	go tool cover -func=cover.out
+
+.PHONY: test
+test:
+	go test -v -coverprofile=cover.out ./...
 	go tool cover -func=cover.out
 
 .PHONY: test.integration
