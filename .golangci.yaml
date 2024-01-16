@@ -119,6 +119,7 @@ linters-settings:
       - os.Mkdir.*
       - os.OpenFile
       - os.WriteFile
+      - strings.SplitN
 
   gomodguard:
     blocked:
