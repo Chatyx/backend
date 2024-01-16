@@ -96,10 +96,11 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (core.
 	}
 
 	if err = hGetCmd.Scan(&rawSess); err != nil {
-		if errors.Is(err, redis.Nil) {
-			return sess, core.ErrSessionNotFound
-		}
 		return sess, fmt.Errorf("scan map cmd: %v", err)
+	}
+
+	if rawSess.UserID == "" {
+		return sess, core.ErrSessionNotFound
 	}
 
 	var errs []error
@@ -108,12 +109,11 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (core.
 			errs = append(errs, cmdErr)
 		}
 	}
-
 	if len(errs) != 0 {
 		return sess, fmt.Errorf("after exec pipeline: %v", errors.Join(errs...))
 	}
 
-	userSessKey := fmt.Sprintf("user:%s:sessions", sess.UserID)
+	userSessKey := fmt.Sprintf("user:%s:sessions", rawSess.UserID)
 	if err = s.cli.SRem(ctx, userSessKey, refreshToken).Err(); err != nil {
 		return sess, fmt.Errorf("remove element from set: %v", err)
 	}
@@ -126,4 +126,11 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (core.
 		ExpiresAt:    time.Unix(rawSess.ExpiresAt, 0).Local(),
 		CreatedAt:    time.Unix(rawSess.CreatedAt, 0).Local(),
 	}, nil
+}
+
+func (s *Storage) Close() error {
+	if err := s.cli.Close(); err != nil {
+		return fmt.Errorf("redis client close: %v", err)
+	}
+	return nil
 }

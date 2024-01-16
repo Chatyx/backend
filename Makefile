@@ -36,6 +36,10 @@ lint: .install-linter
 	${GOLANGCI_LINT} linters
 	${GOLANGCI_LINT} run -v
 
+.PHONY: lint.fix
+lint.fix:
+	${GOLANGCI_LINT} run --fix
+
 .PHONY: swagger
 swagger: .install-swagger
 	${SWAG} init -g ./internal/transport/http/entry.go -o ./api

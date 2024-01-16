@@ -111,7 +111,7 @@ func NewService(storage SessionStorage, opts ...ServiceOption) *Service {
 		RefreshTokenTTL: defaultRefreshTokeTTL,
 		Issuer:          "pkg/auth",
 		CheckPassword: func(user, password string) (userID string, ok bool, err error) {
-			if user == "root" && password == "root" {
+			if user == "root" && password == "root1234" {
 				return "1", true, nil
 			}
 			return "", false, nil

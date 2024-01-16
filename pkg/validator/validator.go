@@ -3,6 +3,8 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -11,8 +13,23 @@ type Validator struct {
 	validate *validator.Validate
 }
 
-func NewValidator(v *validator.Validate) Validator {
-	return Validator{validate: v}
+func NewValidator() Validator {
+	validate := validator.New()
+	validate.RegisterTagNameFunc(func(field reflect.StructField) string {
+		tagValue := field.Tag.Get("json")
+		if tagValue == "" {
+			return field.Name
+		}
+
+		fieldName := strings.SplitN(tagValue, ",", 2)[0]
+		if fieldName == "-" {
+			return field.Name
+		}
+
+		return fieldName
+	})
+
+	return Validator{validate: validate}
 }
 
 func (v Validator) Struct(val any) error {
@@ -22,7 +39,7 @@ func (v Validator) Struct(val any) error {
 		if errors.As(err, &vErrs) {
 			fields := make(ErrorFields, len(vErrs))
 			for _, vErr := range vErrs {
-				fields[vErr.Field()] = vErr.Error()
+				fields[vErr.Field()] = fmt.Sprintf("failed on the '%s' tag", vErr.Tag())
 			}
 
 			return Error{Fields: fields}
@@ -34,14 +51,16 @@ func (v Validator) Struct(val any) error {
 	return nil
 }
 
-func (v Validator) Var(val any, tag string) error {
+func (v Validator) Var(val any, key, tag string) error {
 	if err := v.validate.Var(val, tag); err != nil {
 		vErrs := validator.ValidationErrors{}
 
 		if errors.As(err, &vErrs) {
 			vErr := vErrs[0]
 			return Error{
-				Fields: ErrorFields{vErr.Field(): vErr.Error()},
+				Fields: ErrorFields{
+					key: fmt.Sprintf("failed on the '%s' tag", vErr.Tag()),
+				},
 			}
 		}
 

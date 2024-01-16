@@ -96,7 +96,8 @@ func Configure(conf Config) error {
 	logger := zap.New(
 		zapcore.NewCore(enc, sync, level.toZap()),
 		zap.WithCaller(true),
-	)
+	).WithOptions(zap.AddCallerSkip(1))
+
 	zap.ReplaceGlobals(logger)
 
 	return nil

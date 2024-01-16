@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"path"
 	"time"
 
 	core "github.com/Chatyx/backend/pkg/auth"
@@ -43,13 +44,13 @@ type RefreshToken struct {
 }
 
 type RTCookieSettings struct {
-	Name       string
-	Domain     string
-	PrefixPath string
-	TTL        time.Duration
+	Name   string
+	Domain string
+	TTL    time.Duration
 }
 
 type Config struct {
+	PrefixPath       string
 	RTCookieSettings RTCookieSettings
 }
 
@@ -67,9 +68,9 @@ func WithRTCookieDomain(s string) Option {
 	}
 }
 
-func WithRTCookiePrefixPath(s string) Option {
+func WithPrefixPath(s string) Option {
 	return func(c *Config) {
-		c.RTCookieSettings.PrefixPath = s
+		c.PrefixPath = s
 	}
 }
 
@@ -80,9 +81,10 @@ func WithRTCookieTTL(d time.Duration) Option {
 }
 
 type Controller struct {
-	service   Service
-	validator validator.Validator
-	rtc       RTCookieSettings
+	service    Service
+	validator  validator.Validator
+	rtc        RTCookieSettings
+	prefixPath string
 }
 
 type Service interface {
@@ -104,16 +106,17 @@ func NewController(srv Service, v validator.Validator, opts ...Option) *Controll
 	}
 
 	return &Controller{
-		service:   srv,
-		validator: v,
-		rtc:       conf.RTCookieSettings,
+		service:    srv,
+		validator:  v,
+		rtc:        conf.RTCookieSettings,
+		prefixPath: conf.PrefixPath,
 	}
 }
 
 func (c *Controller) Register(mux *httprouter.Router) {
-	mux.HandlerFunc(http.MethodPost, loginPath, c.login)
-	mux.HandlerFunc(http.MethodPost, logoutPath, c.logout)
-	mux.HandlerFunc(http.MethodPost, refreshTokensPath, c.refreshTokens)
+	mux.HandlerFunc(http.MethodPost, path.Join(c.prefixPath, loginPath), c.login)
+	mux.HandlerFunc(http.MethodPost, path.Join(c.prefixPath, logoutPath), c.logout)
+	mux.HandlerFunc(http.MethodPost, path.Join(c.prefixPath, refreshTokensPath), c.refreshTokens)
 }
 
 // login performs user authentication
@@ -145,7 +148,7 @@ func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 
 	if err := validator.MergeResults(
 		c.validator.Struct(dto),
-		c.validator.Var(fingerprint, "required"),
+		c.validator.Var(fingerprint, fingerprintHeaderKey, "required"),
 	); err != nil {
 		ve := validator.Error{}
 		if errors.As(err, &ve) {
@@ -182,7 +185,7 @@ func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.rtc.Name,
 		Value:    pair.RefreshToken,
-		Path:     c.rtc.PrefixPath + "/auth",
+		Path:     c.prefixPath + "/auth",
 		Domain:   c.rtc.Domain,
 		Expires:  time.Now().Add(c.rtc.TTL),
 		HttpOnly: true,
@@ -245,7 +248,7 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.rtc.Name,
-		Path:     c.rtc.PrefixPath + "/auth",
+		Path:     c.prefixPath + "/auth",
 		Domain:   c.rtc.Domain,
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -285,7 +288,7 @@ func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 
 	if err = validator.MergeResults(
 		c.validator.Struct(dto),
-		c.validator.Var(fingerprint, "required"),
+		c.validator.Var(fingerprint, fingerprintHeaderKey, "required"),
 	); err != nil {
 		ve := validator.Error{}
 		if errors.As(err, &ve) {
@@ -319,7 +322,7 @@ func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.rtc.Name,
 		Value:    pair.RefreshToken,
-		Path:     c.rtc.PrefixPath + "/auth",
+		Path:     c.prefixPath + "/auth",
 		Domain:   c.rtc.Domain,
 		Expires:  time.Now().Add(c.rtc.TTL),
 		HttpOnly: true,
