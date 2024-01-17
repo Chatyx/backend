@@ -39,7 +39,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Fingerprint header",
-                        "name": "fingerprint",
+                        "name": "X-Fingerprint",
                         "in": "header",
                         "required": true
                     },
@@ -132,7 +132,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Fingerprint header",
-                        "name": "fingerprint",
+                        "name": "X-Fingerprint",
                         "in": "header",
                         "required": true
                     },

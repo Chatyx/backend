@@ -303,7 +303,7 @@ paths:
       parameters:
       - description: Fingerprint header
         in: header
-        name: fingerprint
+        name: X-Fingerprint
         required: true
         type: string
       - description: Credentials body
@@ -365,7 +365,7 @@ paths:
       parameters:
       - description: Fingerprint header
         in: header
-        name: fingerprint
+        name: X-Fingerprint
         required: true
         type: string
       - description: Refresh token body

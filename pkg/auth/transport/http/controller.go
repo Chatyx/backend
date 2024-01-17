@@ -128,12 +128,12 @@ func (c *Controller) Register(mux *httprouter.Router) {
 //	response includes http-only cookie with refresh token.
 //	@Accept			json
 //	@Produce		json
-//	@Param			fingerprint	header		string		true	"Fingerprint header"
-//	@Param			input		body		Credentials	true	"Credentials body"
-//	@Success		200			{object}	TokenPair
-//	@Failure		400			{object}	httputil.Error
-//	@Failure		401			{object}	httputil.Error
-//	@Failure		500			{object}	httputil.Error
+//	@Param			X-Fingerprint	header		string		true	"Fingerprint header"
+//	@Param			input			body		Credentials	true	"Credentials body"
+//	@Success		200				{object}	TokenPair
+//	@Failure		400				{object}	httputil.Error
+//	@Failure		401				{object}	httputil.Error
+//	@Failure		500				{object}	httputil.Error
 //	@Router			/auth/login [post]
 func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
@@ -266,11 +266,11 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 //	 Successful response includes http-only cookie with refresh token.
 //	@Accept			json
 //	@Produce		json
-//	@Param			fingerprint	header		string			true	"Fingerprint header"
-//	@Param			input		body		RefreshToken	true	"Refresh token body"
-//	@Success		200			{object}	TokenPair
-//	@Failure		400			{object}	httputil.Error
-//	@Failure		500			{object}	httputil.Error
+//	@Param			X-Fingerprint	header		string			true	"Fingerprint header"
+//	@Param			input			body		RefreshToken	true	"Refresh token body"
+//	@Success		200				{object}	TokenPair
+//	@Failure		400				{object}	httputil.Error
+//	@Failure		500				{object}	httputil.Error
 //	@Router			/auth/refresh-tokens [post]
 func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
