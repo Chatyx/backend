@@ -87,6 +87,7 @@ type Controller struct {
 	prefixPath string
 }
 
+//go:generate mockery --inpackage --testonly --case underscore --name Service
 type Service interface {
 	Login(ctx context.Context, cred core.Credentials, opts ...core.MetaOption) (core.TokenPair, error)
 	RefreshSession(ctx context.Context, rs core.RefreshSession, opts ...core.MetaOption) (core.TokenPair, error)
@@ -185,7 +186,7 @@ func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.rtc.Name,
 		Value:    pair.RefreshToken,
-		Path:     c.prefixPath + "/auth",
+		Path:     path.Join(c.prefixPath, "/auth"),
 		Domain:   c.rtc.Domain,
 		Expires:  time.Now().Add(c.rtc.TTL),
 		HttpOnly: true,
@@ -248,7 +249,7 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.rtc.Name,
-		Path:     c.prefixPath + "/auth",
+		Path:     path.Join(c.prefixPath, "/auth"),
 		Domain:   c.rtc.Domain,
 		MaxAge:   -1,
 		HttpOnly: true,
@@ -322,7 +323,7 @@ func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.rtc.Name,
 		Value:    pair.RefreshToken,
-		Path:     c.prefixPath + "/auth",
+		Path:     path.Join(c.prefixPath, "/auth"),
 		Domain:   c.rtc.Domain,
 		Expires:  time.Now().Add(c.rtc.TTL),
 		HttpOnly: true,
