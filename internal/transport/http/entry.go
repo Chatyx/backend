@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Chatyx/backend/internal/config"
+	"github.com/Chatyx/backend/pkg/httputil/middleware"
 	"github.com/Chatyx/backend/pkg/log"
 
 	"github.com/julienschmidt/httprouter"
@@ -49,8 +50,12 @@ func NewServer(conf config.Server, cs ...Controller) *Server {
 
 	return &Server{
 		srv: &http.Server{
-			Addr:         conf.Listen,
-			Handler:      mux,
+			Addr: conf.Listen,
+			Handler: middleware.Chain(
+				mux,
+				middleware.RequestID,
+				middleware.Log,
+			),
 			ReadTimeout:  conf.ReadTimeout,
 			WriteTimeout: conf.WriteTimeout,
 		},

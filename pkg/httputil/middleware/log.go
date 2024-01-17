@@ -32,7 +32,7 @@ func Log(next http.Handler) http.Handler {
 			"ip", req.RemoteAddr,
 			"host", req.Host,
 			"request_size", req.ContentLength,
-			"duration", time.Since(begin),
+			"duration", time.Since(begin).String(),
 			"status_code", rec.StatusCode,
 		).Info("Request handled")
 	})
