@@ -12,6 +12,10 @@ import (
 	"github.com/Chatyx/backend/pkg/log"
 
 	"github.com/julienschmidt/httprouter"
+	httpSwagger "github.com/swaggo/http-swagger"
+
+	// Register swagger.
+	_ "github.com/Chatyx/backend/api"
 )
 
 const defaultShutdownTimeout = 15 * time.Second
@@ -44,6 +48,10 @@ type Server struct {
 //	@name						Authorization
 func NewServer(conf config.Server, cs ...Controller) *Server {
 	mux := httprouter.New()
+	mux.HandlerFunc(http.MethodGet, "/swagger/:any", httpSwagger.Handler())
+	mux.Handler(http.MethodGet, "/", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
+	mux.Handler(http.MethodGet, "/swagger", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
+
 	for _, c := range cs {
 		c.Register(mux)
 	}
