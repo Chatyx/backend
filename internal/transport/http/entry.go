@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Chatyx/backend/internal/config"
+	"github.com/Chatyx/backend/pkg/httputil"
 	"github.com/Chatyx/backend/pkg/httputil/middleware"
 	"github.com/Chatyx/backend/pkg/log"
 
@@ -55,6 +56,14 @@ type Server struct {
 //	@name						Authorization
 func NewServer(conf Config, cs ...Controller) *Server {
 	mux := httprouter.New()
+	mux.PanicHandler = func(w http.ResponseWriter, req *http.Request, i interface{}) {
+		err := fmt.Errorf("panic caught: %v", i)
+		httputil.RespondError(req.Context(), w, httputil.ErrInternalServer.Wrap(err))
+	}
+	mux.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	mux.HandlerFunc(http.MethodGet, "/swagger/:any", httpSwagger.Handler())
 	mux.Handler(http.MethodGet, "/", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
 	mux.Handler(http.MethodGet, "/swagger", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
