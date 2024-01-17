@@ -12,6 +12,7 @@ import (
 	"github.com/Chatyx/backend/pkg/log"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	// Register swagger.
@@ -22,6 +23,12 @@ const defaultShutdownTimeout = 15 * time.Second
 
 type Controller interface {
 	Register(mux *httprouter.Router)
+}
+
+type Config struct {
+	config.Server
+	Debug bool
+	Cors  config.Cors
 }
 
 type Server struct {
@@ -46,11 +53,23 @@ type Server struct {
 //	@securityDefinitions.apikey	JWTAuth
 //	@in							header
 //	@name						Authorization
-func NewServer(conf config.Server, cs ...Controller) *Server {
+func NewServer(conf Config, cs ...Controller) *Server {
 	mux := httprouter.New()
 	mux.HandlerFunc(http.MethodGet, "/swagger/:any", httpSwagger.Handler())
 	mux.Handler(http.MethodGet, "/", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
 	mux.Handler(http.MethodGet, "/swagger", http.RedirectHandler("/swagger/index.html", http.StatusMovedPermanently))
+
+	corsObj := cors.New(cors.Options{
+		AllowedOrigins: conf.Cors.AllowedOrigins,
+		AllowedMethods: []string{
+			http.MethodHead, http.MethodGet, http.MethodPost,
+			http.MethodPut, http.MethodPatch, http.MethodDelete,
+		},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "X-Fingerprint"},
+		MaxAge:           int(conf.Cors.MaxAge.Seconds()),
+		AllowCredentials: true,
+		Debug:            conf.Debug,
+	})
 
 	for _, c := range cs {
 		c.Register(mux)
@@ -63,6 +82,7 @@ func NewServer(conf config.Server, cs ...Controller) *Server {
 				mux,
 				middleware.RequestID,
 				middleware.Log,
+				corsObj.Handler,
 			),
 			ReadTimeout:  conf.ReadTimeout,
 			WriteTimeout: conf.WriteTimeout,

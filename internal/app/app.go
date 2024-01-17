@@ -83,7 +83,14 @@ func NewApp(confPath string) *App {
 		auhttp.WithRTCookieTTL(conf.Auth.RefreshTokenTTL),
 	)
 
-	apiServer := inhttp.NewServer(conf.API, authController)
+	apiServer := inhttp.NewServer(
+		inhttp.Config{
+			Server: conf.API,
+			Debug:  conf.Debug,
+			Cors:   conf.Cors,
+		},
+		authController,
+	)
 	runners = append(runners, apiServer)
 	closers = append(closers, apiServer)
 
