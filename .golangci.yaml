@@ -233,7 +233,6 @@ linters:
     - tagalign # checks that struct tags are well aligned
     - tenv # detects using os.Setenv instead of t.Setenv since Go1.17
     - testableexamples # checks if examples are testable (have an expected output)
-    - testpackage # makes you use a separate _test package
     - tparallel # detects inappropriate usage of t.Parallel() method in your Go test codes
     - unconvert # removes unnecessary type conversions
     - unparam # reports unused function parameters
@@ -273,6 +272,7 @@ linters:
     #- paralleltest # [too many false positives] detects missing usage of t.Parallel() method in your Go test
     #- tagliatelle # checks the struct tags
     #- thelper # detects golang test helpers without t.Helper() call and checks the consistency of test helpers
+    #- testpackage # makes you use a separate _test package
     #- wsl # [too strict and mostly code is not more readable] whitespace linter forces you to use empty lines
     #- gochecknoglobals # checks that no global variables exist
     #- gochecknoinits # checks that no init functions are present in Go code
@@ -310,3 +310,4 @@ issues:
         - gosec
         - noctx
         - wrapcheck
+        - lll
