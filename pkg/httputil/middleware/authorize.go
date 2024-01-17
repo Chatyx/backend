@@ -8,6 +8,7 @@ import (
 	"github.com/Chatyx/backend/pkg/ctxutil"
 	"github.com/Chatyx/backend/pkg/httputil"
 	"github.com/Chatyx/backend/pkg/log"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -38,8 +39,7 @@ func Authorize(signedKey any) Middleware {
 				return
 			}
 
-			logger := log.FromContext(ctx)
-			logger = log.With("user_id", subject)
+			logger := log.FromContext(ctx).With("user_id", subject)
 
 			ctx = log.WithLogger(ctxutil.WithUserID(ctx, subject), logger)
 			next.ServeHTTP(w, req.WithContext(ctx))
@@ -59,15 +59,10 @@ func extractTokenFromRequest(req *http.Request) (string, error) {
 		return token, nil
 	}
 
-	headerParts := strings.Split(header, " ")
-	if len(headerParts) != 2 {
-		return "", errors.New("authorization header must contains with two parts")
-	}
-
+	headerParts := strings.SplitN(header, " ", 2)
 	if headerParts[0] != "Bearer" {
 		return "", errors.New("authorization header doesn't begin with Bearer")
 	}
-
 	if headerParts[1] == "" {
 		return "", errors.New("authorization header value is empty")
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/Chatyx/backend/pkg/auth"
 	"github.com/Chatyx/backend/pkg/auth/storage/redis"
 	auhttp "github.com/Chatyx/backend/pkg/auth/transport/http"
+	"github.com/Chatyx/backend/pkg/httputil/middleware"
 	"github.com/Chatyx/backend/pkg/log"
 	"github.com/Chatyx/backend/pkg/validator"
 
@@ -72,6 +73,9 @@ func NewApp(confPath string) *App {
 		auth.WithLogger(log.With("service", "auth")),
 		// auth.WithCheckPassword(), TODO
 	)
+
+	authorizeMiddleware := middleware.Authorize([]byte(conf.Auth.SignKey))
+	_ = authorizeMiddleware
 	authController := auhttp.NewController(
 		authService, vld,
 		auhttp.WithPrefixPath("/api/v1"),
