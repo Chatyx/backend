@@ -93,14 +93,14 @@ func TestController_login(t *testing.T) {
 			requestBody:          `{}`,
 			setFingerprint:       true,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"validation error","data":{"password":"failed on the 'required' tag","username":"failed on the 'required' tag"}}`,
+			expectedResponseBody: `{"code":"CM0005","message":"validation error","data":{"password":"failed on the 'required' tag","username":"failed on the 'required' tag"}}`,
 		},
 		{
 			name:                 "Validation error: empty fingerprint",
 			requestBody:          `{"username":"root","password":"root1234"}`,
 			setFingerprint:       false,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"validation error","data":{"X-Fingerprint":"failed on the 'required' tag"}}`,
+			expectedResponseBody: `{"code":"CM0005","message":"validation error","data":{"X-Fingerprint":"failed on the 'required' tag"}}`,
 		},
 		{
 			name:           "Internal server error",
@@ -216,7 +216,7 @@ func TestController_logout(t *testing.T) {
 			name:                 "Validation error: refresh_token is required",
 			requestBody:          `{}`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"validation error","data":{"refresh_token":"failed on the 'required' tag"}}`,
+			expectedResponseBody: `{"code":"CM0005","message":"validation error","data":{"refresh_token":"failed on the 'required' tag"}}`,
 		},
 		{
 			name:        "Internal server error",
@@ -356,14 +356,14 @@ func TestController_refreshTokens(t *testing.T) {
 			requestBody:          `{}`,
 			setFingerprint:       true,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"validation error","data":{"refresh_token":"failed on the 'required' tag"}}`,
+			expectedResponseBody: `{"code":"CM0005","message":"validation error","data":{"refresh_token":"failed on the 'required' tag"}}`,
 		},
 		{
 			name:                 "Validation error: empty fingerprint",
 			requestBody:          `{"refresh_token":"Bulto5iG1kxFmt8VGkPw"}`,
 			setFingerprint:       false,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"validation error","data":{"X-Fingerprint":"failed on the 'required' tag"}}`,
+			expectedResponseBody: `{"code":"CM0005","message":"validation error","data":{"X-Fingerprint":"failed on the 'required' tag"}}`,
 		},
 		{
 			name:           "Internal server error",

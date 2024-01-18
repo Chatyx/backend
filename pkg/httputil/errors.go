@@ -47,8 +47,34 @@ func (e Error) Error() string {
 }
 
 var (
-	ErrInternalServer       = Error{Code: "CM0001", Message: "internal server error", StatusCode: http.StatusInternalServerError}
-	ErrDecodeBodyFailed     = Error{Code: "CM0002", Message: "decode body error", StatusCode: http.StatusBadRequest}
-	ErrValidationFailed     = Error{Code: "CM0003", Message: "validation error", StatusCode: http.StatusBadRequest}
-	ErrInvalidAuthorization = Error{Code: "CM0004", Message: "invalid Authorization header or query param", StatusCode: http.StatusBadRequest}
+	ErrInternalServer = Error{
+		Code:       "CM0001",
+		Message:    "internal server error",
+		StatusCode: http.StatusInternalServerError,
+	}
+	ErrDecodeBodyFailed = Error{
+		Code:       "CM0002",
+		Message:    "decode body error",
+		StatusCode: http.StatusBadRequest,
+	}
+	ErrDecodePathParamsFailed = Error{
+		Code:       "CM0003",
+		Message:    "decode path params error",
+		StatusCode: http.StatusBadRequest,
+	}
+	ErrDecodeQueryParamsFailed = Error{
+		Code:       "CM0004",
+		Message:    "decode query params error",
+		StatusCode: http.StatusBadRequest,
+	}
+	ErrValidationFailed = Error{
+		Code:       "CM0005",
+		Message:    "validation error",
+		StatusCode: http.StatusBadRequest,
+	}
+	ErrInvalidAuthorization = Error{
+		Code:       "CM0006",
+		Message:    "invalid Authorization header or query param",
+		StatusCode: http.StatusBadRequest,
+	}
 )
