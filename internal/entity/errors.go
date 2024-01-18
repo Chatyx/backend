@@ -3,5 +3,7 @@ package entity
 import "errors"
 
 var (
-	ErrWrongCurrentPassword = errors.New("wrong current password")
+	ErrUserNotFound          = errors.New("user is not found")
+	ErrSuchUserAlreadyExists = errors.New("user with such username or email already exists")
+	ErrWrongCurrentPassword  = errors.New("wrong current password")
 )
