@@ -39,7 +39,7 @@ func Authorize(signedKey any) Middleware {
 
 			logger := log.FromContext(ctx).With("user_id", subject)
 
-			ctx = log.WithLogger(ctxutil.WithUserID(ctx, subject), logger)
+			ctx = log.WithLogger(ctxutil.WithUserID(ctx, ctxutil.UserID(subject)), logger)
 			next.ServeHTTP(w, req.WithContext(ctx))
 		})
 	}
