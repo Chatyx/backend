@@ -19,7 +19,7 @@ const (
 	defaultRefreshTokeTTL = 60 * 24 * time.Hour
 )
 
-type CheckPasswordFunc func(user, password string) (userID string, ok bool, err error)
+type CheckPasswordFunc func(ctx context.Context, user, password string) (userID string, ok bool, err error)
 
 type EnrichClaimsFunc func(claims token.Claims)
 
@@ -111,7 +111,7 @@ func NewService(storage SessionStorage, opts ...ServiceOption) *Service {
 		AccessTokenTTL:  defaultAccessTokenTTL,
 		RefreshTokenTTL: defaultRefreshTokeTTL,
 		Issuer:          "pkg/auth",
-		CheckPassword: func(user, password string) (userID string, ok bool, err error) {
+		CheckPassword: func(_ context.Context, user, password string) (userID string, ok bool, err error) {
 			if user == "root" && password == "root1234" {
 				return "1", true, nil
 			}
@@ -140,7 +140,7 @@ func NewService(storage SessionStorage, opts ...ServiceOption) *Service {
 func (s *Service) Login(ctx context.Context, cred Credentials, opts ...MetaOption) (TokenPair, error) {
 	var pair TokenPair
 
-	userID, ok, err := s.checkPassword(cred.Username, cred.Password)
+	userID, ok, err := s.checkPassword(ctx, cred.Username, cred.Password)
 	if err != nil {
 		return pair, fmt.Errorf("check password: %w", err)
 	}

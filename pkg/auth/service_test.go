@@ -96,7 +96,7 @@ func TestService_Login(t *testing.T) {
 				WithEnrichClaims(func(claims token.Claims) {
 					claims[issuer] = issuer
 				}),
-				WithCheckPassword(func(user, password string) (userID string, ok bool, err error) {
+				WithCheckPassword(func(_ context.Context, user, password string) (userID string, ok bool, err error) {
 					if user == "error" || password == "error" {
 						return "", false, errUnexpected
 					}

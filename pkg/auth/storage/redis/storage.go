@@ -128,6 +128,11 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (core.
 	}, nil
 }
 
+func (s *Storage) DeleteAllByUserID(ctx context.Context, id string) error {
+	_, _ = ctx, id
+	panic("implement me")
+}
+
 func (s *Storage) Close() error {
 	if err := s.cli.Close(); err != nil {
 		return fmt.Errorf("redis client close: %v", err)

@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/Chatyx/backend/internal/config"
+	"github.com/Chatyx/backend/internal/service"
 	inhttp "github.com/Chatyx/backend/internal/transport/http"
 	"github.com/Chatyx/backend/pkg/auth"
 	"github.com/Chatyx/backend/pkg/auth/storage/redis"
@@ -64,6 +65,11 @@ func NewApp(confPath string) *App {
 	}
 	closers = append(closers, authStorage)
 
+	userService := service.NewUser(service.UserConfig{
+		UserRepository:    nil, // TODO
+		SessionRepository: authStorage,
+	})
+	_ = userService
 	authService := auth.NewService(
 		authStorage,
 		auth.WithIssuer(conf.Auth.Issuer),
@@ -71,7 +77,7 @@ func NewApp(confPath string) *App {
 		auth.WithAccessTokenTTL(conf.Auth.AccessTokenTTL),
 		auth.WithRefreshTokenTTL(conf.Auth.RefreshTokenTTL),
 		auth.WithLogger(log.With("service", "auth")),
-		// auth.WithCheckPassword(), TODO
+		auth.WithCheckPassword(userService.CheckPassword),
 	)
 
 	authorizeMiddleware := middleware.Authorize([]byte(conf.Auth.SignKey))
