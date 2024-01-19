@@ -129,8 +129,23 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (core.
 }
 
 func (s *Storage) DeleteAllByUserID(ctx context.Context, id string) error {
-	_, _ = ctx, id
-	panic("implement me")
+	userSessKey := fmt.Sprintf("user:%s:sessions", id)
+
+	refreshTokens, err := s.cli.SMembers(ctx, userSessKey).Result()
+	if err != nil {
+		return fmt.Errorf("read user sessions: %v", err)
+	}
+
+	keys := make([]string, 0, len(refreshTokens)+1)
+	keys = append(keys, userSessKey)
+	for _, rt := range refreshTokens {
+		keys = append(keys, "session:"+rt)
+	}
+
+	if err = s.cli.Del(ctx, keys...).Err(); err != nil {
+		return fmt.Errorf("delete user sessions: %v", err)
+	}
+	return nil
 }
 
 func (s *Storage) Close() error {
