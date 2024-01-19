@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Chatyx/backend/internal/config"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

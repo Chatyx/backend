@@ -9,8 +9,10 @@ import (
 	"syscall"
 
 	"github.com/Chatyx/backend/internal/config"
+	"github.com/Chatyx/backend/internal/infrastructure/repository/postgres"
 	"github.com/Chatyx/backend/internal/service"
 	inhttp "github.com/Chatyx/backend/internal/transport/http"
+	v1 "github.com/Chatyx/backend/internal/transport/http/v1"
 	"github.com/Chatyx/backend/pkg/auth"
 	"github.com/Chatyx/backend/pkg/auth/storage/redis"
 	auhttp "github.com/Chatyx/backend/pkg/auth/transport/http"
@@ -20,6 +22,13 @@ import (
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
+
+type CloserAdapter func()
+
+func (c CloserAdapter) Close() error {
+	c()
+	return nil
+}
 
 type Runner interface {
 	Run()
@@ -49,7 +58,13 @@ func NewApp(confPath string) *App {
 		log.WithError(err).Fatal("Failed to configure logger")
 	}
 
-	vld := validator.NewValidator()
+	pgPool, err := postgres.NewConnPool(conf.Postgres)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to init postgres connection pool")
+	}
+	closers = append(closers, CloserAdapter(pgPool.Close))
+
+	userRepo := postgres.NewUserRepository(pgPool)
 
 	authStorageDBNum, _ := strconv.Atoi(conf.Redis.Database)
 	authStorage, err := redis.NewStorage(redis.Config{
@@ -66,10 +81,9 @@ func NewApp(confPath string) *App {
 	closers = append(closers, authStorage)
 
 	userService := service.NewUser(service.UserConfig{
-		UserRepository:    nil, // TODO
+		UserRepository:    userRepo,
 		SessionRepository: authStorage,
 	})
-	_ = userService
 	authService := auth.NewService(
 		authStorage,
 		auth.WithIssuer(conf.Auth.Issuer),
@@ -81,7 +95,13 @@ func NewApp(confPath string) *App {
 	)
 
 	authorizeMiddleware := middleware.Authorize([]byte(conf.Auth.SignKey))
-	_ = authorizeMiddleware
+
+	vld := validator.NewValidator()
+	userController := v1.NewUserController(v1.UserControllerConfig{
+		Service:   userService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
 	authController := auhttp.NewController(
 		authService, vld,
 		auhttp.WithPrefixPath("/api/v1"),
@@ -96,6 +116,7 @@ func NewApp(confPath string) *App {
 			Cors:   conf.Cors,
 		},
 		authController,
+		userController,
 	)
 	runners = append(runners, apiServer)
 	closers = append(closers, apiServer)

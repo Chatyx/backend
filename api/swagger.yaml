@@ -880,6 +880,10 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/v1.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
         "404":
           description: Not Found
           schema:
@@ -999,6 +1003,10 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/httputil.Error'
         "500":
