@@ -10,6 +10,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	uniqueViolationCode = "23505"
+)
+
 func buildConnString(conf config.Postgres) string {
 	b := strings.Builder{}
 	b.WriteString(

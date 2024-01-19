@@ -115,7 +115,7 @@ func (s *Storage) GetWithDelete(ctx context.Context, refreshToken string) (core.
 
 	userSessKey := fmt.Sprintf("user:%s:sessions", rawSess.UserID)
 	if err = s.cli.SRem(ctx, userSessKey, refreshToken).Err(); err != nil {
-		return sess, fmt.Errorf("remove element from set: %v", err)
+		return sess, fmt.Errorf("remove user session from set: %v", err)
 	}
 
 	return core.Session{
@@ -133,7 +133,7 @@ func (s *Storage) DeleteAllByUserID(ctx context.Context, id string) error {
 
 	refreshTokens, err := s.cli.SMembers(ctx, userSessKey).Result()
 	if err != nil {
-		return fmt.Errorf("read user sessions: %v", err)
+		return fmt.Errorf("read all user sessions of the set: %v", err)
 	}
 
 	keys := make([]string, 0, len(refreshTokens)+1)
@@ -143,7 +143,7 @@ func (s *Storage) DeleteAllByUserID(ctx context.Context, id string) error {
 	}
 
 	if err = s.cli.Del(ctx, keys...).Err(); err != nil {
-		return fmt.Errorf("delete user sessions: %v", err)
+		return fmt.Errorf("delete all user sessions: %v", err)
 	}
 	return nil
 }
