@@ -67,7 +67,6 @@ func (u *User) Create(ctx context.Context, obj dto.UserCreate) (entity.User, err
 		LastName:  obj.LastName,
 		BirthDate: obj.BirthDate,
 		Bio:       obj.Bio,
-		IsActive:  true,
 		CreatedAt: time.Now(),
 	}
 
@@ -95,8 +94,6 @@ func (u *User) Update(ctx context.Context, obj dto.UserUpdate) (entity.User, err
 		LastName:  obj.LastName,
 		BirthDate: obj.BirthDate,
 		Bio:       obj.Bio,
-		IsActive:  true,
-		UpdatedAt: time.Now(),
 	}
 
 	if err := u.userRepo.Update(ctx, &user); err != nil {
@@ -136,7 +133,10 @@ func (u *User) CheckPassword(ctx context.Context, username, password string) (us
 		return "", false, fmt.Errorf("get user by name: %w", err)
 	}
 
-	return strconv.Itoa(user.ID), u.hasher.CompareHashAndPassword(user.PwdHash, password), nil
+	if !u.hasher.CompareHashAndPassword(user.PwdHash, password) {
+		return "", false, nil
+	}
+	return strconv.Itoa(user.ID), true, nil
 }
 
 func (u *User) Delete(ctx context.Context, id int) error {

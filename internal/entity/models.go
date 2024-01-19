@@ -9,11 +9,8 @@ type User struct {
 	Email     string
 	FirstName string
 	LastName  string
-	BirthDate time.Time
+	BirthDate *time.Time
 	Bio       string
-	IsActive  bool
-	IsDeleted bool
 	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt time.Time
+	UpdatedAt *time.Time
 }

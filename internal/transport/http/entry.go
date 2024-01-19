@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/Chatyx/backend/internal/config"
@@ -57,6 +58,8 @@ type Server struct {
 func NewServer(conf Config, cs ...Controller) *Server {
 	mux := httprouter.New()
 	mux.PanicHandler = func(w http.ResponseWriter, req *http.Request, i interface{}) {
+		log.FromContext(req.Context()).Debug(string(debug.Stack()))
+
 		err := fmt.Errorf("panic caught: %v", i)
 		httputil.RespondError(req.Context(), w, httputil.ErrInternalServer.Wrap(err))
 	}

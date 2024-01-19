@@ -8,7 +8,7 @@ type UserCreate struct {
 	Email     string
 	FirstName string
 	LastName  string
-	BirthDate time.Time
+	BirthDate *time.Time
 	Bio       string
 }
 
@@ -18,7 +18,7 @@ type UserUpdate struct {
 	Email     string
 	FirstName string
 	LastName  string
-	BirthDate time.Time
+	BirthDate *time.Time
 	Bio       string
 }
 

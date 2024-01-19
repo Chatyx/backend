@@ -44,7 +44,6 @@ CREATE TABLE IF NOT EXISTS users
     last_name  VARCHAR(50)              NULL,
     birth_date DATE                     NULL,
     bio        VARCHAR(10000)           NULL,
-    is_active  BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NULL,
     deleted_at TIMESTAMP WITH TIME ZONE NULL
