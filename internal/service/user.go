@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -129,6 +130,9 @@ func (u *User) UpdatePassword(ctx context.Context, obj dto.UserUpdatePassword) e
 func (u *User) CheckPassword(ctx context.Context, username, password string) (userID string, ok bool, err error) {
 	user, err := u.userRepo.GetByUsername(ctx, username)
 	if err != nil {
+		if errors.Is(err, entity.ErrUserNotFound) {
+			return "", false, nil
+		}
 		return "", false, fmt.Errorf("get user by name: %w", err)
 	}
 
