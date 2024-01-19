@@ -36,44 +36,10 @@ type Conn struct {
 }
 
 type Postgres struct {
-	Conn `yaml:"conn"`
-
-	// MaxOpenConns the maximum number of open connections to the database.
-	//
-	// If MaxIdleConns is greater than 0 and the new MaxOpenConns is less than
-	// MaxIdleConns, then MaxIdleConns will be reduced to match the new
-	// MaxOpenConns limit.
-	//
-	// If n <= 0, then there is no limit on the number of open connections.
-	// The default is 0 (unlimited).
-	MaxOpenConns int `yaml:"max_open_conns"`
-
-	// MaxIdleConns the maximum number of connections in the idle
-	// connection pool.
-	//
-	// If MaxOpenConns is greater than 0 but less than the new MaxIdleConns,
-	// then the new MaxIdleConns will be reduced to match the MaxOpenConns limit.
-	//
-	// If n <= 0, no idle connections are retained.
-	//
-	// The default max idle connections is currently 2. This may change in
-	// a future.
-	MaxIdleConns int `yaml:"max_idle_conns"`
-
-	// ConnMaxIdleTime the maximum amount of time a connection may be idle.
-	//
-	// Expired connections may be closed lazily before reuse.
-	//
-	// If d <= 0, connections are not closed due to a connection's idle time.
-	// The default is 0 (unlimited).
+	Conn            `yaml:"conn"`
+	MaxOpenConns    int           `yaml:"max_open_conns"`
+	MinOpenConns    int           `yaml:"min_open_conns"`
 	ConnMaxIdleTime time.Duration `yaml:"conn_max_idle_time"`
-
-	// ConnMaxLifetime the maximum amount of time a connection may be reused.
-	//
-	// Expired connections may be closed lazily before reuse.
-	//
-	// If d <= 0, connections are not closed due to a connection's age.
-	// The default is 0 (unlimited).
 	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime"`
 }
 
