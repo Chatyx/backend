@@ -12,5 +12,4 @@ type User struct {
 	BirthDate *time.Time
 	Bio       string
 	CreatedAt time.Time
-	UpdatedAt *time.Time
 }

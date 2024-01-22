@@ -22,11 +22,17 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 }
 
 func (r *UserRepository) List(ctx context.Context) ([]entity.User, error) {
-	query := `SELECT 
-		id, username, pwd_hash, email,
-		first_name, last_name, birth_date, bio, 
-		created_at, updated_at
-	FROM users WHERE deleted_at IS NULL`
+	query := `SELECT id,
+       username,
+       pwd_hash,
+       email,
+       first_name,
+       last_name,
+       birth_date,
+       bio,
+       created_at
+	FROM users
+	WHERE deleted_at IS NULL`
 
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
@@ -40,9 +46,9 @@ func (r *UserRepository) List(ctx context.Context) ([]entity.User, error) {
 		var user entity.User
 
 		err = rows.Scan(
-			&user.ID, &user.Username, &user.PwdHash, &user.Email,
-			&user.FirstName, &user.LastName, &user.BirthDate, &user.Bio,
-			&user.CreatedAt, &user.UpdatedAt,
+			&user.ID, &user.Username, &user.PwdHash,
+			&user.Email, &user.FirstName, &user.LastName,
+			&user.BirthDate, &user.Bio, &user.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan user row: %v", err)
@@ -59,10 +65,11 @@ func (r *UserRepository) List(ctx context.Context) ([]entity.User, error) {
 
 func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
 	query := `INSERT INTO users (
-        username, pwd_hash, email, 
-    	first_name, last_name, birth_date, 
+    	username, pwd_hash, email,
+        first_name, last_name, birth_date,
         bio, created_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	RETURNING id`
 
 	err := r.pool.QueryRow(ctx, query,
 		user.Username, user.PwdHash, user.Email,
@@ -82,21 +89,35 @@ func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id int) (entity.User, error) {
-	query := `SELECT 
-		id, username, pwd_hash, email,
-		first_name, last_name, birth_date, bio, 
-		created_at, updated_at
-	FROM users WHERE id = $1 AND deleted_at IS NULL`
+	query := `SELECT id,
+       username,
+       pwd_hash,
+       email,
+       first_name,
+       last_name,
+       birth_date,
+       bio,
+       created_at
+	FROM users
+	WHERE id = $1
+	  AND deleted_at IS NULL`
 
 	return r.getBy(ctx, query, id)
 }
 
 func (r *UserRepository) GetByUsername(ctx context.Context, username string) (entity.User, error) {
-	query := `SELECT 
-		id, username, pwd_hash, email,
-		first_name, last_name, birth_date, bio, 
-		created_at, updated_at
-	FROM users WHERE username = $1 AND deleted_at IS NULL`
+	query := `SELECT id,
+       username,
+       pwd_hash,
+       email,
+       first_name,
+       last_name,
+       birth_date,
+       bio,
+       created_at
+	FROM users
+	WHERE username = $1
+	  AND deleted_at IS NULL`
 
 	return r.getBy(ctx, query, username)
 }
@@ -105,9 +126,9 @@ func (r *UserRepository) getBy(ctx context.Context, query string, args ...any) (
 	var user entity.User
 
 	err := r.pool.QueryRow(ctx, query, args...).Scan(
-		&user.ID, &user.Username, &user.PwdHash, &user.Email,
-		&user.FirstName, &user.LastName, &user.BirthDate, &user.Bio,
-		&user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.Username, &user.PwdHash,
+		&user.Email, &user.FirstName, &user.LastName,
+		&user.BirthDate, &user.Bio, &user.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -121,11 +142,17 @@ func (r *UserRepository) getBy(ctx context.Context, query string, args ...any) (
 }
 
 func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
-	query := `UPDATE users SET 
-		username = $2, email = $3, first_name = $4, 
-		last_name = $5, birth_date = $6, 
-		bio = $7, updated_at = $8
-	WHERE id = $1 AND deleted_at IS NULL RETURNING pwd_hash, created_at`
+	query := `UPDATE users
+	SET username   = $2,
+		email      = $3,
+		first_name = $4,
+		last_name  = $5,
+		birth_date = $6,
+		bio        = $7,
+		updated_at = $8
+	WHERE id = $1
+	  AND deleted_at IS NULL
+	RETURNING pwd_hash, created_at`
 
 	err := r.pool.QueryRow(ctx, query, user.ID,
 		user.Username, user.Email, user.FirstName,
@@ -143,7 +170,11 @@ func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
 }
 
 func (r *UserRepository) UpdatePassword(ctx context.Context, userID int, pwdHash string) error {
-	query := "UPDATE users SET pwd_hash = $2, updated_at = $3 WHERE id = $1 AND deleted_at IS NULL"
+	query := `UPDATE users
+	SET pwd_hash   = $2,
+		updated_at = $3
+	WHERE id = $1
+	  AND deleted_at IS NULL`
 
 	execRes, err := r.pool.Exec(ctx, query, userID, pwdHash, time.Now())
 	if err != nil {
@@ -157,7 +188,11 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, userID int, pwdHash
 }
 
 func (r *UserRepository) Delete(ctx context.Context, id int) error {
-	query := "UPDATE users SET updated_at = $2, deleted_at = $2 WHERE id = $1 AND deleted_at IS NULL"
+	query := `UPDATE users
+	SET updated_at = $2,
+		deleted_at = $2
+	WHERE id = $1
+	  AND deleted_at IS NULL`
 
 	execRes, err := r.pool.Exec(ctx, query, id, time.Now())
 	if err != nil {
