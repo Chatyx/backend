@@ -103,12 +103,12 @@ func (r *GroupRepository) GetByID(ctx context.Context, groupID int) (entity.Grou
 
 	userID := ctxutil.UserIDFromContext(ctx).ToInt()
 	query := `SELECT c.id,
-		   c.name,
-		   c.description,
-		   c.created_at
+		c.name,
+		c.description,
+		c.created_at
 	FROM chats c
-			 INNER JOIN group_participants gp
-						ON c.id = gp.chat_id
+		INNER JOIN group_participants gp
+			ON c.id = gp.chat_id
 	WHERE c.id = $1
 	  AND c.type = 'group'
 	  AND gp.user_id = $2`
@@ -131,7 +131,7 @@ func (r *GroupRepository) GetByID(ctx context.Context, groupID int) (entity.Grou
 func (r *GroupRepository) Update(ctx context.Context, group *entity.Group) error {
 	userID := ctxutil.UserIDFromContext(ctx).ToInt()
 	query := `UPDATE chats AS c
-	SET name        = $3,
+	SET	name        = $3,
 		description = $4,
 		updated_at  = $5
 	FROM group_participants AS gp
@@ -173,7 +173,7 @@ func (r *GroupRepository) Delete(ctx context.Context, groupID int) error {
 	}
 
 	if execRes.RowsAffected() == 0 {
-		return fmt.Errorf("there's no affected rows: %w", entity.ErrGroupNotFound)
+		return fmt.Errorf("there aren't affected rows: %w", entity.ErrGroupNotFound)
 	}
 	return nil
 }

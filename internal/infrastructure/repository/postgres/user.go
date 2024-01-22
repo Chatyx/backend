@@ -23,14 +23,14 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 
 func (r *UserRepository) List(ctx context.Context) ([]entity.User, error) {
 	query := `SELECT id,
-       username,
-       pwd_hash,
-       email,
-       first_name,
-       last_name,
-       birth_date,
-       bio,
-       created_at
+		username,
+		pwd_hash,
+		email,
+		first_name,
+		last_name,
+		birth_date,
+		bio,
+		created_at
 	FROM users
 	WHERE deleted_at IS NULL`
 
@@ -66,8 +66,8 @@ func (r *UserRepository) List(ctx context.Context) ([]entity.User, error) {
 func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
 	query := `INSERT INTO users (
     	username, pwd_hash, email,
-        first_name, last_name, birth_date,
-        bio, created_at)
+		first_name, last_name, birth_date,
+		bio, created_at)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	RETURNING id`
 
@@ -90,14 +90,14 @@ func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
 
 func (r *UserRepository) GetByID(ctx context.Context, id int) (entity.User, error) {
 	query := `SELECT id,
-       username,
-       pwd_hash,
-       email,
-       first_name,
-       last_name,
-       birth_date,
-       bio,
-       created_at
+		username,
+		pwd_hash,
+		email,
+		first_name,
+		last_name,
+		birth_date,
+		bio,
+		created_at
 	FROM users
 	WHERE id = $1
 	  AND deleted_at IS NULL`
@@ -107,14 +107,14 @@ func (r *UserRepository) GetByID(ctx context.Context, id int) (entity.User, erro
 
 func (r *UserRepository) GetByUsername(ctx context.Context, username string) (entity.User, error) {
 	query := `SELECT id,
-       username,
-       pwd_hash,
-       email,
-       first_name,
-       last_name,
-       birth_date,
-       bio,
-       created_at
+		username,
+		pwd_hash,
+		email,
+		first_name,
+		last_name,
+		birth_date,
+		bio,
+		created_at
 	FROM users
 	WHERE username = $1
 	  AND deleted_at IS NULL`
@@ -143,7 +143,7 @@ func (r *UserRepository) getBy(ctx context.Context, query string, args ...any) (
 
 func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
 	query := `UPDATE users
-	SET username   = $2,
+	SET	username   = $2,
 		email      = $3,
 		first_name = $4,
 		last_name  = $5,
@@ -171,7 +171,7 @@ func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
 
 func (r *UserRepository) UpdatePassword(ctx context.Context, userID int, pwdHash string) error {
 	query := `UPDATE users
-	SET pwd_hash   = $2,
+	SET	pwd_hash   = $2,
 		updated_at = $3
 	WHERE id = $1
 	  AND deleted_at IS NULL`
@@ -182,14 +182,14 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, userID int, pwdHash
 	}
 
 	if execRes.RowsAffected() == 0 {
-		return fmt.Errorf("there's no affected rows: %w", entity.ErrUserNotFound)
+		return fmt.Errorf("there aren't affected rows: %w", entity.ErrUserNotFound)
 	}
 	return nil
 }
 
 func (r *UserRepository) Delete(ctx context.Context, id int) error {
 	query := `UPDATE users
-	SET updated_at = $2,
+	SET	updated_at = $2,
 		deleted_at = $2
 	WHERE id = $1
 	  AND deleted_at IS NULL`
@@ -200,7 +200,7 @@ func (r *UserRepository) Delete(ctx context.Context, id int) error {
 	}
 
 	if execRes.RowsAffected() == 0 {
-		return fmt.Errorf("there's no affected rows: %w", entity.ErrUserNotFound)
+		return fmt.Errorf("there aren't affected rows: %w", entity.ErrUserNotFound)
 	}
 	return nil
 }
