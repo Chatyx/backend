@@ -13,3 +13,10 @@ type User struct {
 	Bio       string
 	CreatedAt time.Time
 }
+
+type Group struct {
+	ID          int
+	Name        string
+	Description string
+	CreatedAt   time.Time
+}

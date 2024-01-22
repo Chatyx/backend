@@ -22,4 +22,10 @@ var (
 		Message:    "wrong current password",
 		StatusCode: http.StatusBadRequest,
 	}
+
+	errGroupNotFound = httputil.Error{
+		Code:       "CH0001",
+		Message:    "group is not found",
+		StatusCode: http.StatusNotFound,
+	}
 )

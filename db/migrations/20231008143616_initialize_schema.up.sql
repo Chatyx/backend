@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS chats
 (
     id          BIGSERIAL PRIMARY KEY,
     type        chat_type                NOT NULL,
+    uname       VARCHAR(255) UNIQUE      NULL,
     name        VARCHAR(255)             NULL,
     description VARCHAR(10000)           NULL,
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -65,8 +66,8 @@ CREATE TABLE IF NOT EXISTS group_participants
         REFERENCES chats (id) ON DELETE CASCADE,
     user_id  BIGINT                   NOT NULL
         REFERENCES users (id),
-    status   group_participant_status NOT NULL,
-    is_admin BOOLEAN DEFAULT FALSE,
+    status   group_participant_status NOT NULL DEFAULT 'joined',
+    is_admin BOOLEAN                           DEFAULT FALSE,
 
     PRIMARY KEY (chat_id, user_id)
 );

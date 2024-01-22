@@ -65,6 +65,7 @@ func NewApp(confPath string) *App {
 	closers = append(closers, CloserAdapter(pgPool.Close))
 
 	userRepo := postgres.NewUserRepository(pgPool)
+	groupRepo := postgres.NewGroupRepository(pgPool)
 
 	authStorageDBNum, _ := strconv.Atoi(conf.Redis.Database)
 	authStorage, err := redis.NewStorage(redis.Config{
@@ -84,6 +85,7 @@ func NewApp(confPath string) *App {
 		UserRepository:    userRepo,
 		SessionRepository: authStorage,
 	})
+	groupService := service.NewGroup(groupRepo)
 	authService := auth.NewService(
 		authStorage,
 		auth.WithIssuer(conf.Auth.Issuer),
@@ -102,6 +104,11 @@ func NewApp(confPath string) *App {
 		Authorize: authorizeMiddleware,
 		Validator: vld,
 	})
+	groupController := v1.NewGroupController(v1.GroupControllerConfig{
+		Service:   groupService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
 	authController := auhttp.NewController(
 		authService, vld,
 		auhttp.WithPrefixPath("/api/v1"),
@@ -117,6 +124,7 @@ func NewApp(confPath string) *App {
 		},
 		authController,
 		userController,
+		groupController,
 	)
 	runners = append(runners, apiServer)
 	closers = append(closers, apiServer)
