@@ -191,7 +191,6 @@ func (uc *UserController) list(w http.ResponseWriter, req *http.Request) {
 //	@Param		input	body		UserCreate	true	"Body to create"
 //	@Success	201		{object}	User
 //	@Failure	400		{object}	httputil.Error
-//	@Failure	404		{object}	httputil.Error
 //	@Failure	500		{object}	httputil.Error
 //	@Router		/users [post]
 func (uc *UserController) create(w http.ResponseWriter, req *http.Request) {
