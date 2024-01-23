@@ -122,6 +122,7 @@ type UserUpdatePassword struct {
 	Current string `json:"current_password" validate:"required,min=8,max=27"`
 }
 
+//go:generate mockery --inpackage --testonly --case underscore --name UserService
 type UserService interface {
 	List(ctx context.Context) ([]entity.User, error)
 	Create(ctx context.Context, obj dto.UserCreate) (entity.User, error)
