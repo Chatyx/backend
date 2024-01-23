@@ -39,9 +39,7 @@ func (v Validator) Struct(val any) error {
 		if errors.As(err, &vErrs) {
 			fields := make(ErrorFields, len(vErrs))
 			for _, vErr := range vErrs {
-				fullFieldName := strings.Join(
-					strings.Split(vErr.Namespace(), ".")[1:],
-					".")
+				fullFieldName := extractFieldName(vErr.Namespace(), vErr.StructNamespace())
 				fields[fullFieldName] = fmt.Sprintf("failed on the '%s' tag", vErr.Tag())
 			}
 
@@ -95,4 +93,19 @@ func MergeResults(errs ...error) error {
 		return Error{Fields: fields}
 	}
 	return nil
+}
+
+func extractFieldName(ns, structNs string) string {
+	nsParts := strings.Split(ns, ".")
+	structNsParts := strings.Split(structNs, ".")
+
+	for i, nsPart := range nsParts {
+		if nsPart == structNsParts[i] {
+			continue
+		}
+
+		return strings.Join(nsParts[i:], ".")
+	}
+
+	return ns
 }
