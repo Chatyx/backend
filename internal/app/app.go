@@ -39,6 +39,7 @@ type App struct {
 	closers []io.Closer
 }
 
+//nolint:funlen // there are a lot of components here that need to be configured
 func NewApp(confPath string) *App {
 	var (
 		conf    config.Config
@@ -66,6 +67,7 @@ func NewApp(confPath string) *App {
 
 	userRepo := postgres.NewUserRepository(pgPool)
 	groupRepo := postgres.NewGroupRepository(pgPool)
+	dialogRepo := postgres.NewDialogRepository(pgPool)
 
 	authStorageDBNum, _ := strconv.Atoi(conf.Redis.Database)
 	authStorage, err := redis.NewStorage(redis.Config{
@@ -86,6 +88,7 @@ func NewApp(confPath string) *App {
 		SessionRepository: authStorage,
 	})
 	groupService := service.NewGroup(groupRepo)
+	dialogService := service.NewDialog(dialogRepo)
 	authService := auth.NewService(
 		authStorage,
 		auth.WithIssuer(conf.Auth.Issuer),
@@ -109,6 +112,11 @@ func NewApp(confPath string) *App {
 		Authorize: authorizeMiddleware,
 		Validator: vld,
 	})
+	dialogController := v1.NewDialogController(v1.DialogControllerConfig{
+		Service:   dialogService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
 	authController := auhttp.NewController(
 		authService, vld,
 		auhttp.WithPrefixPath("/api/v1"),
@@ -125,6 +133,7 @@ func NewApp(confPath string) *App {
 		authController,
 		userController,
 		groupController,
+		dialogController,
 	)
 	runners = append(runners, apiServer)
 	closers = append(closers, apiServer)

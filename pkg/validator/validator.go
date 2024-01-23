@@ -39,7 +39,10 @@ func (v Validator) Struct(val any) error {
 		if errors.As(err, &vErrs) {
 			fields := make(ErrorFields, len(vErrs))
 			for _, vErr := range vErrs {
-				fields[vErr.Field()] = fmt.Sprintf("failed on the '%s' tag", vErr.Tag())
+				fullFieldName := strings.Join(
+					strings.Split(vErr.Namespace(), ".")[1:],
+					".")
+				fields[fullFieldName] = fmt.Sprintf("failed on the '%s' tag", vErr.Tag())
 			}
 
 			return Error{Fields: fields}

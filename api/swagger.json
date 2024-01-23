@@ -209,7 +209,7 @@
                 "tags": [
                     "dialogs"
                 ],
-                "summary": "Create a dialog with a specified participant",
+                "summary": "Create a dialog with a specified partner",
                 "parameters": [
                     {
                         "description": "Body to create",
@@ -1221,7 +1221,7 @@
                 "is_blocked": {
                     "type": "boolean"
                 },
-                "participant": {
+                "partner": {
                     "type": "object",
                     "properties": {
                         "is_blocked": {
@@ -1229,9 +1229,6 @@
                         },
                         "user_id": {
                             "type": "integer"
-                        },
-                        "username": {
-                            "type": "string"
                         }
                     }
                 }
@@ -1240,7 +1237,7 @@
         "v1.DialogCreate": {
             "type": "object",
             "properties": {
-                "participant": {
+                "partner": {
                     "type": "object",
                     "required": [
                         "user_id"
@@ -1270,7 +1267,7 @@
         "v1.DialogUpdate": {
             "type": "object",
             "properties": {
-                "participant": {
+                "partner": {
                     "type": "object",
                     "properties": {
                         "is_blocked": {

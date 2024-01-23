@@ -6,6 +6,7 @@ import (
 	"github.com/Chatyx/backend/pkg/httputil"
 )
 
+// user errors.
 var (
 	errUserNotFound = httputil.Error{
 		Code:       "US0001",
@@ -22,10 +23,33 @@ var (
 		Message:    "wrong current password",
 		StatusCode: http.StatusBadRequest,
 	}
+)
 
+// chat (groups/dialogs) and participant errors.
+var (
 	errGroupNotFound = httputil.Error{
 		Code:       "CH0001",
 		Message:    "group is not found",
 		StatusCode: http.StatusNotFound,
+	}
+	errDialogNotFound = httputil.Error{
+		Code:       "CH0002",
+		Message:    "dialog is not found",
+		StatusCode: http.StatusNotFound,
+	}
+	errSuchDialogAlreadyExists = httputil.Error{
+		Code:       "CH0003",
+		Message:    "such a dialog already exists",
+		StatusCode: http.StatusBadRequest,
+	}
+	errCreatingDialogWithYourself = httputil.Error{
+		Code:       "CH0004",
+		Message:    "creating a dialog with yourself",
+		StatusCode: http.StatusBadRequest,
+	}
+	errCreatingDialogWithNonExistencePartner = httputil.Error{
+		Code:       "CH0005",
+		Message:    "creating a dialog with a non-existent partner",
+		StatusCode: http.StatusBadRequest,
 	}
 )

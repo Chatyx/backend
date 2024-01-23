@@ -46,19 +46,17 @@ definitions:
         type: integer
       is_blocked:
         type: boolean
-      participant:
+      partner:
         properties:
           is_blocked:
             type: boolean
           user_id:
             type: integer
-          username:
-            type: string
         type: object
     type: object
   v1.DialogCreate:
     properties:
-      participant:
+      partner:
         properties:
           user_id:
             type: integer
@@ -77,7 +75,7 @@ definitions:
     type: object
   v1.DialogUpdate:
     properties:
-      participant:
+      partner:
         properties:
           is_blocked:
             type: boolean
@@ -439,7 +437,7 @@ paths:
             $ref: '#/definitions/httputil.Error'
       security:
       - JWTAuth: []
-      summary: Create a dialog with a specified participant
+      summary: Create a dialog with a specified partner
       tags:
       - dialogs
   /dialogs/{dialog_id}:

@@ -20,3 +20,15 @@ type Group struct {
 	Description string
 	CreatedAt   time.Time
 }
+
+type DialogPartner struct {
+	UserID    int
+	IsBlocked bool
+}
+
+type Dialog struct {
+	ID        int
+	IsBlocked bool
+	Partner   DialogPartner
+	CreatedAt time.Time
+}

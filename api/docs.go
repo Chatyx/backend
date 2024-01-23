@@ -215,7 +215,7 @@ const docTemplate = `{
                 "tags": [
                     "dialogs"
                 ],
-                "summary": "Create a dialog with a specified participant",
+                "summary": "Create a dialog with a specified partner",
                 "parameters": [
                     {
                         "description": "Body to create",
@@ -1227,7 +1227,7 @@ const docTemplate = `{
                 "is_blocked": {
                     "type": "boolean"
                 },
-                "participant": {
+                "partner": {
                     "type": "object",
                     "properties": {
                         "is_blocked": {
@@ -1235,9 +1235,6 @@ const docTemplate = `{
                         },
                         "user_id": {
                             "type": "integer"
-                        },
-                        "username": {
-                            "type": "string"
                         }
                     }
                 }
@@ -1246,7 +1243,7 @@ const docTemplate = `{
         "v1.DialogCreate": {
             "type": "object",
             "properties": {
-                "participant": {
+                "partner": {
                     "type": "object",
                     "required": [
                         "user_id"
@@ -1276,7 +1273,7 @@ const docTemplate = `{
         "v1.DialogUpdate": {
             "type": "object",
             "properties": {
-                "participant": {
+                "partner": {
                     "type": "object",
                     "properties": {
                         "is_blocked": {

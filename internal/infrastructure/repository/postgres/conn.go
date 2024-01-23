@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	uniqueViolationCode = "23505"
+	foreignKeyViolationCode = "23503"
+	uniqueViolationCode     = "23505"
 )
 
 func buildConnString(conf config.Postgres) string {
