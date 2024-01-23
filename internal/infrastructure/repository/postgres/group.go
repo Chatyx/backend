@@ -119,7 +119,7 @@ func (r *GroupRepository) GetByID(ctx context.Context, groupID int) (entity.Grou
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return group, fmt.Errorf("%v: %w", err, entity.ErrGroupNotFound)
+			return group, fmt.Errorf("%w: %v", entity.ErrGroupNotFound, err)
 		}
 
 		return group, fmt.Errorf("exec query to select group: %v", err)
@@ -148,7 +148,7 @@ func (r *GroupRepository) Update(ctx context.Context, group *entity.Group) error
 	).Scan(&group.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("%v: %w", err, entity.ErrGroupNotFound)
+			return fmt.Errorf("%w: %v", entity.ErrGroupNotFound, err)
 		}
 		return fmt.Errorf("exec query to update group: %v", err)
 	}
@@ -173,7 +173,7 @@ func (r *GroupRepository) Delete(ctx context.Context, groupID int) error {
 	}
 
 	if execRes.RowsAffected() == 0 {
-		return fmt.Errorf("there aren't affected rows: %w", entity.ErrGroupNotFound)
+		return fmt.Errorf("%w: there aren't affected rows", entity.ErrGroupNotFound)
 	}
 	return nil
 }

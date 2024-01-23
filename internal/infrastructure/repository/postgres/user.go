@@ -79,7 +79,7 @@ func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
 	if err != nil {
 		pgErr := &pgconn.PgError{}
 		if errors.As(err, &pgErr) && pgErr.Code == uniqueViolationCode {
-			return fmt.Errorf("%s: %w", pgErr.Message, entity.ErrSuchUserAlreadyExists)
+			return fmt.Errorf("%w: %s", entity.ErrSuchUserAlreadyExists, pgErr.Message)
 		}
 
 		return fmt.Errorf("exec query to insert user: %v", err)
@@ -132,7 +132,7 @@ func (r *UserRepository) getBy(ctx context.Context, query string, args ...any) (
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return user, fmt.Errorf("%v: %w", err, entity.ErrUserNotFound)
+			return user, fmt.Errorf("%w: %v", entity.ErrUserNotFound, err)
 		}
 
 		return user, fmt.Errorf("exec query to select user: %v", err)
@@ -161,7 +161,7 @@ func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
 	).Scan(&user.PwdHash, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("%v: %w", err, entity.ErrUserNotFound)
+			return fmt.Errorf("%w: %v", entity.ErrUserNotFound, err)
 		}
 		return fmt.Errorf("exec query to update user: %v", err)
 	}
@@ -182,7 +182,7 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, userID int, pwdHash
 	}
 
 	if execRes.RowsAffected() == 0 {
-		return fmt.Errorf("there aren't affected rows: %w", entity.ErrUserNotFound)
+		return fmt.Errorf("%w: there aren't affected rows", entity.ErrUserNotFound)
 	}
 	return nil
 }
@@ -200,7 +200,7 @@ func (r *UserRepository) Delete(ctx context.Context, id int) error {
 	}
 
 	if execRes.RowsAffected() == 0 {
-		return fmt.Errorf("there aren't affected rows: %w", entity.ErrUserNotFound)
+		return fmt.Errorf("%w: there aren't affected rows", entity.ErrUserNotFound)
 	}
 	return nil
 }
