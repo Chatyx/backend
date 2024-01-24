@@ -82,6 +82,7 @@ func (g GroupUpdate) DTO() dto.GroupUpdate {
 	}
 }
 
+//go:generate mockery --inpackage --testonly --case underscore --name GroupService
 type GroupService interface {
 	List(ctx context.Context) ([]entity.Group, error)
 	Create(ctx context.Context, obj dto.GroupCreate) (entity.Group, error)
