@@ -184,8 +184,8 @@ func (dc *DialogController) create(w http.ResponseWriter, req *http.Request) {
 			httputil.RespondError(ctx, w, errSuchDialogAlreadyExists.Wrap(err))
 		case errors.Is(err, entity.ErrCreatingDialogWithYourself):
 			httputil.RespondError(ctx, w, errCreatingDialogWithYourself.Wrap(err))
-		case errors.Is(err, entity.ErrCreatingDialogWithNonExistencePartner):
-			httputil.RespondError(ctx, w, errCreatingDialogWithNonExistencePartner.Wrap(err))
+		case errors.Is(err, entity.ErrCreatingDialogWithNonExistenceUser):
+			httputil.RespondError(ctx, w, errCreatingDialogWithNonExistenceUser.Wrap(err))
 		default:
 			httputil.RespondError(ctx, w, err)
 		}
@@ -257,17 +257,6 @@ func (dc *DialogController) update(w http.ResponseWriter, req *http.Request) {
 	var bodyObj DialogUpdate
 
 	if err = httputil.DecodeBody(req.Body, &bodyObj); err != nil {
-		httputil.RespondError(ctx, w, err)
-		return
-	}
-
-	if err = dc.validator.Struct(bodyObj); err != nil {
-		ve := validator.Error{}
-		if errors.As(err, &ve) {
-			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
-			return
-		}
-
 		httputil.RespondError(ctx, w, err)
 		return
 	}

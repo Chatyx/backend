@@ -47,9 +47,9 @@ var (
 		Message:    "creating a dialog with yourself",
 		StatusCode: http.StatusBadRequest,
 	}
-	errCreatingDialogWithNonExistencePartner = httputil.Error{
+	errCreatingDialogWithNonExistenceUser = httputil.Error{
 		Code:       "CH0005",
-		Message:    "creating a dialog with a non-existent partner",
+		Message:    "creating a dialog with a non-existent user",
 		StatusCode: http.StatusBadRequest,
 	}
 )
