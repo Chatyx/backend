@@ -88,6 +88,7 @@ func (d DialogUpdate) DTO() dto.DialogUpdate {
 	}
 }
 
+//go:generate mockery --inpackage --testonly --case underscore --name DialogService
 type DialogService interface {
 	List(ctx context.Context) ([]entity.Dialog, error)
 	Create(ctx context.Context, obj dto.DialogCreate) (entity.Dialog, error)
