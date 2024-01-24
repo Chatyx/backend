@@ -230,7 +230,7 @@ func TestUserController_create(t *testing.T) {
 			})
 
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, userListPath, strings.NewReader(testCase.requestBody))
+			req := httptest.NewRequest(http.MethodPost, userListPath, strings.NewReader(testCase.requestBody))
 
 			cnt.create(rec, req)
 			resp := rec.Result()
@@ -473,7 +473,7 @@ func TestUserController_update(t *testing.T) {
 			})
 
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, userMePath, strings.NewReader(testCase.requestBody))
+			req := httptest.NewRequest(http.MethodPut, userMePath, strings.NewReader(testCase.requestBody))
 			ctx := ctxutil.WithUserID(req.Context(), "1")
 			req = req.WithContext(ctx)
 
@@ -575,7 +575,7 @@ func TestUserController_updatePassword(t *testing.T) {
 			})
 
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, userMePath, strings.NewReader(testCase.requestBody))
+			req := httptest.NewRequest(http.MethodPut, userMePath, strings.NewReader(testCase.requestBody))
 			ctx := ctxutil.WithUserID(req.Context(), "1")
 			req = req.WithContext(ctx)
 
@@ -599,7 +599,7 @@ func TestUserController_delete(t *testing.T) {
 		expectedResponseBody string
 	}{
 		{
-			name: "Success with required fields",
+			name: "Successful",
 			mockBehavior: func(s *MockUserService) {
 				s.On("Delete", mock.Anything, 1).Return(nil)
 			},
@@ -636,7 +636,7 @@ func TestUserController_delete(t *testing.T) {
 			})
 
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, userDetailPath, nil)
+			req := httptest.NewRequest(http.MethodDelete, userDetailPath, nil)
 			ctx := ctxutil.WithUserID(req.Context(), "1")
 			req = req.WithContext(ctx)
 
