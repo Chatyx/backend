@@ -79,7 +79,7 @@ func (r *DialogRepository) Create(ctx context.Context, dialog *entity.Dialog) er
 	userID := ctxutil.UserIDFromContext(ctx).ToInt()
 	partnerUserID := dialog.Partner.UserID
 	if userID == partnerUserID {
-		return entity.ErrCreatingDialogWithYourself
+		return entity.ErrCreateDialogWithYourself
 	}
 
 	tx, err := r.pool.Begin(ctx)
@@ -114,7 +114,7 @@ func (r *DialogRepository) Create(ctx context.Context, dialog *entity.Dialog) er
 	if _, err = tx.Exec(ctx, query, dialog.ID, userID, partnerUserID); err != nil {
 		pgErr := &pgconn.PgError{}
 		if errors.As(err, &pgErr) && isDialogParticipantUserViolation(pgErr) {
-			return fmt.Errorf("%w: %v", entity.ErrCreatingDialogWithNonExistenceUser, pgErr.Message)
+			return fmt.Errorf("%w: %v", entity.ErrCreateDialogWithNonExistentUser, pgErr.Message)
 		}
 		return fmt.Errorf("exec query to insert dialog participants: %v", err)
 	}

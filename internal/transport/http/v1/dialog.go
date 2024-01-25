@@ -183,10 +183,10 @@ func (dc *DialogController) create(w http.ResponseWriter, req *http.Request) {
 		switch {
 		case errors.Is(err, entity.ErrSuchDialogAlreadyExists):
 			httputil.RespondError(ctx, w, errSuchDialogAlreadyExists.Wrap(err))
-		case errors.Is(err, entity.ErrCreatingDialogWithYourself):
-			httputil.RespondError(ctx, w, errCreatingDialogWithYourself.Wrap(err))
-		case errors.Is(err, entity.ErrCreatingDialogWithNonExistenceUser):
-			httputil.RespondError(ctx, w, errCreatingDialogWithNonExistenceUser.Wrap(err))
+		case errors.Is(err, entity.ErrCreateDialogWithYourself):
+			httputil.RespondError(ctx, w, errCreateDialogWithYourself.Wrap(err))
+		case errors.Is(err, entity.ErrCreateDialogWithNonExistentUser):
+			httputil.RespondError(ctx, w, errCreateDialogWithNonExistenceUser.Wrap(err))
 		default:
 			httputil.RespondError(ctx, w, err)
 		}

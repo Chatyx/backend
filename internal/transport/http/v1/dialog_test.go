@@ -153,7 +153,7 @@ func TestDialogController_create(t *testing.T) {
 			mockBehavior: func(s *MockDialogService) {
 				s.On("Create", mock.Anything, dto.DialogCreate{
 					PartnerUserID: 2,
-				}).Return(entity.Dialog{}, entity.ErrCreatingDialogWithYourself)
+				}).Return(entity.Dialog{}, entity.ErrCreateDialogWithYourself)
 			},
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"code":"CH0004","message":"creating a dialog with yourself"}`,
@@ -164,7 +164,7 @@ func TestDialogController_create(t *testing.T) {
 			mockBehavior: func(s *MockDialogService) {
 				s.On("Create", mock.Anything, dto.DialogCreate{
 					PartnerUserID: 2,
-				}).Return(entity.Dialog{}, entity.ErrCreatingDialogWithNonExistenceUser)
+				}).Return(entity.Dialog{}, entity.ErrCreateDialogWithNonExistentUser)
 			},
 			expectedStatusCode:   http.StatusBadRequest,
 			expectedResponseBody: `{"code":"CH0005","message":"creating a dialog with a non-existent user"}`,
