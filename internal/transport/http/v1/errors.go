@@ -42,14 +42,34 @@ var (
 		Message:    "such a dialog already exists",
 		StatusCode: http.StatusBadRequest,
 	}
-	errCreatingDialogWithYourself = httputil.Error{
+	errCreateDialogWithYourself = httputil.Error{
 		Code:       "CH0004",
 		Message:    "creating a dialog with yourself",
 		StatusCode: http.StatusBadRequest,
 	}
-	errCreatingDialogWithNonExistenceUser = httputil.Error{
+	errCreateDialogWithNonExistenceUser = httputil.Error{
 		Code:       "CH0005",
 		Message:    "creating a dialog with a non-existent user",
+		StatusCode: http.StatusBadRequest,
+	}
+	errGroupParticipantNotFound = httputil.Error{
+		Code:       "CH0006",
+		Message:    "group participant is not found",
+		StatusCode: http.StatusNotFound,
+	}
+	errInviteNonExistentUserToGroup = httputil.Error{
+		Code:       "CH0007",
+		Message:    "inviting non-existent user to group",
+		StatusCode: http.StatusBadRequest,
+	}
+	errSuchGroupParticipantAlreadyExists = httputil.Error{
+		Code:       "CH0008",
+		Message:    "such a group participant already exists",
+		StatusCode: http.StatusBadRequest,
+	}
+	errIncorrectGroupParticipantStatusTransit = httputil.Error{
+		Code:       "CH0009",
+		Message:    "incorrect group participant status transit",
 		StatusCode: http.StatusBadRequest,
 	}
 )

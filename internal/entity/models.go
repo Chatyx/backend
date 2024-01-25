@@ -2,6 +2,18 @@ package entity
 
 import "time"
 
+type GroupParticipantStatus string
+
+func (gps GroupParticipantStatus) String() string {
+	return string(gps)
+}
+
+const (
+	JoinedStatus GroupParticipantStatus = "joined"
+	KickedStatus GroupParticipantStatus = "kicked"
+	LeftStatus   GroupParticipantStatus = "left"
+)
+
 type User struct {
 	ID        int
 	Username  string
@@ -19,6 +31,17 @@ type Group struct {
 	Name        string
 	Description string
 	CreatedAt   time.Time
+}
+
+type GroupParticipant struct {
+	GroupID int
+	UserID  int
+	IsAdmin bool
+	Status  GroupParticipantStatus
+}
+
+func (p GroupParticipant) IsInGroup() bool {
+	return p.Status == JoinedStatus
 }
 
 type DialogPartner struct {

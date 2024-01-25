@@ -68,6 +68,7 @@ func NewApp(confPath string) *App {
 	userRepo := postgres.NewUserRepository(pgPool)
 	groupRepo := postgres.NewGroupRepository(pgPool)
 	dialogRepo := postgres.NewDialogRepository(pgPool)
+	groupParticipantRepo := postgres.NewGroupParticipantRepository(pgPool)
 
 	authStorageDBNum, _ := strconv.Atoi(conf.Redis.Database)
 	authStorage, err := redis.NewStorage(redis.Config{
@@ -89,6 +90,7 @@ func NewApp(confPath string) *App {
 	})
 	groupService := service.NewGroup(groupRepo)
 	dialogService := service.NewDialog(dialogRepo)
+	groupParticipantService := service.NewGroupParticipant(groupParticipantRepo)
 	authService := auth.NewService(
 		authStorage,
 		auth.WithIssuer(conf.Auth.Issuer),
@@ -117,6 +119,11 @@ func NewApp(confPath string) *App {
 		Authorize: authorizeMiddleware,
 		Validator: vld,
 	})
+	groupParticipantController := v1.NewGroupParticipantController(v1.GroupParticipantControllerConfig{
+		Service:   groupParticipantService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
 	authController := auhttp.NewController(
 		authService, vld,
 		auhttp.WithPrefixPath("/api/v1"),
@@ -134,6 +141,7 @@ func NewApp(confPath string) *App {
 		userController,
 		groupController,
 		dialogController,
+		groupParticipantController,
 	)
 	runners = append(runners, apiServer)
 	closers = append(closers, apiServer)

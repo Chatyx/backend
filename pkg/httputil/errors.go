@@ -77,4 +77,9 @@ var (
 		Message:    "invalid Authorization header or query param",
 		StatusCode: http.StatusBadRequest,
 	}
+	ErrForbiddenPerformAction = Error{
+		Code:       "CM0007",
+		Message:    "it's forbidden to perform this action",
+		StatusCode: http.StatusForbidden,
+	}
 )
