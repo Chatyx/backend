@@ -38,12 +38,10 @@ func (e Error) Unwrap() error {
 }
 
 func (e Error) Error() string {
-	res := fmt.Sprintf("[%s] - %s", e.Code, e.Message)
 	if e.Err != nil {
-		res += ": " + e.Err.Error()
+		return fmt.Sprintf("[%s] - %s", e.Code, e.Err.Error())
 	}
-
-	return res
+	return fmt.Sprintf("[%s] - %s", e.Code, e.Message)
 }
 
 var (
