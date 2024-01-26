@@ -51,9 +51,10 @@ func NewGroupParticipantList(participants []entity.GroupParticipant) GroupPartic
 }
 
 type GroupParticipantUpdate struct {
-	Status *string `json:"status" validate:"oneof=joined left kicked"`
+	Status *string `json:"status" validate:"omitempty,oneof=joined left kicked"`
 }
 
+//go:generate mockery --inpackage --testonly --case underscore --name GroupParticipantService
 type GroupParticipantService interface {
 	List(ctx context.Context, groupID int) ([]entity.GroupParticipant, error)
 	Get(ctx context.Context, groupID, userID int) (entity.GroupParticipant, error)
@@ -275,6 +276,8 @@ func (pc *GroupParticipantController) update(w http.ResponseWriter, req *http.Re
 		switch {
 		case errors.Is(err, entity.ErrGroupNotFound):
 			httputil.RespondError(ctx, w, errGroupNotFound.Wrap(err))
+		case errors.Is(err, entity.ErrGroupParticipantNotFound):
+			httputil.RespondError(ctx, w, errGroupParticipantNotFound.Wrap(err))
 		case errors.Is(err, entity.ErrIncorrectGroupParticipantStatusTransit):
 			httputil.RespondError(ctx, w, errIncorrectGroupParticipantStatusTransit)
 		case errors.Is(err, entity.ErrForbiddenPerformAction):
