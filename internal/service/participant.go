@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Chatyx/backend/internal/entity"
@@ -10,6 +11,7 @@ import (
 
 type GroupParticipantFunc func(p *entity.GroupParticipant) error
 
+//go:generate mockery --inpackage --testonly --case underscore --name GroupParticipantRepository
 type GroupParticipantRepository interface {
 	List(ctx context.Context, groupID int) ([]entity.GroupParticipant, error)
 	Get(ctx context.Context, groupID, userID int) (entity.GroupParticipant, error)
@@ -53,13 +55,8 @@ func (p *GroupParticipant) List(ctx context.Context, groupID int) ([]entity.Grou
 
 func (p *GroupParticipant) Get(ctx context.Context, groupID, userID int) (entity.GroupParticipant, error) {
 	curUserID := ctxutil.UserIDFromContext(ctx).ToInt()
-	curParticipant, err := p.repo.Get(ctx, groupID, curUserID)
-	if err != nil {
-		return entity.GroupParticipant{}, fmt.Errorf("get current group participant: %w", err)
-	}
-
-	if !curParticipant.IsInGroup() {
-		return entity.GroupParticipant{}, fmt.Errorf("%w: current participant isn't in the group", entity.ErrGroupNotFound)
+	if err := p.checkPermission(ctx, groupID, curUserID, false); err != nil {
+		return entity.GroupParticipant{}, fmt.Errorf("check permission: %w", err)
 	}
 
 	participant, err := p.repo.Get(ctx, groupID, userID)
@@ -71,16 +68,8 @@ func (p *GroupParticipant) Get(ctx context.Context, groupID, userID int) (entity
 
 func (p *GroupParticipant) Invite(ctx context.Context, groupID, userID int) (entity.GroupParticipant, error) {
 	curUserID := ctxutil.UserIDFromContext(ctx).ToInt()
-	curParticipant, err := p.repo.Get(ctx, groupID, curUserID)
-	if err != nil {
-		return entity.GroupParticipant{}, fmt.Errorf("get current group participant: %w", err)
-	}
-
-	if !curParticipant.IsInGroup() {
-		return entity.GroupParticipant{}, fmt.Errorf("%w: current participant isn't in the group", entity.ErrGroupNotFound)
-	}
-	if !curParticipant.IsAdmin {
-		return entity.GroupParticipant{}, fmt.Errorf("%w: current participant isn't admin in the group", entity.ErrForbiddenPerformAction)
+	if err := p.checkPermission(ctx, groupID, curUserID, true); err != nil {
+		return entity.GroupParticipant{}, fmt.Errorf("check permission: %w", err)
 	}
 
 	invitedParticipant := entity.GroupParticipant{
@@ -88,7 +77,7 @@ func (p *GroupParticipant) Invite(ctx context.Context, groupID, userID int) (ent
 		UserID:  userID,
 		Status:  entity.JoinedStatus,
 	}
-	if err = p.repo.Create(ctx, &invitedParticipant); err != nil {
+	if err := p.repo.Create(ctx, &invitedParticipant); err != nil {
 		return entity.GroupParticipant{}, fmt.Errorf("create participant: %w", err)
 	}
 
@@ -103,16 +92,8 @@ func (p *GroupParticipant) UpdateStatus(ctx context.Context, groupID, userID int
 	actionOnSomeone := curUserID != userID
 
 	if actionOnSomeone {
-		curParticipant, err := p.repo.Get(ctx, groupID, curUserID)
-		if err != nil {
-			return fmt.Errorf("get current group participant: %w", err)
-		}
-
-		if !curParticipant.IsInGroup() {
-			return fmt.Errorf("%w: current participant isn't in the group", entity.ErrGroupNotFound)
-		}
-		if !curParticipant.IsAdmin {
-			return fmt.Errorf("%w: current participant isn't admin in the group", entity.ErrForbiddenPerformAction)
+		if err := p.checkPermission(ctx, groupID, curUserID, true); err != nil {
+			return fmt.Errorf("check permission: %w", err)
 		}
 
 		statusMatrix = entity.MxActionOnSomeone
@@ -131,6 +112,25 @@ func (p *GroupParticipant) UpdateStatus(ctx context.Context, groupID, userID int
 	}
 
 	// TODO create a service message and publish it
+
+	return nil
+}
+
+func (p *GroupParticipant) checkPermission(ctx context.Context, groupID, userID int, checkAdmin bool) error {
+	curParticipant, err := p.repo.Get(ctx, groupID, userID)
+	if err != nil {
+		if errors.Is(err, entity.ErrGroupParticipantNotFound) {
+			return fmt.Errorf("%w: current participant isn't in the group", entity.ErrGroupNotFound)
+		}
+		return fmt.Errorf("get current group participant: %w", err)
+	}
+
+	if !curParticipant.IsInGroup() {
+		return fmt.Errorf("%w: current participant isn't in the group", entity.ErrGroupNotFound)
+	}
+	if checkAdmin && !curParticipant.IsAdmin {
+		return fmt.Errorf("%w: current participant isn't admin in the group", entity.ErrForbiddenPerformAction)
+	}
 
 	return nil
 }
