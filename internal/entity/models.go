@@ -14,6 +14,17 @@ const (
 	LeftStatus   GroupParticipantStatus = "left"
 )
 
+type ChatType string
+
+func (ct ChatType) String() string {
+	return string(ct)
+}
+
+const (
+	DialogChatType ChatType = "dialog"
+	GroupChatType  ChatType = "group"
+)
+
 type User struct {
 	ID        int
 	Username  string
@@ -54,4 +65,20 @@ type Dialog struct {
 	IsBlocked bool
 	Partner   DialogPartner
 	CreatedAt time.Time
+}
+
+type ChatID struct {
+	ID   int
+	Type ChatType
+}
+
+type Message struct {
+	ID          int
+	ChatID      ChatID
+	SenderID    int
+	Content     []byte
+	ContentType string
+	IsService   bool
+	SentAt      time.Time
+	DeliveredAt *time.Time
 }
