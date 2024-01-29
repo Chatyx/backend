@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS messages
         REFERENCES users (id),
     chat_id      BIGINT                   NOT NULL
         REFERENCES chats (id) ON DELETE CASCADE,
+    chat_type    chat_type                NOT NULL,
     content      VARCHAR(2000)            NOT NULL,
     content_type content_type             NOT NULL,
     is_service   BOOLEAN DEFAULT FALSE,
