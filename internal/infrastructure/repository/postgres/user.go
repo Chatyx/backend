@@ -14,11 +14,15 @@ import (
 )
 
 type UserRepository struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	getter dbClientGetter
 }
 
 func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
-	return &UserRepository{pool: pool}
+	return &UserRepository{
+		pool:   pool,
+		getter: dbClientGetter{pool: pool},
+	}
 }
 
 func (r *UserRepository) List(ctx context.Context) ([]entity.User, error) {
@@ -34,7 +38,7 @@ func (r *UserRepository) List(ctx context.Context) ([]entity.User, error) {
 	FROM users
 	WHERE deleted_at IS NULL`
 
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := r.getter.Get(ctx).Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("exec query to select users: %v", err)
 	}
@@ -71,7 +75,7 @@ func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	RETURNING id`
 
-	err := r.pool.QueryRow(ctx, query,
+	err := r.getter.Get(ctx).QueryRow(ctx, query,
 		user.Username, user.PwdHash, user.Email,
 		user.FirstName, user.LastName, user.BirthDate,
 		user.Bio, user.CreatedAt,
@@ -125,7 +129,7 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (en
 func (r *UserRepository) getBy(ctx context.Context, query string, args ...any) (entity.User, error) {
 	var user entity.User
 
-	err := r.pool.QueryRow(ctx, query, args...).Scan(
+	err := r.getter.Get(ctx).QueryRow(ctx, query, args...).Scan(
 		&user.ID, &user.Username, &user.PwdHash,
 		&user.Email, &user.FirstName, &user.LastName,
 		&user.BirthDate, &user.Bio, &user.CreatedAt,
@@ -154,7 +158,7 @@ func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
 	  AND deleted_at IS NULL
 	RETURNING pwd_hash, created_at`
 
-	err := r.pool.QueryRow(ctx, query, user.ID,
+	err := r.getter.Get(ctx).QueryRow(ctx, query, user.ID,
 		user.Username, user.Email, user.FirstName,
 		user.LastName, user.BirthDate,
 		user.Bio, time.Now(),
@@ -176,7 +180,7 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, userID int, pwdHash
 	WHERE id = $1
 	  AND deleted_at IS NULL`
 
-	execRes, err := r.pool.Exec(ctx, query, userID, pwdHash, time.Now())
+	execRes, err := r.getter.Get(ctx).Exec(ctx, query, userID, pwdHash, time.Now())
 	if err != nil {
 		return fmt.Errorf("exec query to update user password: %v", err)
 	}
@@ -194,7 +198,7 @@ func (r *UserRepository) Delete(ctx context.Context, id int) error {
 	WHERE id = $1
 	  AND deleted_at IS NULL`
 
-	execRes, err := r.pool.Exec(ctx, query, id, time.Now())
+	execRes, err := r.getter.Get(ctx).Exec(ctx, query, id, time.Now())
 	if err != nil {
 		return fmt.Errorf("exec query to update user deleted_at: %v", err)
 	}

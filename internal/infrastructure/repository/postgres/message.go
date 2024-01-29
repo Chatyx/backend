@@ -15,11 +15,15 @@ import (
 var builder = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 type MessageRepository struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	getter dbClientGetter
 }
 
 func NewMessageRepository(pool *pgxpool.Pool) *MessageRepository {
-	return &MessageRepository{pool: pool}
+	return &MessageRepository{
+		pool:   pool,
+		getter: dbClientGetter{pool: pool},
+	}
 }
 
 func (r *MessageRepository) List(ctx context.Context, obj dto.MessageList) ([]entity.Message, error) {
@@ -41,7 +45,7 @@ func (r *MessageRepository) List(ctx context.Context, obj dto.MessageList) ([]en
 		return nil, fmt.Errorf("build select messages query: %v", err)
 	}
 
-	rows, err := r.pool.Query(ctx, query, args...)
+	rows, err := r.getter.Get(ctx).Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("exec query to select messages: %v", err)
 	}
@@ -83,7 +87,7 @@ func (r *MessageRepository) Create(ctx context.Context, message *entity.Message)
 		return fmt.Errorf("build insert message query: %v", err)
 	}
 
-	err = r.pool.QueryRow(ctx, query, args...).Scan(&message.ID)
+	err = r.getter.Get(ctx).QueryRow(ctx, query, args...).Scan(&message.ID)
 	if err != nil {
 		return fmt.Errorf("exec query to insert message: %v", err)
 	}

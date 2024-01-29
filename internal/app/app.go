@@ -65,6 +65,7 @@ func NewApp(confPath string) *App {
 	}
 	closers = append(closers, CloserAdapter(pgPool.Close))
 
+	txm := postgres.NewTransactionManager(pgPool)
 	userRepo := postgres.NewUserRepository(pgPool)
 	groupRepo := postgres.NewGroupRepository(pgPool)
 	dialogRepo := postgres.NewDialogRepository(pgPool)
@@ -90,7 +91,7 @@ func NewApp(confPath string) *App {
 	})
 	groupService := service.NewGroup(groupRepo)
 	dialogService := service.NewDialog(dialogRepo)
-	groupParticipantService := service.NewGroupParticipant(groupParticipantRepo)
+	groupParticipantService := service.NewGroupParticipant(txm, groupParticipantRepo)
 	authService := auth.NewService(
 		authStorage,
 		auth.WithIssuer(conf.Auth.Issuer),

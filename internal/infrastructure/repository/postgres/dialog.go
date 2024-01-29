@@ -18,11 +18,15 @@ import (
 )
 
 type DialogRepository struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	getter dbClientGetter
 }
 
 func NewDialogRepository(pool *pgxpool.Pool) *DialogRepository {
-	return &DialogRepository{pool: pool}
+	return &DialogRepository{
+		pool:   pool,
+		getter: dbClientGetter{pool: pool},
+	}
 }
 
 func (r *DialogRepository) List(ctx context.Context) ([]entity.Dialog, error) {
@@ -46,7 +50,7 @@ func (r *DialogRepository) List(ctx context.Context) ([]entity.Dialog, error) {
 			ON dialogs.id = dp.chat_id
 	WHERE dp.user_id != $1`
 
-	rows, err := r.pool.Query(ctx, query, userID)
+	rows, err := r.getter.Get(ctx).Query(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("exec query to select dialogs: %v", err)
 	}
@@ -82,15 +86,27 @@ func (r *DialogRepository) Create(ctx context.Context, dialog *entity.Dialog) er
 		return entity.ErrCreateDialogWithYourself
 	}
 
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %v", err)
+	var (
+		hasExternalTx bool
+		err           error
+	)
+
+	tx, ok := r.getter.Get(ctx).(pgx.Tx)
+	if ok {
+		hasExternalTx = true
 	}
-	defer func() {
-		if err = tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			log.FromContext(ctx).WithError(err).Error("Rollback transaction")
+
+	if !hasExternalTx {
+		tx, err = r.pool.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("begin transaction: %v", err)
 		}
-	}()
+		defer func() {
+			if err = tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				log.FromContext(ctx).WithError(err).Error("Rollback transaction")
+			}
+		}()
+	}
 
 	query := `INSERT INTO chats
 		(uname, type, created_at)
@@ -119,8 +135,10 @@ func (r *DialogRepository) Create(ctx context.Context, dialog *entity.Dialog) er
 		return fmt.Errorf("exec query to insert dialog participants: %v", err)
 	}
 
-	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transaction: %v", err)
+	if !hasExternalTx {
+		if err = tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit transaction: %v", err)
+		}
 	}
 
 	return nil
@@ -150,7 +168,7 @@ func (r *DialogRepository) GetByID(ctx context.Context, dialogID int) (entity.Di
 			ON dialogs.id = dp.chat_id
 	WHERE dp.user_id != $2`
 
-	err := r.pool.QueryRow(ctx, query, dialogID, userID).Scan(
+	err := r.getter.Get(ctx).QueryRow(ctx, query, dialogID, userID).Scan(
 		&dialog.ID, &dialog.IsBlocked,
 		&dialog.Partner.UserID, &dialog.Partner.IsBlocked,
 		&dialog.CreatedAt,
@@ -173,7 +191,7 @@ func (r *DialogRepository) Update(ctx context.Context, dialog *entity.Dialog) er
 	WHERE chat_id = $1
 	  AND user_id != $2`
 
-	execRes, err := r.pool.Exec(ctx, query, dialog.ID, userID, dialog.Partner.IsBlocked)
+	execRes, err := r.getter.Get(ctx).Exec(ctx, query, dialog.ID, userID, dialog.Partner.IsBlocked)
 	if err != nil {
 		return fmt.Errorf("exec query to update dialog participant: %v", err)
 	}

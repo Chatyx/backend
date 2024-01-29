@@ -32,9 +32,9 @@ func (_m *MockGroupParticipantRepository) Create(ctx context.Context, p *entity.
 	return r0
 }
 
-// Get provides a mock function with given fields: ctx, groupID, userID
-func (_m *MockGroupParticipantRepository) Get(ctx context.Context, groupID int, userID int) (entity.GroupParticipant, error) {
-	ret := _m.Called(ctx, groupID, userID)
+// Get provides a mock function with given fields: ctx, groupID, userID, withLock
+func (_m *MockGroupParticipantRepository) Get(ctx context.Context, groupID int, userID int, withLock bool) (entity.GroupParticipant, error) {
+	ret := _m.Called(ctx, groupID, userID, withLock)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
@@ -42,40 +42,22 @@ func (_m *MockGroupParticipantRepository) Get(ctx context.Context, groupID int, 
 
 	var r0 entity.GroupParticipant
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) (entity.GroupParticipant, error)); ok {
-		return rf(ctx, groupID, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, bool) (entity.GroupParticipant, error)); ok {
+		return rf(ctx, groupID, userID, withLock)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) entity.GroupParticipant); ok {
-		r0 = rf(ctx, groupID, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, bool) entity.GroupParticipant); ok {
+		r0 = rf(ctx, groupID, userID, withLock)
 	} else {
 		r0 = ret.Get(0).(entity.GroupParticipant)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
-		r1 = rf(ctx, groupID, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, int, int, bool) error); ok {
+		r1 = rf(ctx, groupID, userID, withLock)
 	} else {
 		r1 = ret.Error(1)
 	}
 
 	return r0, r1
-}
-
-// GetThenUpdate provides a mock function with given fields: ctx, groupID, userID, fn
-func (_m *MockGroupParticipantRepository) GetThenUpdate(ctx context.Context, groupID int, userID int, fn GroupParticipantFunc) error {
-	ret := _m.Called(ctx, groupID, userID, fn)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetThenUpdate")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, GroupParticipantFunc) error); ok {
-		r0 = rf(ctx, groupID, userID, fn)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
 }
 
 // List provides a mock function with given fields: ctx, groupID
@@ -106,6 +88,24 @@ func (_m *MockGroupParticipantRepository) List(ctx context.Context, groupID int)
 	}
 
 	return r0, r1
+}
+
+// Update provides a mock function with given fields: ctx, p
+func (_m *MockGroupParticipantRepository) Update(ctx context.Context, p *entity.GroupParticipant) error {
+	ret := _m.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *entity.GroupParticipant) error); ok {
+		r0 = rf(ctx, p)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // NewMockGroupParticipantRepository creates a new instance of MockGroupParticipantRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

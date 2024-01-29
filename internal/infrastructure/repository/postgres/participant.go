@@ -6,25 +6,22 @@ import (
 	"fmt"
 
 	"github.com/Chatyx/backend/internal/entity"
-	"github.com/Chatyx/backend/internal/service"
-	"github.com/Chatyx/backend/pkg/log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type dbClient interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
-}
-
 type GroupParticipantRepository struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	getter dbClientGetter
 }
 
 func NewGroupParticipantRepository(pool *pgxpool.Pool) *GroupParticipantRepository {
-	return &GroupParticipantRepository{pool: pool}
+	return &GroupParticipantRepository{
+		pool:   pool,
+		getter: dbClientGetter{pool: pool},
+	}
 }
 
 func (r *GroupParticipantRepository) List(ctx context.Context, groupID int) ([]entity.GroupParticipant, error) {
@@ -32,7 +29,7 @@ func (r *GroupParticipantRepository) List(ctx context.Context, groupID int) ([]e
 	FROM group_participants gp
 	WHERE gp.chat_id = $1`
 
-	rows, err := r.pool.Query(ctx, query, groupID)
+	rows, err := r.getter.Get(ctx).Query(ctx, query, groupID)
 	if err != nil {
 		return nil, fmt.Errorf("exec query to select group participants: %v", err)
 	}
@@ -60,59 +57,18 @@ func (r *GroupParticipantRepository) List(ctx context.Context, groupID int) ([]e
 	return participants, nil
 }
 
-func (r *GroupParticipantRepository) Get(ctx context.Context, groupID, userID int) (entity.GroupParticipant, error) {
-	return r.get(ctx, r.pool, groupID, userID, false)
-}
-
-func (r *GroupParticipantRepository) GetThenUpdate(ctx context.Context, groupID, userID int, fn service.GroupParticipantFunc) error {
-	if fn == nil {
-		if _, err := r.Get(ctx, groupID, userID); err != nil {
-			return err
-		}
-	}
-
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %v", err)
-	}
-	defer func() {
-		if err = tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			log.FromContext(ctx).WithError(err).Error("Rollback transaction")
-		}
-	}()
-
-	participant, err := r.get(ctx, tx, groupID, userID, true)
-	if err != nil {
-		return err
-	}
-
-	if err = fn(&participant); err != nil {
-		return err
-	}
-
-	if err = r.update(ctx, tx, &participant); err != nil {
-		return err
-	}
-
-	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transaction: %v", err)
-	}
-	return nil
-}
-
-//nolint:lll // too long namings
-func (r *GroupParticipantRepository) get(ctx context.Context, db dbClient, groupID, userID int, forUpdate bool) (entity.GroupParticipant, error) {
+func (r *GroupParticipantRepository) Get(ctx context.Context, groupID, userID int, withLock bool) (entity.GroupParticipant, error) {
 	var participant entity.GroupParticipant
 
 	query := `SELECT gp.chat_id, gp.user_id, gp.status, gp.is_admin
 	FROM group_participants gp
 	WHERE gp.chat_id = $1 AND gp.user_id = $2`
 
-	if forUpdate {
+	if withLock {
 		query += " FOR UPDATE"
 	}
 
-	err := db.QueryRow(ctx, query, groupID, userID).Scan(
+	err := r.getter.Get(ctx).QueryRow(ctx, query, groupID, userID).Scan(
 		&participant.GroupID, &participant.UserID,
 		&participant.Status, &participant.IsAdmin,
 	)
@@ -127,10 +83,10 @@ func (r *GroupParticipantRepository) get(ctx context.Context, db dbClient, group
 	return participant, nil
 }
 
-func (r *GroupParticipantRepository) update(ctx context.Context, db dbClient, participant *entity.GroupParticipant) error {
+func (r *GroupParticipantRepository) Update(ctx context.Context, participant *entity.GroupParticipant) error {
 	query := "UPDATE group_participants SET status = $3 WHERE chat_id = $1 AND user_id = $2"
 
-	execRes, err := db.Exec(ctx, query, participant.GroupID, participant.UserID, participant.Status)
+	execRes, err := r.getter.Get(ctx).Exec(ctx, query, participant.GroupID, participant.UserID, participant.Status)
 	if err != nil {
 		return fmt.Errorf("exec query to update group participant: %v", err)
 	}
@@ -143,7 +99,7 @@ func (r *GroupParticipantRepository) update(ctx context.Context, db dbClient, pa
 
 func (r *GroupParticipantRepository) Create(ctx context.Context, participant *entity.GroupParticipant) error {
 	query := "INSERT INTO group_participants (chat_id, user_id, status, is_admin) VALUES ($1, $2, $3, $4)"
-	_, err := r.pool.Exec(
+	_, err := r.getter.Get(ctx).Exec(
 		ctx, query,
 		participant.GroupID, participant.UserID,
 		participant.Status, participant.IsAdmin,

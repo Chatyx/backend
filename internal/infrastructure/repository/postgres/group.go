@@ -15,11 +15,15 @@ import (
 )
 
 type GroupRepository struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	getter dbClientGetter
 }
 
 func NewGroupRepository(pool *pgxpool.Pool) *GroupRepository {
-	return &GroupRepository{pool: pool}
+	return &GroupRepository{
+		pool:   pool,
+		getter: dbClientGetter{pool: pool},
+	}
 }
 
 func (r *GroupRepository) List(ctx context.Context) ([]entity.Group, error) {
@@ -33,7 +37,7 @@ func (r *GroupRepository) List(ctx context.Context) ([]entity.Group, error) {
 			ON c.id = gp.chat_id
 	WHERE gp.user_id = $1 AND c.type = 'group'`
 
-	rows, err := r.pool.Query(ctx, query, userID)
+	rows, err := r.getter.Get(ctx).Query(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("exec query to select groups: %v", err)
 	}
@@ -62,15 +66,27 @@ func (r *GroupRepository) List(ctx context.Context) ([]entity.Group, error) {
 }
 
 func (r *GroupRepository) Create(ctx context.Context, group *entity.Group) error {
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %v", err)
+	var (
+		hasExternalTx bool
+		err           error
+	)
+
+	tx, ok := r.getter.Get(ctx).(pgx.Tx)
+	if ok {
+		hasExternalTx = true
 	}
-	defer func() {
-		if err = tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			log.FromContext(ctx).WithError(err).Error("Rollback transaction")
+
+	if !hasExternalTx {
+		tx, err = r.pool.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("begin transaction: %v", err)
 		}
-	}()
+		defer func() {
+			if err = tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				log.FromContext(ctx).WithError(err).Error("Rollback transaction")
+			}
+		}()
+	}
 
 	query := `INSERT INTO chats
 		(name, type, description, created_at)
@@ -91,8 +107,10 @@ func (r *GroupRepository) Create(ctx context.Context, group *entity.Group) error
 		return fmt.Errorf("exec query to insert group participant: %v", err)
 	}
 
-	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transaction: %v", err)
+	if !hasExternalTx {
+		if err = tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit transaction: %v", err)
+		}
 	}
 
 	return nil
@@ -113,7 +131,7 @@ func (r *GroupRepository) GetByID(ctx context.Context, groupID int) (entity.Grou
 	  AND c.type = 'group'
 	  AND gp.user_id = $2`
 
-	err := r.pool.QueryRow(ctx, query, groupID, userID).Scan(
+	err := r.getter.Get(ctx).QueryRow(ctx, query, groupID, userID).Scan(
 		&group.ID, &group.Name,
 		&group.Description, &group.CreatedAt,
 	)
@@ -142,7 +160,7 @@ func (r *GroupRepository) Update(ctx context.Context, group *entity.Group) error
 	  AND gp.is_admin IS TRUE
 	RETURNING created_at`
 
-	err := r.pool.QueryRow(ctx, query,
+	err := r.getter.Get(ctx).QueryRow(ctx, query,
 		group.ID, userID,
 		group.Name, group.Description, time.Now(),
 	).Scan(&group.CreatedAt)
@@ -167,7 +185,7 @@ func (r *GroupRepository) Delete(ctx context.Context, groupID int) error {
 	  AND gp.user_id = $2
 	  AND gp.is_admin IS TRUE`
 
-	execRes, err := r.pool.Exec(ctx, query, groupID, userID)
+	execRes, err := r.getter.Get(ctx).Exec(ctx, query, groupID, userID)
 	if err != nil {
 		return fmt.Errorf("exec query to delete group: %v", err)
 	}

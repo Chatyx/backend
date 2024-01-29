@@ -14,9 +14,14 @@ type GroupParticipantFunc func(p *entity.GroupParticipant) error
 //go:generate mockery --inpackage --testonly --case underscore --name GroupParticipantRepository
 type GroupParticipantRepository interface {
 	List(ctx context.Context, groupID int) ([]entity.GroupParticipant, error)
-	Get(ctx context.Context, groupID, userID int) (entity.GroupParticipant, error)
-	GetThenUpdate(ctx context.Context, groupID, userID int, fn GroupParticipantFunc) error
+	Get(ctx context.Context, groupID, userID int, withLock bool) (entity.GroupParticipant, error)
 	Create(ctx context.Context, p *entity.GroupParticipant) error
+	Update(ctx context.Context, p *entity.GroupParticipant) error
+}
+
+//go:generate mockery --inpackage --testonly --case underscore --name TransactionManager
+type TransactionManager interface {
+	Do(ctx context.Context, fn func(ctx context.Context) error) error
 }
 
 type StatusMatrix interface {
@@ -24,11 +29,15 @@ type StatusMatrix interface {
 }
 
 type GroupParticipant struct {
+	txm  TransactionManager
 	repo GroupParticipantRepository
 }
 
-func NewGroupParticipant(repo GroupParticipantRepository) *GroupParticipant {
-	return &GroupParticipant{repo: repo}
+func NewGroupParticipant(txm TransactionManager, repo GroupParticipantRepository) *GroupParticipant {
+	return &GroupParticipant{
+		txm:  txm,
+		repo: repo,
+	}
 }
 
 func (p *GroupParticipant) List(ctx context.Context, groupID int) ([]entity.GroupParticipant, error) {
@@ -59,7 +68,7 @@ func (p *GroupParticipant) Get(ctx context.Context, groupID, userID int) (entity
 		return entity.GroupParticipant{}, fmt.Errorf("check permission: %w", err)
 	}
 
-	participant, err := p.repo.Get(ctx, groupID, userID)
+	participant, err := p.repo.Get(ctx, groupID, userID, false)
 	if err != nil {
 		return entity.GroupParticipant{}, fmt.Errorf("get group participant: %w", err)
 	}
@@ -99,16 +108,24 @@ func (p *GroupParticipant) UpdateStatus(ctx context.Context, groupID, userID int
 		statusMatrix = entity.MxActionOnSomeone
 	}
 
-	err := p.repo.GetThenUpdate(ctx, groupID, userID, func(participant *entity.GroupParticipant) error {
+	err := p.txm.Do(ctx, func(ctx context.Context) error {
+		participant, err := p.repo.Get(ctx, groupID, userID, true)
+		if err != nil {
+			return fmt.Errorf("get group participant: %w", err)
+		}
+
 		if !statusMatrix.IsCorrectTransit(participant.Status, status) {
 			return fmt.Errorf("%w: transit from %s to %s", entity.ErrIncorrectGroupParticipantStatusTransit, participant.Status, status)
 		}
 
 		participant.Status = status
+		if err = p.repo.Update(ctx, &participant); err != nil {
+			return fmt.Errorf("update group participant: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("get participant for the next update: %w", err)
+		return fmt.Errorf("call transaction manager: %w", err)
 	}
 
 	// TODO create a service message and publish it
@@ -117,7 +134,7 @@ func (p *GroupParticipant) UpdateStatus(ctx context.Context, groupID, userID int
 }
 
 func (p *GroupParticipant) checkPermission(ctx context.Context, groupID, userID int, checkAdmin bool) error {
-	curParticipant, err := p.repo.Get(ctx, groupID, userID)
+	curParticipant, err := p.repo.Get(ctx, groupID, userID, false)
 	if err != nil {
 		if errors.Is(err, entity.ErrGroupParticipantNotFound) {
 			return fmt.Errorf("%w: current participant isn't in the group", entity.ErrGroupNotFound)
