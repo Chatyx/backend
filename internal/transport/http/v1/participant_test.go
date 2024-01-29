@@ -159,7 +159,7 @@ func TestGroupParticipantController_invite(t *testing.T) {
 			groupIDPathParam:     "1",
 			userIDQueryParam:     uuid.New().String(),
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0004","message":"decode query params error"}`,
+			expectedResponseBody: `{"code":"CM0005","message":"decode query params error"}`,
 		},
 		{
 			name:             "Group is not found",
@@ -199,7 +199,7 @@ func TestGroupParticipantController_invite(t *testing.T) {
 				s.On("Invite", mock.Anything, 1, 2).Return(entity.GroupParticipant{}, entity.ErrForbiddenPerformAction)
 			},
 			expectedStatusCode:   http.StatusForbidden,
-			expectedResponseBody: `{"code":"CM0007","message":"it's forbidden to perform this action"}`,
+			expectedResponseBody: `{"code":"CM0008","message":"it's forbidden to perform this action"}`,
 		},
 		{
 			name:             "Internal server error",
@@ -413,7 +413,7 @@ func TestGroupParticipantController_update(t *testing.T) {
 			userIDPathParam:      "2",
 			requestBody:          `{"status":"test"}`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0005","message":"validation error","data":{"status":"failed on the 'oneof' tag"}}`,
+			expectedResponseBody: `{"code":"CM0006","message":"validation error","data":{"status":"failed on the 'oneof' tag"}}`,
 		},
 		{
 			name:             "Group is not found",
@@ -446,7 +446,7 @@ func TestGroupParticipantController_update(t *testing.T) {
 				s.On("UpdateStatus", mock.Anything, 1, 2, entity.KickedStatus).Return(entity.ErrForbiddenPerformAction)
 			},
 			expectedStatusCode:   http.StatusForbidden,
-			expectedResponseBody: `{"code":"CM0007","message":"it's forbidden to perform this action"}`,
+			expectedResponseBody: `{"code":"CM0008","message":"it's forbidden to perform this action"}`,
 		},
 		{
 			name:             "Incorrect status transit",

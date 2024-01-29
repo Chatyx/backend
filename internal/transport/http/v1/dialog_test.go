@@ -134,7 +134,7 @@ func TestDialogController_create(t *testing.T) {
 			name:                 "Validation error: partner.user_id is required",
 			requestBody:          `{}`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0005","message":"validation error","data":{"partner.user_id":"failed on the 'required' tag"}}`,
+			expectedResponseBody: `{"code":"CM0006","message":"validation error","data":{"partner.user_id":"failed on the 'required' tag"}}`,
 		},
 		{
 			name:        "Create a dialog that already exists",

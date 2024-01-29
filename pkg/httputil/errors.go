@@ -3,6 +3,7 @@ package httputil
 import (
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type Error struct {
@@ -39,7 +40,12 @@ func (e Error) Unwrap() error {
 
 func (e Error) Error() string {
 	if e.Err != nil {
-		return fmt.Sprintf("[%s] - %s", e.Code, e.Err.Error())
+		errString := e.Err.Error()
+		if strings.HasPrefix(errString, e.Message) {
+			return fmt.Sprintf("[%s] - %s", e.Code, errString)
+		}
+
+		return fmt.Sprintf("[%s] - %s: %s", e.Code, e.Message, errString)
 	}
 	return fmt.Sprintf("[%s] - %s", e.Code, e.Message)
 }
@@ -60,23 +66,28 @@ var (
 		Message:    "decode path params error",
 		StatusCode: http.StatusBadRequest,
 	}
-	ErrDecodeQueryParamsFailed = Error{
+	ErrDecodeHeaderParamsFailed = Error{
 		Code:       "CM0004",
+		Message:    "decode header params error",
+		StatusCode: http.StatusBadRequest,
+	}
+	ErrDecodeQueryParamsFailed = Error{
+		Code:       "CM0005",
 		Message:    "decode query params error",
 		StatusCode: http.StatusBadRequest,
 	}
 	ErrValidationFailed = Error{
-		Code:       "CM0005",
+		Code:       "CM0006",
 		Message:    "validation error",
 		StatusCode: http.StatusBadRequest,
 	}
 	ErrInvalidAuthorization = Error{
-		Code:       "CM0006",
+		Code:       "CM0007",
 		Message:    "invalid Authorization header or query param",
 		StatusCode: http.StatusBadRequest,
 	}
 	ErrForbiddenPerformAction = Error{
-		Code:       "CM0007",
+		Code:       "CM0008",
 		Message:    "it's forbidden to perform this action",
 		StatusCode: http.StatusForbidden,
 	}

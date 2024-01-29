@@ -141,7 +141,7 @@ func TestGroupController_create(t *testing.T) {
 			name:                 "Validation error: name is required",
 			requestBody:          `{}`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0005","message":"validation error","data":{"name":"failed on the 'required' tag"}}`,
+			expectedResponseBody: `{"code":"CM0006","message":"validation error","data":{"name":"failed on the 'required' tag"}}`,
 		},
 		{
 			name:        "Internal server error",
@@ -341,7 +341,7 @@ func TestGroupController_update(t *testing.T) {
 			groupIDPathParam:     "1",
 			requestBody:          `{}`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0005","message":"validation error","data":{"name":"failed on the 'required' tag"}}`,
+			expectedResponseBody: `{"code":"CM0006","message":"validation error","data":{"name":"failed on the 'required' tag"}}`,
 		},
 		{
 			name:             "Group is not found",
