@@ -955,6 +955,20 @@ const docTemplate = `{
                 "summary": "Send message to the specified chat",
                 "parameters": [
                     {
+                        "type": "integer",
+                        "description": "Chat id for dialog or group",
+                        "name": "chat_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Chat type (dialog or group)",
+                        "name": "chat_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "description": "Body to create",
                         "name": "input",
                         "in": "body",
@@ -1541,28 +1555,13 @@ const docTemplate = `{
         "v1.MessageCreate": {
             "type": "object",
             "required": [
-                "chat_id",
-                "chat_type",
                 "content",
                 "content_type"
             ],
             "properties": {
-                "chat_id": {
-                    "type": "integer"
-                },
-                "chat_type": {
-                    "type": "string",
-                    "enum": [
-                        "dialog",
-                        "group"
-                    ]
-                },
                 "content": {
-                    "type": "array",
-                    "maxItems": 2000,
-                    "items": {
-                        "type": "integer"
-                    }
+                    "type": "string",
+                    "maxLength": 2000
                 },
                 "content_type": {
                     "type": "string",

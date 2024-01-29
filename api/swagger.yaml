@@ -181,26 +181,15 @@ definitions:
     type: object
   v1.MessageCreate:
     properties:
-      chat_id:
-        type: integer
-      chat_type:
-        enum:
-        - dialog
-        - group
-        type: string
       content:
-        items:
-          type: integer
-        maxItems: 2000
-        type: array
+        maxLength: 2000
+        type: string
       content_type:
         enum:
         - text
         - image
         type: string
     required:
-    - chat_id
-    - chat_type
     - content
     - content_type
     type: object
@@ -906,6 +895,16 @@ paths:
       consumes:
       - application/json
       parameters:
+      - description: Chat id for dialog or group
+        in: query
+        name: chat_id
+        required: true
+        type: integer
+      - description: Chat type (dialog or group)
+        in: query
+        name: chat_type
+        required: true
+        type: string
       - description: Body to create
         in: body
         name: input

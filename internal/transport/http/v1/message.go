@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/Chatyx/backend/internal/dto"
@@ -70,18 +69,12 @@ func NewMessage(message entity.Message) Message {
 }
 
 type MessageCreate struct {
-	ChatID      int    `json:"chat_id"      validate:"required"`
-	ChatType    string `json:"chat_type"    validate:"required,oneof=dialog group"`
 	Content     string `json:"content"      validate:"required,max=2000"`
 	ContentType string `json:"content_type" validate:"required,oneof=text image"`
 }
 
 func (mc MessageCreate) DTO() dto.MessageCreate {
 	return dto.MessageCreate{
-		ChatID: entity.ChatID{
-			ID:   mc.ChatID,
-			Type: entity.ChatType(mc.ChatType),
-		},
 		Content:     mc.Content,
 		ContentType: mc.ContentType,
 	}
@@ -136,36 +129,29 @@ func (mc *MessageController) Register(mux *httprouter.Router) {
 //	@Router		/messages  [get]
 func (mc *MessageController) list(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	query := req.URL.Query()
 
-	chatType := query.Get(chatTypeParam)
-	sort := query.Get(sortParam)
+	var (
+		chatID   int
+		chatType string
+		idAfter  int
+		limit    int
+		sort     string
+	)
 
-	chatID, err := strconv.Atoi(query.Get(chatIDParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodeQueryParamsFailed.Wrap(err))
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.MergeResults(
+		dec.Query(chatIDParam, &chatID, nil),
+		dec.Query(chatTypeParam, &chatType, nil),
+		dec.Query(idAfterParam, &idAfter, 0),
+		dec.Query(limitParam, &limit, defaultLimit),
+		dec.Query(sortParam, &sort, nil),
+	); err != nil {
+		httputil.RespondError(ctx, w, err)
 		return
 	}
 
-	idAfter := 0
-	if idAfterRaw := query.Get(idAfterParam); idAfterRaw != "" {
-		idAfter, err = strconv.Atoi(idAfterRaw)
-		if err != nil {
-			httputil.RespondError(ctx, w, httputil.ErrDecodeQueryParamsFailed.Wrap(err))
-			return
-		}
-	}
-
-	limit := defaultLimit
-	if limitRaw := query.Get(limitParam); limitRaw != "" {
-		limit, err = strconv.Atoi(limitRaw)
-		if err != nil {
-			httputil.RespondError(ctx, w, httputil.ErrDecodeQueryParamsFailed.Wrap(err))
-			return
-		}
-	}
-
-	if err = validator.MergeResults(
+	if err := validator.MergeResults(
+		mc.validator.Var(chatID, chatIDParam, "required"),
 		mc.validator.Var(chatType, chatTypeParam, "required,oneof=dialog group"),
 		mc.validator.Var(sort, sortParam, "required,oneof=asc desc"),
 		mc.validator.Var(limit, limitParam, "gt=0,max=100"),
@@ -213,24 +199,39 @@ func (mc *MessageController) list(w http.ResponseWriter, req *http.Request) {
 //	@Tags		messages
 //	@Accept		json
 //	@Produce	json
-//	@Param		input	body		MessageCreate	true	"Body to create"
-//	@Success	201		{object}	Message
-//	@Failure	400		{object}	httputil.Error
-//	@Failure	404		{object}	httputil.Error
-//	@Failure	500		{object}	httputil.Error
+//	@Param		chat_id		query		int				true	"Chat id for dialog or group"
+//	@Param		chat_type	query		string			true	"Chat type (dialog or group)"
+//	@Param		input		body		MessageCreate	true	"Body to create"
+//	@Success	201			{object}	Message
+//	@Failure	400			{object}	httputil.Error
+//	@Failure	404			{object}	httputil.Error
+//	@Failure	500			{object}	httputil.Error
 //	@Security	JWTAuth
 //	@Router		/messages  [post]
 func (mc *MessageController) create(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
-	var bodyObj MessageCreate
+	var (
+		chatID   int
+		chatType string
+		bodyObj  MessageCreate
+	)
 
-	if err := httputil.DecodeBody(req.Body, &bodyObj); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.MergeResults(
+		dec.Query(chatIDParam, &chatID, nil),
+		dec.Query(chatTypeParam, &chatType, nil),
+		dec.Body(&bodyObj),
+	); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
 
-	if err := mc.validator.Struct(bodyObj); err != nil {
+	if err := validator.MergeResults(
+		mc.validator.Var(chatID, chatIDParam, "required"),
+		mc.validator.Var(chatType, chatTypeParam, "required,oneof=dialog group"),
+		mc.validator.Struct(bodyObj),
+	); err != nil {
 		ve := validator.Error{}
 		if errors.As(err, &ve) {
 			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
@@ -241,7 +242,13 @@ func (mc *MessageController) create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	message, err := mc.service.Create(ctx, bodyObj.DTO())
+	obj := bodyObj.DTO()
+	obj.ChatID = entity.ChatID{
+		ID:   chatID,
+		Type: entity.ChatType(chatType),
+	}
+
+	message, err := mc.service.Create(ctx, obj)
 	if err != nil {
 		switch {
 		case errors.Is(err, entity.ErrGroupNotFound):
