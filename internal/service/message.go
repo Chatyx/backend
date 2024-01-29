@@ -16,7 +16,7 @@ type MessageRepository interface {
 }
 
 type InChatChecker interface {
-	Check(ctx context.Context, userID int, chatID entity.ChatID) error
+	Check(ctx context.Context, chatID entity.ChatID, userID int) error
 }
 
 type MessagePublisher interface {
@@ -39,7 +39,7 @@ func NewMessage(repo MessageRepository, publisher MessagePublisher, checker InCh
 
 func (s *Message) List(ctx context.Context, obj dto.MessageList) ([]entity.Message, error) {
 	userID := ctxutil.UserIDFromContext(ctx).ToInt()
-	if err := s.checker.Check(ctx, userID, obj.ChatID); err != nil {
+	if err := s.checker.Check(ctx, obj.ChatID, userID); err != nil {
 		return nil, fmt.Errorf("check whether the current user is in the chat or not: %w", err)
 	}
 
@@ -52,7 +52,7 @@ func (s *Message) List(ctx context.Context, obj dto.MessageList) ([]entity.Messa
 
 func (s *Message) Create(ctx context.Context, obj dto.MessageCreate) (entity.Message, error) {
 	userID := ctxutil.UserIDFromContext(ctx).ToInt()
-	if err := s.checker.Check(ctx, userID, obj.ChatID); err != nil {
+	if err := s.checker.Check(ctx, obj.ChatID, userID); err != nil {
 		return entity.Message{}, fmt.Errorf("check whether the current user is in the chat or not: %w", err)
 	}
 

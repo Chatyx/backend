@@ -2,22 +2,26 @@ package dto
 
 import "github.com/Chatyx/backend/internal/entity"
 
-type Direction string
+type Sort string
+
+func (s Sort) String() string {
+	return string(s)
+}
 
 const (
-	AscDirection  Direction = "asc"
-	DescDirection Direction = "desc"
+	AscSort  Sort = "asc"
+	DescSort Sort = "desc"
 )
 
 type MessageList struct {
-	ChatID    entity.ChatID
-	IDAfter   int
-	Limit     int
-	Direction Direction
+	ChatID  entity.ChatID
+	IDAfter int
+	Limit   int
+	Sort    Sort
 }
 
 type MessageCreate struct {
 	ChatID      entity.ChatID
-	Content     []byte
+	Content     string
 	ContentType string
 }

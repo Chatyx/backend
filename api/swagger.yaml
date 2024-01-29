@@ -1,5 +1,15 @@
 basePath: /api/v1
 definitions:
+  entity.GroupParticipantStatus:
+    enum:
+    - joined
+    - kicked
+    - left
+    type: string
+    x-enum-varnames:
+    - JoinedStatus
+    - KickedStatus
+    - LeftStatus
   http.Credentials:
     properties:
       password:
@@ -47,12 +57,7 @@ definitions:
       is_blocked:
         type: boolean
       partner:
-        properties:
-          is_blocked:
-            type: boolean
-          user_id:
-            type: integer
-        type: object
+        $ref: '#/definitions/v1.DialogPartner'
     type: object
   v1.DialogCreate:
     properties:
@@ -71,6 +76,13 @@ definitions:
           $ref: '#/definitions/v1.Dialog'
         type: array
       total:
+        type: integer
+    type: object
+  v1.DialogPartner:
+    properties:
+      is_blocked:
+        type: boolean
+      user_id:
         type: integer
     type: object
   v1.DialogUpdate:
@@ -117,11 +129,9 @@ definitions:
       is_admin:
         type: boolean
       status:
-        type: string
+        $ref: '#/definitions/entity.GroupParticipantStatus'
       user_id:
         type: integer
-      username:
-        type: string
     type: object
   v1.GroupParticipantList:
     properties:
@@ -131,6 +141,15 @@ definitions:
         type: array
       total:
         type: integer
+    type: object
+  v1.GroupParticipantUpdate:
+    properties:
+      status:
+        enum:
+        - joined
+        - left
+        - kicked
+        type: string
     type: object
   v1.GroupUpdate:
     properties:
@@ -146,9 +165,7 @@ definitions:
   v1.Message:
     properties:
       content:
-        items:
-          type: integer
-        type: array
+        type: string
       content_type:
         type: string
       delivered_at:
@@ -166,6 +183,11 @@ definitions:
     properties:
       chat_id:
         type: integer
+      chat_type:
+        enum:
+        - dialog
+        - group
+        type: string
       content:
         items:
           type: integer
@@ -178,6 +200,7 @@ definitions:
         type: string
     required:
     - chat_id
+    - chat_type
     - content
     - content_type
     type: object
@@ -699,6 +722,48 @@ paths:
       summary: List all participants for a specified group
       tags:
       - group-participants
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      - description: User identity to invite
+        in: query
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.GroupParticipant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Invite a specified participant in a group
+      tags:
+      - group-participants
   /groups/{group_id}/participants/{user_id}:
     get:
       consumes:
@@ -753,6 +818,12 @@ paths:
         name: user_id
         required: true
         type: integer
+      - description: Body to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.GroupParticipantUpdate'
       produces:
       - application/json
       responses:
@@ -783,6 +854,30 @@ paths:
     get:
       consumes:
       - application/json
+      parameters:
+      - description: Chat id for dialog or group
+        in: query
+        name: chat_id
+        required: true
+        type: integer
+      - description: Chat type (dialog or group)
+        in: query
+        name: chat_type
+        required: true
+        type: string
+      - description: Message id that excludes already-retrieved messages
+        in: query
+        name: id_after
+        type: integer
+      - description: 'Number of items to list per page (default: 20, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: Sort order (asc or desc)
+        in: query
+        name: sort
+        required: true
+        type: string
       produces:
       - application/json
       responses:

@@ -9,6 +9,8 @@ import (
 	"syscall"
 
 	"github.com/Chatyx/backend/internal/config"
+	cachepostgres "github.com/Chatyx/backend/internal/infrastructure/cache/postgres"
+	pubsubredis "github.com/Chatyx/backend/internal/infrastructure/pubsub/redis"
 	"github.com/Chatyx/backend/internal/infrastructure/repository/postgres"
 	"github.com/Chatyx/backend/internal/service"
 	inhttp "github.com/Chatyx/backend/internal/transport/http"
@@ -70,6 +72,9 @@ func NewApp(confPath string) *App {
 	groupRepo := postgres.NewGroupRepository(pgPool)
 	dialogRepo := postgres.NewDialogRepository(pgPool)
 	groupParticipantRepo := postgres.NewGroupParticipantRepository(pgPool)
+	participantChecker := cachepostgres.NewParticipantChecker(pgPool)
+	messageRepo := postgres.NewMessageRepository(pgPool)
+	pubsub := pubsubredis.NewPublishSubscriber(nil)
 
 	authStorageDBNum, _ := strconv.Atoi(conf.Redis.Database)
 	authStorage, err := redis.NewStorage(redis.Config{
@@ -92,6 +97,7 @@ func NewApp(confPath string) *App {
 	groupService := service.NewGroup(groupRepo)
 	dialogService := service.NewDialog(dialogRepo)
 	groupParticipantService := service.NewGroupParticipant(txm, groupParticipantRepo)
+	messageService := service.NewMessage(messageRepo, pubsub, participantChecker)
 	authService := auth.NewService(
 		authStorage,
 		auth.WithIssuer(conf.Auth.Issuer),
@@ -125,6 +131,11 @@ func NewApp(confPath string) *App {
 		Authorize: authorizeMiddleware,
 		Validator: vld,
 	})
+	messageController := v1.NewMessageController(v1.MessageControllerConfig{
+		Service:   messageService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
 	authController := auhttp.NewController(
 		authService, vld,
 		auhttp.WithPrefixPath("/api/v1"),
@@ -143,6 +154,7 @@ func NewApp(confPath string) *App {
 		groupController,
 		dialogController,
 		groupParticipantController,
+		messageController,
 	)
 	runners = append(runners, apiServer)
 	closers = append(closers, apiServer)

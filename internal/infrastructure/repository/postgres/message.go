@@ -29,15 +29,16 @@ func NewMessageRepository(pool *pgxpool.Pool) *MessageRepository {
 func (r *MessageRepository) List(ctx context.Context, obj dto.MessageList) ([]entity.Message, error) {
 	b := builder.Select("id", "sender_id", "chat_id", "chat_type",
 		"content", "content_type", "is_service", "sent_at", "delivered_at").
+		From("messages").
 		Where(sq.Eq{"chat_id": obj.ChatID.ID, "chat_type": obj.ChatID.Type})
 
-	if obj.Direction == dto.DescDirection {
+	if obj.Sort == dto.DescSort {
 		if obj.IDAfter == 0 {
 			obj.IDAfter = math.MaxInt64
 		}
-		b = b.Where(sq.Lt{"id": obj.IDAfter}).OrderBy("created_at DESC")
+		b = b.Where(sq.Lt{"id": obj.IDAfter}).OrderBy("sent_at DESC")
 	} else {
-		b = b.Where(sq.Gt{"id": obj.IDAfter}).OrderBy("created_at ASC")
+		b = b.Where(sq.Gt{"id": obj.IDAfter}).OrderBy("sent_at ASC")
 	}
 
 	query, args, err := b.Limit(uint64(obj.Limit)).ToSql()
@@ -57,9 +58,9 @@ func (r *MessageRepository) List(ctx context.Context, obj dto.MessageList) ([]en
 		var message entity.Message
 
 		err = rows.Scan(
-			&message.ID, &message.ChatID.ID, &message.ChatID.Type,
-			&message.SenderID, &message.Content, &message.ContentType,
-			&message.IsService, &message.SentAt, &message.DeliveredAt,
+			&message.ID, &message.SenderID, &message.ChatID.ID, &message.ChatID.Type,
+			&message.Content, &message.ContentType, &message.IsService,
+			&message.SentAt, &message.DeliveredAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan message row: %v", err)

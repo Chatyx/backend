@@ -658,6 +658,71 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWTAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group-participants"
+                ],
+                "summary": "Invite a specified participant in a group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Group identity",
+                        "name": "group_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "User identity to invite",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/v1.GroupParticipant"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputil.Error"
+                        }
+                    }
+                }
             }
         },
         "/groups/{group_id}/participants/{user_id}": {
@@ -751,6 +816,15 @@ const docTemplate = `{
                         "name": "user_id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Body to update",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.GroupParticipantUpdate"
+                        }
                     }
                 ],
                 "responses": {
@@ -801,6 +875,41 @@ const docTemplate = `{
                     "messages"
                 ],
                 "summary": "List messages for a specified chat",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chat id for dialog or group",
+                        "name": "chat_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Chat type (dialog or group)",
+                        "name": "chat_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Message id that excludes already-retrieved messages",
+                        "name": "id_after",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items to list per page (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order (asc or desc)",
+                        "name": "sort",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1158,6 +1267,19 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "entity.GroupParticipantStatus": {
+            "type": "string",
+            "enum": [
+                "joined",
+                "kicked",
+                "left"
+            ],
+            "x-enum-varnames": [
+                "JoinedStatus",
+                "KickedStatus",
+                "LeftStatus"
+            ]
+        },
         "http.Credentials": {
             "type": "object",
             "required": [
@@ -1228,15 +1350,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "partner": {
-                    "type": "object",
-                    "properties": {
-                        "is_blocked": {
-                            "type": "boolean"
-                        },
-                        "user_id": {
-                            "type": "integer"
-                        }
-                    }
+                    "$ref": "#/definitions/v1.DialogPartner"
                 }
             }
         },
@@ -1266,6 +1380,17 @@ const docTemplate = `{
                     }
                 },
                 "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.DialogPartner": {
+            "type": "object",
+            "properties": {
+                "is_blocked": {
+                    "type": "boolean"
+                },
+                "user_id": {
                     "type": "integer"
                 }
             }
@@ -1337,13 +1462,10 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "status": {
-                    "type": "string"
+                    "$ref": "#/definitions/entity.GroupParticipantStatus"
                 },
                 "user_id": {
                     "type": "integer"
-                },
-                "username": {
-                    "type": "string"
                 }
             }
         },
@@ -1358,6 +1480,19 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "v1.GroupParticipantUpdate": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "joined",
+                        "left",
+                        "kicked"
+                    ]
                 }
             }
         },
@@ -1381,10 +1516,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "content": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
+                    "type": "string"
                 },
                 "content_type": {
                     "type": "string"
@@ -1410,12 +1542,20 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "chat_id",
+                "chat_type",
                 "content",
                 "content_type"
             ],
             "properties": {
                 "chat_id": {
                     "type": "integer"
+                },
+                "chat_type": {
+                    "type": "string",
+                    "enum": [
+                        "dialog",
+                        "group"
+                    ]
                 },
                 "content": {
                     "type": "array",

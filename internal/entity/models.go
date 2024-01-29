@@ -76,7 +76,7 @@ type Message struct {
 	ID          int
 	ChatID      ChatID
 	SenderID    int
-	Content     []byte
+	Content     string
 	ContentType string
 	IsService   bool
 	SentAt      time.Time
