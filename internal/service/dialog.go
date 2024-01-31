@@ -7,6 +7,7 @@ import (
 
 	"github.com/Chatyx/backend/internal/dto"
 	"github.com/Chatyx/backend/internal/entity"
+	"github.com/Chatyx/backend/pkg/ctxutil"
 	"github.com/Chatyx/backend/pkg/log"
 )
 
@@ -17,12 +18,20 @@ type DialogRepository interface {
 	Update(ctx context.Context, dialog *entity.Dialog) error
 }
 
-type Dialog struct {
-	repo DialogRepository
+type DialogParticipantEventProducer interface {
+	Produce(ctx context.Context, event entity.ParticipantEvent) error
 }
 
-func NewDialog(repo DialogRepository) *Dialog {
-	return &Dialog{repo: repo}
+type Dialog struct {
+	repo DialogRepository
+	prod DialogParticipantEventProducer
+}
+
+func NewDialog(repo DialogRepository, prod DialogParticipantEventProducer) *Dialog {
+	return &Dialog{
+		repo: repo,
+		prod: prod,
+	}
 }
 
 func (g *Dialog) List(ctx context.Context) ([]entity.Dialog, error) {
@@ -45,6 +54,26 @@ func (g *Dialog) Create(ctx context.Context, obj dto.DialogCreate) (entity.Dialo
 	if err := g.repo.Create(ctx, &dialog); err != nil {
 		return entity.Dialog{}, fmt.Errorf("create dialog: %w", err)
 	}
+
+	chatID := entity.ChatID{ID: dialog.ID, Type: entity.DialogChatType}
+	events := []entity.ParticipantEvent{
+		{
+			Type:   entity.AddedParticipant,
+			ChatID: chatID,
+			UserID: ctxutil.UserIDFromContext(ctx).ToInt(),
+		},
+		{
+			Type:   entity.AddedParticipant,
+			ChatID: chatID,
+			UserID: obj.PartnerUserID,
+		},
+	}
+	for _, event := range events {
+		if err := g.prod.Produce(ctx, event); err != nil {
+			return entity.Dialog{}, fmt.Errorf("produce dialog participant event: %w", err)
+		}
+	}
+
 	return dialog, nil
 }
 
@@ -73,5 +102,23 @@ func (g *Dialog) Update(ctx context.Context, obj dto.DialogUpdate) error {
 	if err := g.repo.Update(ctx, &dialog); err != nil {
 		return fmt.Errorf("update dialog: %w", err)
 	}
+
+	eventType := entity.RemovedParticipant
+	if !*obj.PartnerIsBlocked {
+		eventType = entity.AddedParticipant
+	}
+
+	event := entity.ParticipantEvent{
+		Type: eventType,
+		ChatID: entity.ChatID{
+			ID:   dialog.ID,
+			Type: entity.DialogChatType,
+		},
+		UserID: dialog.Partner.UserID,
+	}
+	if err := g.prod.Produce(ctx, event); err != nil {
+		return fmt.Errorf("produce dialog participant event: %w", err)
+	}
+
 	return nil
 }

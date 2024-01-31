@@ -10,8 +10,8 @@ import (
 
 	"github.com/Chatyx/backend/internal/config"
 	cachepostgres "github.com/Chatyx/backend/internal/infrastructure/cache/postgres"
-	pubsubredis "github.com/Chatyx/backend/internal/infrastructure/pubsub/redis"
 	"github.com/Chatyx/backend/internal/infrastructure/repository/postgres"
+	sysbusredis "github.com/Chatyx/backend/internal/infrastructure/sysbus/redis"
 	"github.com/Chatyx/backend/internal/service"
 	inhttp "github.com/Chatyx/backend/internal/transport/http"
 	v1 "github.com/Chatyx/backend/internal/transport/http/v1"
@@ -67,6 +67,12 @@ func NewApp(confPath string) *App {
 	}
 	closers = append(closers, CloserAdapter(pgPool.Close))
 
+	redisCli, err := sysbusredis.NewRedisConn(conf.Redis)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to init redis client")
+	}
+	closers = append(closers, redisCli)
+
 	txm := postgres.NewTransactionManager(pgPool)
 	userRepo := postgres.NewUserRepository(pgPool)
 	groupRepo := postgres.NewGroupRepository(pgPool)
@@ -74,7 +80,8 @@ func NewApp(confPath string) *App {
 	groupParticipantRepo := postgres.NewGroupParticipantRepository(pgPool)
 	participantChecker := cachepostgres.NewParticipantChecker(pgPool)
 	messageRepo := postgres.NewMessageRepository(pgPool)
-	pubsub := pubsubredis.NewPublishSubscriber(nil)
+	messagePubSub := sysbusredis.NewMessagePublishSubscriber(redisCli)
+	chatProdCons := sysbusredis.NewParticipantEventProduceConsumer(redisCli)
 
 	authStorageDBNum, _ := strconv.Atoi(conf.Redis.Database)
 	authStorage, err := redis.NewStorage(redis.Config{
@@ -94,10 +101,14 @@ func NewApp(confPath string) *App {
 		UserRepository:    userRepo,
 		SessionRepository: authStorage,
 	})
-	groupService := service.NewGroup(groupRepo)
-	dialogService := service.NewDialog(dialogRepo)
-	groupParticipantService := service.NewGroupParticipant(txm, groupParticipantRepo)
-	messageService := service.NewMessage(messageRepo, pubsub, participantChecker)
+	groupService := service.NewGroup(groupRepo, chatProdCons)
+	dialogService := service.NewDialog(dialogRepo, chatProdCons)
+	groupParticipantService := service.NewGroupParticipant(service.GroupParticipantConfig{
+		TxManager:     txm,
+		Repository:    groupParticipantRepo,
+		EventProducer: chatProdCons,
+	})
+	messageService := service.NewMessage(messageRepo, messagePubSub, participantChecker)
 	authService := auth.NewService(
 		authStorage,
 		auth.WithIssuer(conf.Auth.Issuer),

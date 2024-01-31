@@ -19,6 +19,11 @@ type GroupParticipantRepository interface {
 	Update(ctx context.Context, p *entity.GroupParticipant) error
 }
 
+//go:generate mockery --inpackage --testonly --case underscore --name GroupParticipantEventProducer
+type GroupParticipantEventProducer interface {
+	Produce(ctx context.Context, event entity.ParticipantEvent) error
+}
+
 //go:generate mockery --inpackage --testonly --case underscore --name TransactionManager
 type TransactionManager interface {
 	Do(ctx context.Context, fn func(ctx context.Context) error) error
@@ -28,15 +33,23 @@ type StatusMatrix interface {
 	IsCorrectTransit(from, to entity.GroupParticipantStatus) bool
 }
 
+type GroupParticipantConfig struct {
+	TxManager     TransactionManager
+	Repository    GroupParticipantRepository
+	EventProducer GroupParticipantEventProducer
+}
+
 type GroupParticipant struct {
 	txm  TransactionManager
 	repo GroupParticipantRepository
+	prod GroupParticipantEventProducer
 }
 
-func NewGroupParticipant(txm TransactionManager, repo GroupParticipantRepository) *GroupParticipant {
+func NewGroupParticipant(conf GroupParticipantConfig) *GroupParticipant {
 	return &GroupParticipant{
-		txm:  txm,
-		repo: repo,
+		txm:  conf.TxManager,
+		repo: conf.Repository,
+		prod: conf.EventProducer,
 	}
 }
 
@@ -90,7 +103,17 @@ func (p *GroupParticipant) Invite(ctx context.Context, groupID, userID int) (ent
 		return entity.GroupParticipant{}, fmt.Errorf("create participant: %w", err)
 	}
 
-	// TODO create a service message and publish it
+	err := p.prod.Produce(ctx, entity.ParticipantEvent{
+		Type: entity.AddedParticipant,
+		ChatID: entity.ChatID{
+			ID:   groupID,
+			Type: entity.GroupChatType,
+		},
+		UserID: userID,
+	})
+	if err != nil {
+		return entity.GroupParticipant{}, fmt.Errorf("produce group participant event: %w", err)
+	}
 
 	return invitedParticipant, nil
 }
@@ -128,7 +151,25 @@ func (p *GroupParticipant) UpdateStatus(ctx context.Context, groupID, userID int
 		return fmt.Errorf("call transaction manager: %w", err)
 	}
 
-	// TODO create a service message and publish it
+	var eventType entity.ParticipantEventType
+	switch status {
+	case entity.JoinedStatus:
+		eventType = entity.AddedParticipant
+	case entity.KickedStatus, entity.LeftStatus:
+		eventType = entity.RemovedParticipant
+	}
+
+	err = p.prod.Produce(ctx, entity.ParticipantEvent{
+		Type: eventType,
+		ChatID: entity.ChatID{
+			ID:   groupID,
+			Type: entity.GroupChatType,
+		},
+		UserID: userID,
+	})
+	if err != nil {
+		return fmt.Errorf("produce group participant event: %w", err)
+	}
 
 	return nil
 }

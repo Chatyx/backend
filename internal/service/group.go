@@ -7,6 +7,7 @@ import (
 
 	"github.com/Chatyx/backend/internal/dto"
 	"github.com/Chatyx/backend/internal/entity"
+	"github.com/Chatyx/backend/pkg/ctxutil"
 )
 
 type GroupRepository interface {
@@ -19,10 +20,14 @@ type GroupRepository interface {
 
 type Group struct {
 	repo GroupRepository
+	prod GroupParticipantEventProducer
 }
 
-func NewGroup(repo GroupRepository) *Group {
-	return &Group{repo: repo}
+func NewGroup(repo GroupRepository, prod GroupParticipantEventProducer) *Group {
+	return &Group{
+		repo: repo,
+		prod: prod,
+	}
 }
 
 func (g *Group) List(ctx context.Context) ([]entity.Group, error) {
@@ -44,6 +49,19 @@ func (g *Group) Create(ctx context.Context, obj dto.GroupCreate) (entity.Group, 
 	if err := g.repo.Create(ctx, &group); err != nil {
 		return entity.Group{}, fmt.Errorf("create group: %w", err)
 	}
+
+	event := entity.ParticipantEvent{
+		Type: entity.AddedParticipant,
+		ChatID: entity.ChatID{
+			ID:   group.ID,
+			Type: entity.GroupChatType,
+		},
+		UserID: ctxutil.UserIDFromContext(ctx).ToInt(),
+	}
+	if err := g.prod.Produce(ctx, event); err != nil {
+		return entity.Group{}, fmt.Errorf("produce group participant event: %w", err)
+	}
+
 	return group, nil
 }
 

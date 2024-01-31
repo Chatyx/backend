@@ -189,16 +189,18 @@ func (r *DialogRepository) Update(ctx context.Context, dialog *entity.Dialog) er
 	query := `UPDATE dialog_participants
 	SET is_blocked = $3
 	WHERE chat_id = $1
-	  AND user_id != $2`
+	  AND user_id != $2
+	RETURNING user_id`
 
-	execRes, err := r.getter.Get(ctx).Exec(ctx, query, dialog.ID, userID, dialog.Partner.IsBlocked)
+	err := r.getter.Get(ctx).QueryRow(ctx, query, dialog.ID, userID, dialog.Partner.IsBlocked).Scan(&dialog.Partner.UserID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("%w: %v", entity.ErrDialogNotFound, err)
+		}
+
 		return fmt.Errorf("exec query to update dialog participant: %v", err)
 	}
 
-	if execRes.RowsAffected() == 0 {
-		return fmt.Errorf("%w: there aren't affected rows", entity.ErrDialogNotFound)
-	}
 	return nil
 }
 
