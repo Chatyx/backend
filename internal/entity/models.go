@@ -25,6 +25,17 @@ const (
 	GroupChatType  ChatType = "group"
 )
 
+type ParticipantEventType string
+
+func (et ParticipantEventType) String() string {
+	return string(et)
+}
+
+const (
+	AddedParticipant   ParticipantEventType = "added"
+	RemovedParticipant ParticipantEventType = "removed"
+)
+
 type User struct {
 	ID        int
 	Username  string
@@ -70,6 +81,12 @@ type Dialog struct {
 type ChatID struct {
 	ID   int
 	Type ChatType
+}
+
+type ParticipantEvent struct {
+	Type   ParticipantEventType
+	ChatID ChatID
+	UserID int
 }
 
 type Message struct {
