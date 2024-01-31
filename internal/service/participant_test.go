@@ -93,7 +93,10 @@ func TestGroupParticipant_List(t *testing.T) {
 				testCase.mockBehavior(repo)
 			}
 
-			service := NewGroupParticipant(txm, repo)
+			service := NewGroupParticipant(GroupParticipantConfig{
+				TxManager:  txm,
+				Repository: repo,
+			})
 			ctx := ctxutil.WithUserID(context.Background(), ctxutil.UserID(strconv.Itoa(testCase.currentUserID)))
 
 			participants, err := service.List(ctx, 1)
@@ -192,7 +195,10 @@ func TestGroupParticipant_Get(t *testing.T) {
 				testCase.mockBehavior(repo)
 			}
 
-			service := NewGroupParticipant(txm, repo)
+			service := NewGroupParticipant(GroupParticipantConfig{
+				TxManager:  txm,
+				Repository: repo,
+			})
 			ctx := ctxutil.WithUserID(context.Background(), ctxutil.UserID(strconv.Itoa(testCase.currentUserID)))
 
 			participants, err := service.Get(ctx, 1, 2)
@@ -217,13 +223,13 @@ func TestGroupParticipant_Invite(t *testing.T) {
 	testCases := []struct {
 		name                string
 		currentUserID       int
-		mockBehavior        func(repo *MockGroupParticipantRepository)
+		mockBehavior        func(repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer)
 		expectedParticipant entity.GroupParticipant
 		expectedError       error
 	}{
 		{
 			name: "Successful",
-			mockBehavior: func(repo *MockGroupParticipantRepository) {
+			mockBehavior: func(repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
 					GroupID: 1,
 					UserID:  1,
@@ -232,19 +238,28 @@ func TestGroupParticipant_Invite(t *testing.T) {
 				}, nil)
 
 				repo.On("Create", mock.Anything, &defaultInvitedParticipant).Return(nil)
+
+				prod.On("Produce", mock.Anything, entity.ParticipantEvent{
+					Type: entity.AddedParticipant,
+					ChatID: entity.ChatID{
+						ID:   1,
+						Type: entity.GroupChatType,
+					},
+					UserID: 2,
+				}).Return(nil)
 			},
 			expectedParticipant: defaultInvitedParticipant,
 		},
 		{
 			name: "Current user isn't in the group",
-			mockBehavior: func(repo *MockGroupParticipantRepository) {
+			mockBehavior: func(repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{}, entity.ErrGroupParticipantNotFound)
 			},
 			expectedError: entity.ErrGroupNotFound,
 		},
 		{
 			name: "Current user is kicked from group",
-			mockBehavior: func(repo *MockGroupParticipantRepository) {
+			mockBehavior: func(repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
 					GroupID: 1,
 					UserID:  1,
@@ -256,7 +271,7 @@ func TestGroupParticipant_Invite(t *testing.T) {
 		},
 		{
 			name: "Current user isn't admin",
-			mockBehavior: func(repo *MockGroupParticipantRepository) {
+			mockBehavior: func(repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
 					GroupID: 1,
 					UserID:  1,
@@ -268,14 +283,14 @@ func TestGroupParticipant_Invite(t *testing.T) {
 		},
 		{
 			name: "Unexpected error while getting current participant",
-			mockBehavior: func(repo *MockGroupParticipantRepository) {
+			mockBehavior: func(repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{}, errUnexpected)
 			},
 			expectedError: errUnexpected,
 		},
 		{
 			name: "Unexpected error while creating participant",
-			mockBehavior: func(repo *MockGroupParticipantRepository) {
+			mockBehavior: func(repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
 					GroupID: 1,
 					UserID:  1,
@@ -287,17 +302,45 @@ func TestGroupParticipant_Invite(t *testing.T) {
 			},
 			expectedError: errUnexpected,
 		},
+		{
+			name: "Unexpected error while producing participant event",
+			mockBehavior: func(repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
+				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
+					GroupID: 1,
+					UserID:  1,
+					IsAdmin: true,
+					Status:  entity.JoinedStatus,
+				}, nil)
+
+				repo.On("Create", mock.Anything, &defaultInvitedParticipant).Return(nil)
+
+				prod.On("Produce", mock.Anything, entity.ParticipantEvent{
+					Type: entity.AddedParticipant,
+					ChatID: entity.ChatID{
+						ID:   1,
+						Type: entity.GroupChatType,
+					},
+					UserID: 2,
+				}).Return(errUnexpected)
+			},
+			expectedError: errUnexpected,
+		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			txm := NewMockTransactionManager(t)
 			repo := NewMockGroupParticipantRepository(t)
+			prod := NewMockGroupParticipantEventProducer(t)
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(repo)
+				testCase.mockBehavior(repo, prod)
 			}
 
-			service := NewGroupParticipant(txm, repo)
+			service := NewGroupParticipant(GroupParticipantConfig{
+				TxManager:     txm,
+				Repository:    repo,
+				EventProducer: prod,
+			})
 			ctx := ctxutil.WithUserID(context.Background(), "1")
 
 			participants, err := service.Invite(ctx, 1, 2)
@@ -316,14 +359,14 @@ func TestGroupParticipant_UpdateStatus(t *testing.T) {
 		name            string
 		userIDForUpdate int
 		statusForUpdate entity.GroupParticipantStatus
-		mockBehavior    func(txm *MockTransactionManager, repo *MockGroupParticipantRepository)
+		mockBehavior    func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer)
 		expectedError   error
 	}{
 		{
 			name:            "Successful kick another user",
 			userIDForUpdate: 2,
 			statusForUpdate: entity.KickedStatus,
-			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository) {
+			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
 					GroupID: 1,
 					UserID:  1,
@@ -332,23 +375,63 @@ func TestGroupParticipant_UpdateStatus(t *testing.T) {
 				}, nil)
 
 				txm.On("Do", mock.Anything, mock.Anything).Return(nil)
-				// repo.On("GetThenUpdate", mock.Anything, 1, 2, mock.AnythingOfType("GroupParticipantFunc")).Return(nil)
+
+				prod.On("Produce", mock.Anything, entity.ParticipantEvent{
+					Type: entity.RemovedParticipant,
+					ChatID: entity.ChatID{
+						ID:   1,
+						Type: entity.GroupChatType,
+					},
+					UserID: 2,
+				}).Return(nil)
+			},
+		},
+		{
+			name:            "Successful return of another user",
+			userIDForUpdate: 2,
+			statusForUpdate: entity.JoinedStatus,
+			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
+				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
+					GroupID: 1,
+					UserID:  1,
+					IsAdmin: true,
+					Status:  entity.JoinedStatus,
+				}, nil)
+
+				txm.On("Do", mock.Anything, mock.Anything).Return(nil)
+
+				prod.On("Produce", mock.Anything, entity.ParticipantEvent{
+					Type: entity.AddedParticipant,
+					ChatID: entity.ChatID{
+						ID:   1,
+						Type: entity.GroupChatType,
+					},
+					UserID: 2,
+				}).Return(nil)
 			},
 		},
 		{
 			name:            "Successful leave from the group",
 			userIDForUpdate: 1,
 			statusForUpdate: entity.LeftStatus,
-			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository) {
+			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				txm.On("Do", mock.Anything, mock.Anything).Return(nil)
-				// repo.On("GetThenUpdate", mock.Anything, 1, 1, mock.AnythingOfType("GroupParticipantFunc")).Return(nil)
+
+				prod.On("Produce", mock.Anything, entity.ParticipantEvent{
+					Type: entity.RemovedParticipant,
+					ChatID: entity.ChatID{
+						ID:   1,
+						Type: entity.GroupChatType,
+					},
+					UserID: 1,
+				}).Return(nil)
 			},
 		},
 		{
 			name:            "Current user isn't in the group",
 			userIDForUpdate: 2,
 			statusForUpdate: entity.KickedStatus,
-			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository) {
+			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{}, entity.ErrGroupParticipantNotFound)
 			},
 			expectedError: entity.ErrGroupNotFound,
@@ -357,7 +440,7 @@ func TestGroupParticipant_UpdateStatus(t *testing.T) {
 			name:            "Current user is kicked from group",
 			userIDForUpdate: 2,
 			statusForUpdate: entity.KickedStatus,
-			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository) {
+			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
 					GroupID: 1,
 					UserID:  1,
@@ -371,7 +454,7 @@ func TestGroupParticipant_UpdateStatus(t *testing.T) {
 			name:            "Current user isn't admin",
 			userIDForUpdate: 2,
 			statusForUpdate: entity.KickedStatus,
-			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository) {
+			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
 					GroupID: 1,
 					UserID:  1,
@@ -385,7 +468,7 @@ func TestGroupParticipant_UpdateStatus(t *testing.T) {
 			name:            "Unexpected error while getting current participant",
 			userIDForUpdate: 2,
 			statusForUpdate: entity.KickedStatus,
-			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository) {
+			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{}, errUnexpected)
 			},
 			expectedError: errUnexpected,
@@ -394,7 +477,7 @@ func TestGroupParticipant_UpdateStatus(t *testing.T) {
 			name:            "Unexpected error while updating participant status",
 			userIDForUpdate: 2,
 			statusForUpdate: entity.KickedStatus,
-			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository) {
+			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
 				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
 					GroupID: 1,
 					UserID:  1,
@@ -403,7 +486,31 @@ func TestGroupParticipant_UpdateStatus(t *testing.T) {
 				}, nil)
 
 				txm.On("Do", mock.Anything, mock.Anything).Return(errUnexpected)
-				// repo.On("GetThenUpdate", mock.Anything, 1, 2, mock.AnythingOfType("GroupParticipantFunc")).Return(errUnexpected)
+			},
+			expectedError: errUnexpected,
+		},
+		{
+			name:            "Unexpected error while producing participant event",
+			userIDForUpdate: 2,
+			statusForUpdate: entity.KickedStatus,
+			mockBehavior: func(txm *MockTransactionManager, repo *MockGroupParticipantRepository, prod *MockGroupParticipantEventProducer) {
+				repo.On("Get", mock.Anything, 1, 1, false).Return(entity.GroupParticipant{
+					GroupID: 1,
+					UserID:  1,
+					IsAdmin: true,
+					Status:  entity.JoinedStatus,
+				}, nil)
+
+				txm.On("Do", mock.Anything, mock.Anything).Return(nil)
+
+				prod.On("Produce", mock.Anything, entity.ParticipantEvent{
+					Type: entity.RemovedParticipant,
+					ChatID: entity.ChatID{
+						ID:   1,
+						Type: entity.GroupChatType,
+					},
+					UserID: 2,
+				}).Return(errUnexpected)
 			},
 			expectedError: errUnexpected,
 		},
@@ -413,11 +520,16 @@ func TestGroupParticipant_UpdateStatus(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			txm := NewMockTransactionManager(t)
 			repo := NewMockGroupParticipantRepository(t)
+			prod := NewMockGroupParticipantEventProducer(t)
 			if testCase.mockBehavior != nil {
-				testCase.mockBehavior(txm, repo)
+				testCase.mockBehavior(txm, repo, prod)
 			}
 
-			service := NewGroupParticipant(txm, repo)
+			service := NewGroupParticipant(GroupParticipantConfig{
+				TxManager:     txm,
+				Repository:    repo,
+				EventProducer: prod,
+			})
 			ctx := ctxutil.WithUserID(context.Background(), "1")
 
 			err := service.UpdateStatus(ctx, 1, testCase.userIDForUpdate, testCase.statusForUpdate)
