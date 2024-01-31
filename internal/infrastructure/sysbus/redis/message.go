@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Chatyx/backend/internal/entity"
+	"github.com/Chatyx/backend/internal/service"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -34,7 +35,8 @@ func (ps *MessagePublishSubscriber) Publish(ctx context.Context, message entity.
 	return nil
 }
 
-func (ps *MessagePublishSubscriber) Subscribe(ctx context.Context, chatIDs ...entity.ChatID) *MessageConsumer {
+//nolint:ireturn // that's a factory
+func (ps *MessagePublishSubscriber) Subscribe(ctx context.Context, chatIDs ...entity.ChatID) service.MessageConsumer {
 	channels := chatChannelNames(chatIDs...)
 	return &MessageConsumer{
 		pubSub: ps.cli.Subscribe(ctx, channels...),
