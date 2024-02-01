@@ -1,0 +1,9 @@
+- chat_id: 2
+  user_id: 1
+  status: joined
+  is_admin: true
+
+- chat_id: 2
+  user_id: 2
+  status: joined
+  is_admin: false

@@ -1,0 +1,10 @@
+- id: 1
+  type: dialog
+  uname: u1:u2
+  created_at: 2024-01-01T18:23:10.521
+
+- id: 2
+  type: group
+  name: My family
+  description: ...
+  created_at: 2024-01-01T18:24:59.167
