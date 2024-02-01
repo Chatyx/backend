@@ -47,13 +47,13 @@ func NewMessageList(messages []entity.Message) MessageList {
 }
 
 type Message struct {
-	ID          int        `json:"id"`
-	SenderID    int        `json:"sender_id"`
-	Content     string     `json:"content"`
-	ContentType string     `json:"content_type"`
-	IsService   bool       `json:"is_service"`
-	SentAt      time.Time  `json:"sent_at"`
-	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
+	ID          int                `json:"id"`
+	SenderID    int                `json:"sender_id"`
+	Content     string             `json:"content"`
+	ContentType entity.ContentType `json:"content_type"`
+	IsService   bool               `json:"is_service"`
+	SentAt      time.Time          `json:"sent_at"`
+	DeliveredAt *time.Time         `json:"delivered_at,omitempty"`
 }
 
 func NewMessage(message entity.Message) Message {
@@ -69,8 +69,8 @@ func NewMessage(message entity.Message) Message {
 }
 
 type MessageCreate struct {
-	Content     string `json:"content"      validate:"required,max=2000"`
-	ContentType string `json:"content_type" validate:"required,oneof=text image"`
+	Content     string             `json:"content"      validate:"required,max=2000"`
+	ContentType entity.ContentType `json:"content_type" validate:"required,oneof=text image"`
 }
 
 func (mc MessageCreate) DTO() dto.MessageCreate {

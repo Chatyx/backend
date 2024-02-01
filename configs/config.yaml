@@ -11,6 +11,8 @@ api:
 
 chat:
   listen: ":8081"
+  read_timeout: 15s
+  write_timeout: 15s
 
 cors:
   allowed_origins:

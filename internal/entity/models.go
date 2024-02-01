@@ -25,6 +25,17 @@ const (
 	GroupChatType  ChatType = "group"
 )
 
+type ContentType string
+
+func (ct ContentType) String() string {
+	return string(ct)
+}
+
+const (
+	TextContentType  ContentType = "text"
+	ImageContentType ContentType = "image"
+)
+
 type ParticipantEventType string
 
 func (et ParticipantEventType) String() string {
@@ -94,7 +105,7 @@ type Message struct {
 	ChatID      ChatID
 	SenderID    int
 	Content     string
-	ContentType string
+	ContentType ContentType
 	IsService   bool
 	SentAt      time.Time
 	DeliveredAt *time.Time

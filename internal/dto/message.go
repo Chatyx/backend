@@ -23,5 +23,5 @@ type MessageList struct {
 type MessageCreate struct {
 	ChatID      entity.ChatID
 	Content     string
-	ContentType string
+	ContentType entity.ContentType
 }

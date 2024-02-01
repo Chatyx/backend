@@ -1,0 +1,32 @@
+syntax = "proto3";
+package model;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = ".;model";
+
+enum ChatType {
+  DIALOG = 0;
+  GROUP = 1;
+}
+
+enum ContentType {
+  TEXT = 0;
+  IMAGE = 1;
+}
+
+message MessageCreate {
+  int64 chat_id = 1;
+  ChatType chat_type = 2;
+  string content = 3;
+}
+
+message Message {
+  int64 id = 1;
+  int64 sender_id = 2;
+  string content = 3;
+  ContentType content_type = 4;
+  bool is_service = 5;
+  google.protobuf.Timestamp sent_at = 6;
+  optional google.protobuf.Timestamp delivered = 7;
+}

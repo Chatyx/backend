@@ -15,6 +15,7 @@ import (
 	"github.com/Chatyx/backend/internal/service"
 	inhttp "github.com/Chatyx/backend/internal/transport/http"
 	v1 "github.com/Chatyx/backend/internal/transport/http/v1"
+	"github.com/Chatyx/backend/internal/transport/websocket"
 	"github.com/Chatyx/backend/pkg/auth"
 	"github.com/Chatyx/backend/pkg/auth/storage/redis"
 	auhttp "github.com/Chatyx/backend/pkg/auth/transport/http"
@@ -109,6 +110,13 @@ func NewApp(confPath string) *App {
 		EventProducer: chatProdCons,
 	})
 	messageService := service.NewMessage(messageRepo, messagePubSub, participantChecker)
+	messageServeManager := service.NewMessageServeManager(service.MessageServeManagerConfig{
+		Service:          messageService,
+		EventConsumer:    chatProdCons,
+		Subscriber:       messagePubSub,
+		GroupRepository:  groupRepo,
+		DialogRepository: dialogRepo,
+	})
 	authService := auth.NewService(
 		authStorage,
 		auth.WithIssuer(conf.Auth.Issuer),
@@ -169,6 +177,18 @@ func NewApp(confPath string) *App {
 	)
 	runners = append(runners, apiServer)
 	closers = append(closers, apiServer)
+
+	wsInitHandler := websocket.NewClientSessionInitHandler(messageServeManager)
+	wsServer := websocket.NewServer(
+		websocket.Config{
+			Server: conf.Chat,
+			Debug:  conf.Debug,
+			Cors:   conf.Cors,
+		},
+		authorizeMiddleware(wsInitHandler),
+	)
+	runners = append(runners, wsServer)
+	closers = append(closers, wsServer)
 
 	return &App{
 		runners: runners,

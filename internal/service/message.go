@@ -114,7 +114,7 @@ func NewMessageServeManager(conf MessageServeManagerConfig) *MessageServeManager
 	}
 }
 
-func (sm *MessageServeManager) BeginServe(ctx context.Context, inCh <-chan dto.MessageCreate) (chan<- entity.Message, <-chan error, error) {
+func (sm *MessageServeManager) BeginServe(ctx context.Context, inCh <-chan dto.MessageCreate) (<-chan entity.Message, <-chan error, error) {
 	chatIDs, err := sm.listActiveChatIDs(ctx)
 	if err != nil {
 		return nil, nil, err

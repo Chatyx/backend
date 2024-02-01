@@ -103,15 +103,15 @@ func (c *MessageConsumer) Close() error {
 }
 
 type messageModel struct {
-	ID          int             `json:"id"`
-	ChatID      int             `json:"chat_id"`
-	ChatType    entity.ChatType `json:"chat_type"`
-	SenderID    int             `json:"sender_id"`
-	Content     string          `json:"content"`
-	ContentType string          `json:"content_type"`
-	IsService   bool            `json:"is_service"`
-	SentAt      time.Time       `json:"sent_at"`
-	DeliveredAt *time.Time      `json:"delivered_at,omitempty"`
+	ID          int                `json:"id"`
+	ChatID      int                `json:"chat_id"`
+	ChatType    entity.ChatType    `json:"chat_type"`
+	SenderID    int                `json:"sender_id"`
+	Content     string             `json:"content"`
+	ContentType entity.ContentType `json:"content_type"`
+	IsService   bool               `json:"is_service"`
+	SentAt      time.Time          `json:"sent_at"`
+	DeliveredAt *time.Time         `json:"delivered_at,omitempty"`
 }
 
 func newMessageModel(message entity.Message) messageModel {
