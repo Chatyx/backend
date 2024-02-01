@@ -42,7 +42,6 @@ func NewServer(conf Config, h http.Handler) *Server {
 			Addr: conf.Listen,
 			Handler: middleware.Chain(
 				mux,
-				middleware.Log,
 				corsObj.Handler,
 			),
 			ReadTimeout:  conf.ReadTimeout,
