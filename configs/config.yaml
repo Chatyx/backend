@@ -23,7 +23,7 @@ cors:
 auth:
   issuer: chatyx
   sign_key: xNN3f9M9vZLtqHJwX2wtTbCBMpR
-  access_token_ttl: 24h
+  access_token_ttl: 15m
   refresh_token_ttl: 720h # 30 days
 
 postgres:
