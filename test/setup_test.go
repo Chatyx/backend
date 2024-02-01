@@ -6,12 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/Chatyx/backend/internal/app"
+	"github.com/Chatyx/backend/internal/config"
 
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/golang-migrate/migrate/v4"
@@ -29,10 +32,14 @@ const (
 	fixturesPath   = "./fixtures"
 )
 
+const defaultTimeout = 5 * time.Second
+
 type AppTestSuite struct {
 	suite.Suite
+	conf      config.Config
 	db        *sql.DB
 	redisCli  *redis.Client
+	httpCli   *http.Client
 	mig       *migrate.Migrate
 	fixLoader *testfixtures.Loader
 }
@@ -77,6 +84,9 @@ func (s *AppTestSuite) SetupSuite() {
 		testfixtures.Directory(fixturesPath),
 	)
 	s.Require().NoError(err, "Failed to create *testfixtures.Loader instance")
+
+	s.conf = conf
+	s.httpCli = &http.Client{Timeout: defaultTimeout}
 
 	go application.Run()
 }
