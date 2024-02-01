@@ -40,6 +40,7 @@ type Runner interface {
 type App struct {
 	runners []Runner
 	closers []io.Closer
+	conf    config.Config
 }
 
 //nolint:funlen // there are a lot of components here that need to be configured
@@ -193,7 +194,12 @@ func NewApp(confPath string) *App {
 	return &App{
 		runners: runners,
 		closers: closers,
+		conf:    conf,
 	}
+}
+
+func (a *App) Config() config.Config {
+	return a.conf
 }
 
 func (a *App) Run() {

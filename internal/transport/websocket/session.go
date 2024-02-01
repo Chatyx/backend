@@ -10,6 +10,7 @@ import (
 	"github.com/Chatyx/backend/internal/transport/websocket/model"
 	"github.com/Chatyx/backend/pkg/ctxutil"
 	"github.com/Chatyx/backend/pkg/log"
+
 	ws "github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
 )

@@ -59,23 +59,16 @@ build:
 generate: .install-mockery
 	go generate ./...
 
-.PHONY: infra
-infra:
-	docker-compose up --remove-orphan postgres redis
-
-.PHONY: test.unit
-test.unit:
-	go test -tags=unit -v -coverprofile=cover.out ./...
-	go tool cover -func=cover.out
-
 .PHONY: test
 test:
-	go test -v -coverprofile=cover.out ./...
+	go test -v -coverprofile=cover.out ./internal/... ./pkg/...
 	go tool cover -func=cover.out
 
 .PHONY: test.integration
-test.integration: infra
-	go test -tags=integration -v ./test/... || true
+test.integration:
+	docker-compose -f ./test/docker-compose.yaml up -d
+	go test -v ./test/... || true
+	docker-compose -f ./test/docker-compose.yaml down
 
 # usage: make migration NAME="{migration_name}"
 .PHONY: migration

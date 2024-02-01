@@ -1,0 +1,27 @@
+- id: 1
+  username: john1967
+  pwd_hash: $2a$04$lMtx8rPkeTzu2vR..aLj8OLxwZtT0O7dBGk3uyBS4.ng4Z40Yi42G # qwerty12345
+  email: john1967@gmail.com
+  first_name: John
+  last_name: Lennon
+  birth_date: 1967-07-16
+  bio: ...
+  created_at: 2024-01-01T17:28:30.441
+
+- id: 2
+  username: mick47
+  pwd_hash: $2a$04$lMtx8rPkeTzu2vR..aLj8OLxwZtT0O7dBGk3uyBS4.ng4Z40Yi42G # qwerty12345
+  email: mick47@gmail.com
+  created_at: 2024-01-01T17:29:11.231
+
+- id: 3
+  username: william86
+  pwd_hash: $2a$04$lMtx8rPkeTzu2vR..aLj8OLxwZtT0O7dBGk3uyBS4.ng4Z40Yi42G # qwerty12345
+  email: william86@gmail.com
+  created_at: 2024-01-01T17:29:12.132
+
+- id: 4
+  username: jacob86
+  pwd_hash: $2a$04$lMtx8rPkeTzu2vR..aLj8OLxwZtT0O7dBGk3uyBS4.ng4Z40Yi42G # qwerty12345
+  email: jacob86@gmail.com
+  created_at: 2024-01-01T17:29:13.325

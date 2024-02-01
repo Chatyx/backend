@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15.4
+    container_name: chatyx-postgres_test
+    environment:
+      - POSTGRES_DB=chatyx_db_test
+      - POSTGRES_USER=chatyx_user
+      - POSTGRES_PASSWORD=chatyx_password
+    ports:
+      - "15432:5432"
+    restart: always
+    networks:
+      - chatyx-backend-network_test
+
+  redis:
+    image: redis:7.2
+    container_name: chatyx-redis_test
+    ports:
+      - "16379:6379"
+    restart: always
+    networks:
+      - chatyx-backend-network_test
+
+networks:
+  chatyx-backend-network_test:
