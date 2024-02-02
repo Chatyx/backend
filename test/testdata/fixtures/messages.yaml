@@ -1,0 +1,8 @@
+- id: 1
+  sender_id: 1
+  chat_id: 1
+  chat_type: dialog
+  content: Hello, world
+  content_type: text
+  is_service: false
+  sent_at: 2024-01-02T16:32:11.231

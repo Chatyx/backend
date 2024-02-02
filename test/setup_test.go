@@ -29,7 +29,7 @@ import (
 const (
 	configPath     = "../configs/test_config.yaml"
 	migrationsPath = "../db/migrations"
-	fixturesPath   = "./fixtures"
+	fixturesPath   = "./testdata/fixtures"
 )
 
 const defaultTimeout = 5 * time.Second
@@ -95,13 +95,19 @@ func (s *AppTestSuite) TearDownSuite() {
 	pid := syscall.Getpid()
 	process, err := os.FindProcess(pid)
 	s.Require().NoErrorf(err, "Failed to find process %d", pid)
-	s.Require().NoErrorf(process.Signal(syscall.SIGTERM), "Failed to send SIGTERM to process with pid %d", process.Pid)
+	s.NoErrorf(process.Signal(syscall.SIGTERM), "Failed to send SIGTERM to process with pid %d", process.Pid)
 
-	s.NoError(s.mig.Down(), "Failed to migrate down")
-	s.NoError(s.redisCli.FlushAll(context.Background()).Err(), "Failed to flush all redis keys")
+	srcErr, dbErr := s.mig.Close()
+	s.NoError(srcErr, "Failed to close migrate")
+	s.NoError(dbErr, "Failed to close migrate")
+	s.NoError(s.db.Close(), "Failed to close postgres connection")
+	s.NoError(s.redisCli.Close(), "Failed to close redis connection")
 }
 
 func (s *AppTestSuite) SetupTest() {
 	s.Require().NoError(s.fixLoader.Load(), "Failed to populate postgres")
+}
+
+func (s *AppTestSuite) TearDownTest() {
 	s.Require().NoError(s.redisCli.FlushAll(context.Background()).Err(), "Failed to flush all redis keys")
 }

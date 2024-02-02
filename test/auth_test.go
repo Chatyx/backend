@@ -11,30 +11,35 @@ import (
 
 const defaultFingerprint = "12345"
 
-func (s *AppTestSuite) authenticate(username, password string) auth.TokenPair {
-	bodyStr := fmt.Sprintf(`{"username":"%s","password":"%s"}`, username, password)
-	req, err := http.NewRequest(http.MethodPost, s.apiURLFromPath("/api/v1/auth/login"), strings.NewReader(bodyStr))
-	s.Require().NoError(err, "Failed to create authentication request")
+func (s *AppTestSuite) authenticate(username string) (auth.TokenPair, error) {
+	bodyStr := fmt.Sprintf(`{"username":"%s","password":"%s"}`, username, "qwerty12345")
+	req, err := http.NewRequest(http.MethodPost, s.apiURLFromPath("/api/v1/auth/login").String(), strings.NewReader(bodyStr))
+	if err != nil {
+		return auth.TokenPair{}, fmt.Errorf("create request: %w", err)
+	}
 
 	req.Header.Set("X-Fingerprint", defaultFingerprint)
 
 	resp, err := s.httpCli.Do(req)
-	s.Require().NoError(err, "Failed to authenticate send request")
-	s.Require().Equal(http.StatusOK, resp.StatusCode)
+	if err != nil {
+		return auth.TokenPair{}, fmt.Errorf("send request: %w", err)
+	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return auth.TokenPair{}, fmt.Errorf("got %d response status code", resp.StatusCode)
+	}
 
 	var tokens struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
-	err = json.NewDecoder(resp.Body).Decode(&tokens)
-	s.NoError(err, "Failed to decode response body")
-
-	s.NotEmpty(tokens.AccessToken, "Access token is empty")
-	s.NotEmpty(tokens.RefreshToken, "Refresh token is empty")
+	if err = json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
+		return auth.TokenPair{}, fmt.Errorf("decode response body: %w", err)
+	}
 
 	return auth.TokenPair{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
-	}
+	}, nil
 }

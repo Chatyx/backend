@@ -19,7 +19,7 @@ MOCKERY = ${PROJECT_BIN}/mockery
 
 export PATH := ${PROJECT_BIN}:${PATH}
 
-all: clean lint test.unit test.integration build
+all: clean lint test test.integration build
 
 .PHONY: .install-linter
 .install-linter:
@@ -61,13 +61,13 @@ generate: .install-mockery
 
 .PHONY: test
 test:
-	go test -v -coverprofile=cover.out ./internal/... ./pkg/...
+	go test -count=1 -v -coverprofile=cover.out ./internal/... ./pkg/...
 	go tool cover -func=cover.out
 
 .PHONY: test.integration
 test.integration:
 	docker-compose -f ./test/docker-compose.yaml up -d
-	go test -v ./test/... || true
+	go test -count=1 -v ./test/... -run TestAppTestSuite || true
 	docker-compose -f ./test/docker-compose.yaml down
 
 # usage: make migration NAME="{migration_name}"
