@@ -80,6 +80,7 @@ func (mc MessageCreate) DTO() dto.MessageCreate {
 	}
 }
 
+//go:generate mockery --inpackage --testonly --case underscore --name MessageService
 type MessageService interface {
 	List(ctx context.Context, obj dto.MessageList) ([]entity.Message, error)
 	Create(ctx context.Context, obj dto.MessageCreate) (entity.Message, error)
