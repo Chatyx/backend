@@ -13,8 +13,15 @@ func NewMessageFromEntity(message entity.Message) *Message {
 		deliveredAt = timestamppb.New(*message.DeliveredAt)
 	}
 
-	var contentType ContentType
+	var chatType ChatType
+	switch message.ChatID.Type {
+	case entity.DialogChatType:
+		chatType = ChatType_DIALOG
+	case entity.GroupChatType:
+		chatType = ChatType_GROUP
+	}
 
+	var contentType ContentType
 	switch message.ContentType {
 	case entity.TextContentType:
 		contentType = ContentType_TEXT
@@ -24,6 +31,8 @@ func NewMessageFromEntity(message entity.Message) *Message {
 
 	return &Message{
 		Id:          int64(message.ID),
+		ChatId:      int64(message.ChatID.ID),
+		ChatType:    chatType,
 		SenderId:    int64(message.SenderID),
 		Content:     message.Content,
 		ContentType: contentType,

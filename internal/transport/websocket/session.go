@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -82,7 +83,7 @@ func (s *ClientSession) readMessages(inCh chan<- dto.MessageCreate) {
 				return
 			}
 
-			s.logger.WithError(err).Error("Failed to read message from websocket")
+			s.logger.WithError(err).Debug("Failed to read message from websocket")
 			return
 		}
 
@@ -127,7 +128,13 @@ func (s *ClientSession) writeMessages(outCh <-chan entity.Message, errCh <-chan 
 				return
 			}
 
-			s.logger.WithError(err).Error("Error while serving messages")
+			logger := s.logger.WithError(err)
+			if errors.Is(err, entity.ErrGroupNotFound) || errors.Is(err, entity.ErrDialogNotFound) {
+				logger.Debug("Error while serving messages")
+			} else {
+				logger.Error("Error while serving messages")
+			}
+
 			return
 		case <-ticker.C:
 			if err := s.conn.SetWriteDeadline(time.Now().Add(writeTimeout)); err != nil {
