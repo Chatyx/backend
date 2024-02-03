@@ -2,112 +2,150 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
+	"time"
 
-	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/internal/repository"
-	"github.com/Mort4lis/scht-backend/pkg/hasher"
+	"github.com/Chatyx/backend/internal/dto"
+	"github.com/Chatyx/backend/internal/entity"
+	"github.com/Chatyx/backend/pkg/hasher"
 )
 
-type userService struct {
-	userRepo    repository.UserRepository
-	sessionRepo repository.SessionRepository
-	hasher      hasher.PasswordHasher
+type UserRepository interface {
+	List(ctx context.Context) ([]entity.User, error)
+	Create(ctx context.Context, user *entity.User) error
+	GetByID(ctx context.Context, id int) (entity.User, error)
+	GetByUsername(ctx context.Context, username string) (entity.User, error)
+	Update(ctx context.Context, user *entity.User) error
+	UpdatePassword(ctx context.Context, userID int, pwdHash string) error
+	Delete(ctx context.Context, id int) error
 }
 
-func NewUserService(userRepo repository.UserRepository, sessionRepo repository.SessionRepository, hasher hasher.PasswordHasher) UserService {
-	return &userService{
-		userRepo:    userRepo,
-		sessionRepo: sessionRepo,
-		hasher:      hasher,
+type SessionRepository interface {
+	DeleteAllByUserID(ctx context.Context, id string) error
+}
+
+type UserConfig struct {
+	UserRepository    UserRepository
+	SessionRepository SessionRepository
+}
+
+type User struct {
+	userRepo UserRepository
+	sessRepo SessionRepository
+	hasher   hasher.BCrypt
+}
+
+func NewUser(conf UserConfig) *User {
+	return &User{
+		userRepo: conf.UserRepository,
+		sessRepo: conf.SessionRepository,
 	}
 }
 
-func (s *userService) List(ctx context.Context) ([]domain.User, error) {
-	users, err := s.userRepo.List(ctx)
+func (u *User) List(ctx context.Context) ([]entity.User, error) {
+	users, err := u.userRepo.List(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get list of users: %w", err)
+		return nil, fmt.Errorf("list of users: %w", err)
 	}
 
 	return users, nil
 }
 
-func (s *userService) Create(ctx context.Context, dto domain.CreateUserDTO) (domain.User, error) {
-	hash, err := s.hasher.Hash(dto.Password)
+func (u *User) Create(ctx context.Context, obj dto.UserCreate) (entity.User, error) {
+	pwdHash, err := u.hasher.Hash(obj.Password)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("failed to hashing password: %w", err)
+		return entity.User{}, fmt.Errorf("get hash from password: %w", err)
 	}
 
-	dto.Password = hash
+	user := entity.User{
+		Username:  obj.Username,
+		PwdHash:   pwdHash,
+		Email:     obj.Email,
+		FirstName: obj.FirstName,
+		LastName:  obj.LastName,
+		BirthDate: obj.BirthDate,
+		Bio:       obj.Bio,
+		CreatedAt: time.Now(),
+	}
 
-	user, err := s.userRepo.Create(ctx, dto)
+	if err = u.userRepo.Create(ctx, &user); err != nil {
+		return entity.User{}, fmt.Errorf("create user: %w", err)
+	}
+	return user, nil
+}
+
+func (u *User) GetByID(ctx context.Context, id int) (entity.User, error) {
+	user, err := u.userRepo.GetByID(ctx, id)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("failed to create user: %w", err)
+		return entity.User{}, fmt.Errorf("get user by id: %w", err)
 	}
 
 	return user, nil
 }
 
-func (s *userService) GetByID(ctx context.Context, userID string) (domain.User, error) {
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
-		return domain.User{}, fmt.Errorf("failed to get user by id: %w", err)
+func (u *User) Update(ctx context.Context, obj dto.UserUpdate) (entity.User, error) {
+	user := entity.User{
+		ID:        obj.ID,
+		Username:  obj.Username,
+		Email:     obj.Email,
+		FirstName: obj.FirstName,
+		LastName:  obj.LastName,
+		BirthDate: obj.BirthDate,
+		Bio:       obj.Bio,
 	}
 
+	if err := u.userRepo.Update(ctx, &user); err != nil {
+		return entity.User{}, fmt.Errorf("update user: %w", err)
+	}
 	return user, nil
 }
 
-func (s *userService) GetByUsername(ctx context.Context, username string) (domain.User, error) {
-	user, err := s.userRepo.GetByUsername(ctx, username)
+func (u *User) UpdatePassword(ctx context.Context, obj dto.UserUpdatePassword) error {
+	user, err := u.userRepo.GetByID(ctx, obj.UserID) // TODO: think about for update (lock)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("failed to get user by username: %w", err)
+		return fmt.Errorf("get user by id: %w", err)
 	}
 
-	return user, nil
-}
+	if !u.hasher.CompareHashAndPassword(user.PwdHash, obj.CurPassword) {
+		return fmt.Errorf("compare current hash and password: %w", entity.ErrWrongCurrentPassword)
+	}
 
-func (s *userService) Update(ctx context.Context, dto domain.UpdateUserDTO) (domain.User, error) {
-	user, err := s.userRepo.Update(ctx, dto)
+	pwdHash, err := u.hasher.Hash(obj.NewPassword)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("failed to update user: %w", err)
+		return fmt.Errorf("get hash from new password: %w", err)
 	}
 
-	return user, nil
-}
-
-func (s *userService) UpdatePassword(ctx context.Context, dto domain.UpdateUserPasswordDTO) error {
-	user, err := s.GetByID(ctx, dto.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to get user by uuid: %w", err)
-	}
-
-	if !s.hasher.CompareHashAndPassword(user.Password, dto.Current) {
-		return fmt.Errorf("can't update password: %w", domain.ErrWrongCurrentPassword)
-	}
-
-	hash, err := s.hasher.Hash(dto.New)
-	if err != nil {
-		return fmt.Errorf("failed to hashing password: %w", err)
-	}
-
-	if err = s.sessionRepo.DeleteAllByUserID(ctx, user.ID); err != nil {
-		return fmt.Errorf("failed to delete all user sessions: %w", err)
-	}
-
-	if err = s.userRepo.UpdatePassword(ctx, dto.UserID, hash); err != nil {
-		return fmt.Errorf("failed to update password: %w", err)
+	if err = u.userRepo.UpdatePassword(ctx, user.ID, pwdHash); err != nil {
+		return fmt.Errorf("update new password: %w", err)
 	}
 
 	return nil
 }
 
-func (s *userService) Delete(ctx context.Context, userID string) error {
-	if err := s.userRepo.Delete(ctx, userID); err != nil {
-		return fmt.Errorf("failed to delete user: %w", err)
+func (u *User) CheckPassword(ctx context.Context, username, password string) (userID string, ok bool, err error) {
+	user, err := u.userRepo.GetByUsername(ctx, username)
+	if err != nil {
+		if errors.Is(err, entity.ErrUserNotFound) {
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("get user by name: %w", err)
 	}
 
-	if err := s.sessionRepo.DeleteAllByUserID(ctx, userID); err != nil {
-		return fmt.Errorf("failed to delete all user sessions: %w", err)
+	if !u.hasher.CompareHashAndPassword(user.PwdHash, password) {
+		return "", false, nil
+	}
+	return strconv.Itoa(user.ID), true, nil
+}
+
+func (u *User) Delete(ctx context.Context, id int) error {
+	if err := u.userRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("delete user: %w", err)
+	}
+
+	if err := u.sessRepo.DeleteAllByUserID(ctx, strconv.Itoa(id)); err != nil {
+		return fmt.Errorf("delete all user sessions: %w", err)
 	}
 
 	return nil

@@ -1,13 +1,111 @@
 package validator
 
-import "github.com/go-playground/validator/v10"
+import (
+	"errors"
+	"fmt"
+	"reflect"
+	"strings"
 
-type Validator interface {
-	Validate() error
+	"github.com/go-playground/validator/v10"
+)
+
+type Validator struct {
+	validate *validator.Validate
 }
 
-var validate *validator.Validate
+func NewValidator() Validator {
+	validate := validator.New()
+	validate.RegisterTagNameFunc(func(field reflect.StructField) string {
+		tagValue := field.Tag.Get("json")
+		if tagValue == "" {
+			return field.Name
+		}
 
-func SetValidate(v *validator.Validate) {
-	validate = v
+		fieldName := strings.SplitN(tagValue, ",", 2)[0]
+		if fieldName == "-" {
+			return field.Name
+		}
+
+		return fieldName
+	})
+
+	return Validator{validate: validate}
+}
+
+func (v Validator) Struct(val any) error {
+	if err := v.validate.Struct(val); err != nil {
+		vErrs := validator.ValidationErrors{}
+
+		if errors.As(err, &vErrs) {
+			fields := make(ErrorFields, len(vErrs))
+			for _, vErr := range vErrs {
+				fullFieldName := extractFieldName(vErr.Namespace(), vErr.StructNamespace())
+				fields[fullFieldName] = fmt.Sprintf("failed on the '%s' tag", vErr.Tag())
+			}
+
+			return Error{Fields: fields}
+		}
+
+		return fmt.Errorf("validate struct: %w", err)
+	}
+
+	return nil
+}
+
+func (v Validator) Var(val any, key, tag string) error {
+	if err := v.validate.Var(val, tag); err != nil {
+		vErrs := validator.ValidationErrors{}
+
+		if errors.As(err, &vErrs) {
+			vErr := vErrs[0]
+			return Error{
+				Fields: ErrorFields{
+					key: fmt.Sprintf("failed on the '%s' tag", vErr.Tag()),
+				},
+			}
+		}
+
+		return fmt.Errorf("validate variable: %w", err)
+	}
+
+	return nil
+}
+
+func MergeResults(errs ...error) error {
+	fields := make(ErrorFields)
+
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+
+		ve := Error{}
+		if !errors.As(err, &ve) {
+			return err
+		}
+
+		for k, v := range ve.Fields {
+			fields[k] = v
+		}
+	}
+
+	if len(fields) != 0 {
+		return Error{Fields: fields}
+	}
+	return nil
+}
+
+func extractFieldName(ns, structNs string) string {
+	nsParts := strings.Split(ns, ".")
+	structNsParts := strings.Split(structNs, ".")
+
+	for i, nsPart := range nsParts {
+		if nsPart == structNsParts[i] {
+			continue
+		}
+
+		return strings.Join(nsParts[i:], ".")
+	}
+
+	return ns
 }

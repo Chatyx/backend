@@ -19,20 +19,20 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.46
+          version: v1.54.2
   
   test:
     needs: lint
     runs-on: ubuntu-latest
     env:
       TZ: Europe/Moscow
-      DB_USER: scht_user
-      DB_PASSWORD: scht_password
-      DB_NAME: scht_db_test
+      DB_USER: chatyx_user
+      DB_PASSWORD: chatyx_password
+      DB_NAME: chatyx_db_test
     
     services:
       postgres:
-        image: postgres:12.1
+        image: postgres:15.4
         env:
           POSTGRES_USER: ${{ env.DB_USER }}
           POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
@@ -43,17 +43,17 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5433:5432
+          - 15432:5432
       
       redis:
-        image: redis:6.2.5
+        image: redis:7.2
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 6380:6379
+          - 16379:6379
       
     steps:
       - name: Check out repository code
@@ -62,13 +62,13 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.21
       
       - name: Run unit tests
-        run: go test -tags=unit -v -coverprofile=cover.out ./... && go tool cover -func=cover.out
+        run: go test -v -coverprofile=cover.out ./internal/... ./pkg/... && go tool cover -func=cover.out
       
       - name: Run integration tests
-        run: go test -tags=integration -v ./test/...
+        run: go test -v ./test/... -run TestAppTestSuite
 
   publish:
     needs: test
@@ -91,5 +91,5 @@ jobs:
           push: true
           context: .
           tags: |
-            mortalis/scht-backend:0.0.1
-            mortalis/scht-backend:latest
+            mortalis/chatyx-backend:0.1.0
+            mortalis/chatyx-backend:latest

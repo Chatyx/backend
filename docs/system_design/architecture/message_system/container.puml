@@ -1,0 +1,39 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "User")
+Container(loadBalancer, "Load Balancer", "Nginx", "Uses round-robin")
+Container(apiGateway, "API Gateway", "Istio")
+Container(presenceSystem, "Presence System", "Software system", "Stores last seen date for users")
+Container(notificationSystem, "Notification System", "Software system", "Sends notifications to users")
+ContainerQueue(messageQueue, "Events queue", "Kafka", "Message queue for notification system")
+
+System_Boundary(messageSystem, "Message System") {
+    Container(chatService, "Chat Service", "Go", "Handles creating and reading chats, participants")
+    Container(messageService, "Message Service", "Go", "Handles message streams, uses cache-aside strategy")
+    Container(serviceDiscovery, "Service Discovery", "Zookeeper", "Stores information about which user has connection with the Message Service")
+    ContainerDb(chatDatabase, "Chat database", "PostgreSQL", "Stores chats, participants")
+    ContainerDb(messageDatabase, "Message database", "Cassandra", "Stores messages")
+    ContainerDb(messageCache, "Message cache", "Redis", "Stores the last N messages for the chats, uses LRU eviction policy")
+}
+
+Rel(user, loadBalancer, "Creates and reads chats, participants; sends and reads messages", "REST")
+Rel(user, serviceDiscovery, "Detects which Message Service should connect to")
+BiRel(user, messageService, "Sends message stream", "WebSocket")
+
+Rel(loadBalancer, apiGateway, "Creates and reads chats, participants; sends and reads messages", "REST")
+Rel(apiGateway, chatService, "Creates and reads chats, participants", "GRPC")
+Rel(apiGateway, messageService, "Sends and reads messages", "GRPC")
+
+Rel(messageService, chatService, "Get participants for the chat", "GRPC")
+Rel(messageService, serviceDiscovery, "For every participant discover its Message Service")
+Rel(messageService, messageService, "Sends message stream to recipient's Message Service", "GRPC")
+Rel(messageService, messageDatabase, "Creates and reads messages")
+Rel(messageService, messageCache, "Creates and reads messages")
+Rel(messageService, presenceSystem, "Sets last seen date for user", "GRPC")
+Rel(messageService, messageQueue, "Sends notification event if participant is offline")
+
+Rel(chatService, chatDatabase, "Creates and reads chats, participants")
+Rel(notificationSystem, messageQueue, "Subscribes on notification events")
+Rel(notificationSystem, user, "Notifies users about different events")
+@enduml

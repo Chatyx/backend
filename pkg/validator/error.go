@@ -1,13 +1,33 @@
 package validator
 
-import "fmt"
+import (
+	"strings"
+)
 
 type ErrorFields map[string]string
 
-type ValidationError struct {
+func (ef ErrorFields) String() string {
+	b := strings.Builder{}
+	b.WriteByte('[')
+
+	i := 0
+	for field, value := range ef {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+
+		i++
+		b.WriteString(field + ":" + value)
+	}
+
+	b.WriteByte(']')
+	return b.String()
+}
+
+type Error struct {
 	Fields ErrorFields
 }
 
-func (e ValidationError) Error() string {
-	return fmt.Sprintf("%v", e.Fields)
+func (e Error) Error() string {
+	return e.Fields.String()
 }

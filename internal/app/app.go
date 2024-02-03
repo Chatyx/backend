@@ -1,254 +1,224 @@
 package app
 
 import (
-	"context"
 	"fmt"
-	"net/http"
+	"io"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
-	"time"
 
-	"github.com/Mort4lis/scht-backend/internal/config"
-	apiHandlers "github.com/Mort4lis/scht-backend/internal/delivery/http"
-	chatHandlers "github.com/Mort4lis/scht-backend/internal/delivery/websocket"
-	"github.com/Mort4lis/scht-backend/internal/repository"
-	"github.com/Mort4lis/scht-backend/internal/server"
-	"github.com/Mort4lis/scht-backend/internal/service"
-	inVld "github.com/Mort4lis/scht-backend/internal/validator"
-	"github.com/Mort4lis/scht-backend/pkg/auth"
-	password "github.com/Mort4lis/scht-backend/pkg/hasher"
-	"github.com/Mort4lis/scht-backend/pkg/logging"
-	pkgVld "github.com/Mort4lis/scht-backend/pkg/validator"
-	"github.com/go-redis/redis/v8"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/Chatyx/backend/internal/config"
+	cachepostgres "github.com/Chatyx/backend/internal/infrastructure/cache/postgres"
+	"github.com/Chatyx/backend/internal/infrastructure/repository/postgres"
+	sysbusredis "github.com/Chatyx/backend/internal/infrastructure/sysbus/redis"
+	"github.com/Chatyx/backend/internal/service"
+	inhttp "github.com/Chatyx/backend/internal/transport/http"
+	v1 "github.com/Chatyx/backend/internal/transport/http/v1"
+	"github.com/Chatyx/backend/internal/transport/websocket"
+	"github.com/Chatyx/backend/pkg/auth"
+	"github.com/Chatyx/backend/pkg/auth/storage/redis"
+	auhttp "github.com/Chatyx/backend/pkg/auth/transport/http"
+	"github.com/Chatyx/backend/pkg/httputil/middleware"
+	"github.com/Chatyx/backend/pkg/log"
+	"github.com/Chatyx/backend/pkg/validator"
+
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
+type CloserAdapter func()
+
+func (c CloserAdapter) Close() error {
+	c()
+	return nil
+}
+
+type Runner interface {
+	Run()
+}
+
 type App struct {
-	cfg         *config.Config
-	dbPool      *pgxpool.Pool
-	redisClient *redis.Client
-
-	apiServer  server.Server
-	chatServer server.Server
-
-	logger logging.Logger
+	runners []Runner
+	closers []io.Closer
+	conf    config.Config
 }
 
-// @title Scht REST API
-// @version 1.0
-// @description REST API for Scht Backend application
-
-// @host 127.0.0.1
-// @BasePath /api
-
-// @contact.name Pavel Korchagin
-// @contact.email mortalis94@gmail.com
-
-// @securityDefinitions.apikey JWTTokenAuth
-// @in header
-// @name Authorization
-
-// NewApp creates new application.
-func NewApp(cfg *config.Config) *App {
-	app := &App{
-		cfg:    cfg,
-		logger: logging.GetLogger(),
-	}
-
-	app.initPG(cfg.Postgres)
-	app.initRedis(cfg.Redis)
-
-	hasher := password.BCryptPasswordHasher{}
-
-	tokenManager, err := auth.NewJWTTokenManager(cfg.Auth.SignKey)
-	if err != nil {
-		app.logger.WithError(err).Fatal("Failed to create new token manager")
-	}
-
-	validate, err := inVld.New()
-	if err != nil {
-		app.logger.WithError(err).Fatal("Failed to init validator")
-	}
-
-	pkgVld.SetValidate(validate)
-
-	msgPubSub := repository.NewMessagePubSub(app.redisClient)
-	userRepo := repository.NewUserPostgresRepository(app.dbPool)
-	chatRepo := repository.NewChatCacheRepositoryDecorator(
-		repository.NewChatPostgresRepository(app.dbPool),
-		app.redisClient,
-	)
-	chatMemberRepo := repository.NewChatMemberCacheRepository(
-		repository.NewChatMemberPostgresRepository(app.dbPool),
-		app.redisClient,
-	)
-	sessionRepo := repository.NewSessionRedisRepository(app.redisClient)
-	msgRepo := repository.NewMessageRedisRepository(app.redisClient)
-
-	userService := service.NewUserService(userRepo, sessionRepo, hasher)
-	chatService := service.NewChatService(chatRepo)
-	chatMemberService := service.NewChatMemberService(service.ChatMemberConfig{
-		UserService:    userService,
-		ChatMemberRepo: chatMemberRepo,
-		MessageRepo:    msgRepo,
-		MessagePubSub:  msgPubSub,
-	})
-	messageService := service.NewMessageService(chatMemberRepo, msgRepo, msgPubSub)
-	authService := service.NewAuthService(service.AuthServiceConfig{
-		UserService:     userService,
-		SessionRepo:     sessionRepo,
-		Hasher:          hasher,
-		TokenManager:    tokenManager,
-		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
-		RefreshTokenTTL: cfg.Auth.RefreshTokenTTL,
-	})
-
-	container := service.ServiceContainer{
-		User:       userService,
-		Chat:       chatService,
-		ChatMember: chatMemberService,
-		Message:    messageService,
-		Auth:       authService,
-	}
-
-	apiListenCfg := cfg.Listen.API
-	app.apiServer = server.NewHttpServerWrapper(
-		server.Config{
-			ServerName: "API Server",
-			ListenType: apiListenCfg.Type,
-			BindIP:     apiListenCfg.BindIP,
-			BindPort:   apiListenCfg.BindPort,
-		},
-		&http.Server{
-			Handler:      apiHandlers.Init(container, cfg),
-			ReadTimeout:  15 * time.Second,
-			WriteTimeout: 15 * time.Second,
-		},
-	)
-
-	chatListenCfg := cfg.Listen.Chat
-	app.chatServer = server.NewHttpServerWrapper(
-		server.Config{
-			ServerName: "Chat Server",
-			ListenType: chatListenCfg.Type,
-			BindIP:     chatListenCfg.BindIP,
-			BindPort:   chatListenCfg.BindPort,
-		},
-		&http.Server{
-			Handler:      chatHandlers.Init(container, cfg),
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 5 * time.Second,
-		},
-	)
-
-	return app
-}
-
-func (app *App) initPG(cfg config.PostgresConfig) {
+//nolint:funlen // there are a lot of components here that need to be configured
+func NewApp(confPath string) *App {
 	var (
-		err  error
-		pool *pgxpool.Pool
+		conf    config.Config
+		runners []Runner
+		closers []io.Closer
 	)
 
-	dsn := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%d/%s",
-		cfg.Username, cfg.Password,
-		cfg.Host, cfg.Port, cfg.Database,
-	)
-
-	err = DoWithAttempts(func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		pool, err = pgxpool.Connect(ctx, dsn)
-		if err != nil {
-			app.logger.WithError(err).Warning("Failed to connect to postgres... Going to do the next attempt")
-
-			return err
-		}
-
-		return nil
-	}, cfg.MaxConnectionAttempts, cfg.FailedConnectionDelay)
-
-	if err != nil {
-		app.logger.WithError(err).Fatal("All attempts are exceeded. Unable to connect to postgres")
+	if err := cleanenv.ReadConfig(confPath, &conf); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to read config: %v", err)
+		os.Exit(1)
 	}
 
-	app.dbPool = pool
-}
+	if err := log.Configure(log.Config{
+		Level:          conf.Log.Level,
+		ProductionMode: !conf.Debug,
+	}); err != nil {
+		log.WithError(err).Fatal("Failed to configure logger")
+	}
 
-func (app *App) initRedis(cfg config.RedisConfig) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		Username: cfg.Username,
-		Password: cfg.Password,
-		DB:       0, // use default database
+	pgPool, err := postgres.NewConnPool(conf.Postgres)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to init postgres connection pool")
+	}
+	closers = append(closers, CloserAdapter(pgPool.Close))
+
+	redisCli, err := sysbusredis.NewRedisConn(conf.Redis)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to init redis client")
+	}
+	closers = append(closers, redisCli)
+
+	txm := postgres.NewTransactionManager(pgPool)
+	userRepo := postgres.NewUserRepository(pgPool)
+	groupRepo := postgres.NewGroupRepository(pgPool)
+	dialogRepo := postgres.NewDialogRepository(pgPool)
+	groupParticipantRepo := postgres.NewGroupParticipantRepository(pgPool)
+	participantChecker := cachepostgres.NewParticipantChecker(pgPool)
+	messageRepo := postgres.NewMessageRepository(pgPool)
+	messagePubSub := sysbusredis.NewMessagePublishSubscriber(redisCli)
+	chatProdCons := sysbusredis.NewParticipantEventProduceConsumer(redisCli)
+
+	authStorageDBNum, _ := strconv.Atoi(conf.Redis.Database)
+	authStorage, err := redis.NewStorage(redis.Config{
+		Host:        conf.Redis.Host,
+		Port:        conf.Redis.Port,
+		Username:    conf.Redis.User,
+		Password:    conf.Redis.Password,
+		DB:          authStorageDBNum,
+		ConnTimeout: conf.Redis.Timeout,
 	})
-
-	err := DoWithAttempts(func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := rdb.Ping(ctx).Err(); err != nil {
-			app.logger.WithError(err).Warning("Failed to connect to redis... Going to do the next attempt")
-
-			return err
-		}
-
-		return nil
-	}, cfg.MaxConnectionAttempts, cfg.FailedConnectionDelay)
 	if err != nil {
-		app.logger.WithError(err).Fatal("All attempts are exceeded. Unable to connect to redis")
+		log.WithError(err).Fatal("Failed to establish redis connection")
 	}
+	closers = append(closers, authStorage)
 
-	app.redisClient = rdb
-}
-
-func (app *App) Run() error {
-	if err := app.apiServer.Run(); err != nil {
-		return err
-	}
-
-	if err := app.chatServer.Run(); err != nil {
-		return err
-	}
-
-	return app.gracefulShutdown()
-}
-
-func (app *App) gracefulShutdown() error {
-	quit := make(chan os.Signal, 1)
-	signal.Notify(
-		quit,
-		[]os.Signal{syscall.SIGABRT, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGTERM, os.Interrupt}...,
+	userService := service.NewUser(service.UserConfig{
+		UserRepository:    userRepo,
+		SessionRepository: authStorage,
+	})
+	groupService := service.NewGroup(groupRepo, chatProdCons)
+	dialogService := service.NewDialog(dialogRepo, chatProdCons)
+	groupParticipantService := service.NewGroupParticipant(service.GroupParticipantConfig{
+		TxManager:     txm,
+		Repository:    groupParticipantRepo,
+		EventProducer: chatProdCons,
+	})
+	messageService := service.NewMessage(messageRepo, messagePubSub, participantChecker)
+	messageServeManager := service.NewMessageServeManager(service.MessageServeManagerConfig{
+		Service:          messageService,
+		EventConsumer:    chatProdCons,
+		Subscriber:       messagePubSub,
+		GroupRepository:  groupRepo,
+		DialogRepository: dialogRepo,
+	})
+	authService := auth.NewService(
+		authStorage,
+		auth.WithIssuer(conf.Auth.Issuer),
+		auth.WithSignedKey([]byte(conf.Auth.SignKey)),
+		auth.WithAccessTokenTTL(conf.Auth.AccessTokenTTL),
+		auth.WithRefreshTokenTTL(conf.Auth.RefreshTokenTTL),
+		auth.WithLogger(log.With("service", "auth")),
+		auth.WithCheckPassword(userService.CheckPassword),
 	)
 
-	sig := <-quit
-	app.logger.Infof("Caught signal %s. Shutting down...", sig)
+	authorizeMiddleware := middleware.Authorize([]byte(conf.Auth.SignKey))
 
-	app.dbPool.Close()
+	vld := validator.NewValidator()
+	userController := v1.NewUserController(v1.UserControllerConfig{
+		Service:   userService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
+	groupController := v1.NewGroupController(v1.GroupControllerConfig{
+		Service:   groupService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
+	dialogController := v1.NewDialogController(v1.DialogControllerConfig{
+		Service:   dialogService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
+	groupParticipantController := v1.NewGroupParticipantController(v1.GroupParticipantControllerConfig{
+		Service:   groupParticipantService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
+	messageController := v1.NewMessageController(v1.MessageControllerConfig{
+		Service:   messageService,
+		Authorize: authorizeMiddleware,
+		Validator: vld,
+	})
+	authController := auhttp.NewController(
+		authService, vld,
+		auhttp.WithPrefixPath("/api/v1"),
+		auhttp.WithRTCookieDomain(conf.Domain),
+		auhttp.WithRTCookieTTL(conf.Auth.RefreshTokenTTL),
+	)
 
-	if err := app.chatServer.Stop(); err != nil {
-		return err
+	apiServer := inhttp.NewServer(
+		inhttp.Config{
+			Server: conf.API,
+			Debug:  conf.Debug,
+			Cors:   conf.Cors,
+		},
+		authController,
+		userController,
+		groupController,
+		dialogController,
+		groupParticipantController,
+		messageController,
+	)
+	runners = append(runners, apiServer)
+	closers = append(closers, apiServer)
+
+	wsInitHandler := websocket.NewClientSessionInitHandler(messageServeManager)
+	wsServer := websocket.NewServer(
+		websocket.Config{
+			Server: conf.Chat,
+			Debug:  conf.Debug,
+			Cors:   conf.Cors,
+		},
+		authorizeMiddleware(wsInitHandler),
+	)
+	runners = append(runners, wsServer)
+	closers = append(closers, wsServer)
+
+	return &App{
+		runners: runners,
+		closers: closers,
+		conf:    conf,
 	}
-
-	return app.apiServer.Stop()
 }
 
-func DoWithAttempts(fn func() error, maxAttempts int, delay time.Duration) error {
-	var err error
+func (a *App) Config() config.Config {
+	return a.conf
+}
 
-	for maxAttempts > 0 {
-		if err = fn(); err != nil {
-			time.Sleep(delay)
-			maxAttempts--
-
-			continue
-		}
-
-		return nil
+func (a *App) Run() {
+	for _, runner := range a.runners {
+		runner.Run()
 	}
 
-	return err
+	a.gracefulShutdown()
+}
+
+func (a *App) gracefulShutdown() {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
+
+	log.Infof("Caught signal %s. Shutting down...", <-quit)
+
+	for i := len(a.closers) - 1; i >= 0; i-- {
+		if err := a.closers[i].Close(); err != nil {
+			log.WithError(err).Error("Failed to close")
+		}
+	}
 }

@@ -1,54 +1,91 @@
-BACKEND_BIN = ./build/scht-backend
-MIGRATE_BIN = ./build/migrate
+PROJECT_DIR = $(shell pwd)
+PROJECT_BUILD = ${PROJECT_DIR}/build
+PROJECT_BIN = ${PROJECT_DIR}/bin
+$(shell [ -f bin ] || mkdir -p ${PROJECT_BIN})
 
-lint:
-	golangci-lint run
+BINARY_NAME = chatyx-backend
+BRANCH_NAME = $(shell git name-rev --name-only HEAD)
+COMMIT_HASH = $(shell git rev-parse --short HEAD)
+BUILD_TIMESTAMP = $(shell date +"%Y-%m-%d:T%H:%M:%S")
+PACKAGE = github.com/Chatyx/backend
+LDFLAGS = -X '${PACKAGE}/version.BranchName=${BRANCH_NAME}' \
+  -X '${PACKAGE}/version.CommitHash=${COMMIT_HASH}' \
+  -X '${PACKAGE}/version.BuildTimestamp=${BUILD_TIMESTAMP}' \
 
-build: clean $(BACKEND_BIN) $(MIGRATE_BIN)
+GOLANGCI_LINT = ${PROJECT_BIN}/golangci-lint
+SWAG = ${PROJECT_BIN}/swag
+MIGRATE = ${PROJECT_BIN}/migrate
+MOCKERY = ${PROJECT_BIN}/mockery
 
-$(BACKEND_BIN):
-	go build -o $(BACKEND_BIN) ./cmd/app/main.go
+export PATH := ${PROJECT_BIN}:${PATH}
 
-$(MIGRATE_BIN):
-	go build -o $(MIGRATE_BIN) ./cmd/migrate/main.go
+all: clean lint test test.integration build
 
-swagger:
-	swag init -g ./internal/app/app.go
+.PHONY: .install-linter
+.install-linter:
+	[ -f ${GOLANGCI_LINT} ] || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ${PROJECT_BIN} v1.54.2
 
-generate:
+.PHONY: .install-swagger
+.install-swagger:
+	[ -f ${SWAG} ] || GOBIN=${PROJECT_BIN} go install github.com/swaggo/swag/cmd/swag@v1.16.2
+
+.PHONY: .install-migrate
+.install-migrate:
+	[ -f ${MIGRATE} ] || GOBIN=${PROJECT_BIN} go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.16.2
+
+.PHONY: .install-mockery
+.install-mockery:
+	[-f ${MOCKERY} ] || GOBIN=${PROJECT_BIN} go install github.com/vektra/mockery/v2@v2.40.1
+
+.PHONY: lint
+lint: .install-linter
+	${GOLANGCI_LINT} --version
+	${GOLANGCI_LINT} linters
+	${GOLANGCI_LINT} run -v
+
+.PHONY: lint.fix
+lint.fix:
+	${GOLANGCI_LINT} run --fix
+
+.PHONY: swagger
+swagger: .install-swagger
+	${SWAG} init -g ./internal/transport/http/entry.go -o ./api
+
+.PHONY: build
+build:
+	go build -ldflags="${LDFLAGS}" -o ${PROJECT_BUILD}/${BINARY_NAME} ./cmd/${BINARY_NAME}
+
+.PHONY: generate
+generate: .install-mockery
 	go generate ./...
 
-infrastructure.dev:
-	docker-compose down
-	docker-compose up --remove-orphan postgres redis
-
-infrastructure.test:
-	docker-compose -f docker-compose.test.yml down
-	docker-compose -f docker-compose.test.yml up -d
-
-test.unit:
-	go test -tags=unit -v -coverprofile=cover.out ./...
+.PHONY: test
+test:
+	go test -count=1 -v -coverprofile=cover.out ./internal/... ./pkg/...
 	go tool cover -func=cover.out
 
-test.integration: infrastructure.test
-	go test -tags=integration -v ./test/... || true
-	docker-compose -f docker-compose.test.yml down
+.PHONY: test.integration
+test.integration:
+	docker-compose -f ./test/docker-compose.yaml up -d
+	go test -count=1 -v ./test/... -run TestAppTestSuite || true
+	docker-compose -f ./test/docker-compose.yaml down
 
-migrations:
-	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \
-		migrate/migrate create -ext sql -dir /migrations -seq $(NAME)
+# usage: make migration NAME="{migration_name}"
+.PHONY: migration
+migration: .install-migrate
+	${MIGRATE} create -ext sql -dir ./db/migrations ${NAME}
 
-migrate.up:
-	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \
-		--network host migrate/migrate \
-        -path=/migrations/ \
-        -database postgres://scht_user:scht_password@localhost:5432/scht_db?sslmode=disable up
+.PHONY: migrate.up
+migrate.up: .install-migrate
+	${MIGRATE} -path=./db/migrations/ \
+        -database postgres://chatyx_user:chatyx_password@localhost:5432/chatyx_db?sslmode=disable up
 
-migrate.down:
-	docker run --rm -v ${PWD}/internal/db/migrations:/migrations \
-    	--network host migrate/migrate \
-        -path=/migrations/ \
-        -database postgres://scht_user:scht_password@localhost:5432/scht_db?sslmode=disable down 1
+.PHONY: migrate.down
+migrate.down: .install-migrate
+	${MIGRATE} -path=./db/migrations/ \
+        -database postgres://chatyx_user:chatyx_password@localhost:5432/chatyx_db?sslmode=disable down 1
 
+.PHONY: clean
 clean:
-	rm -rf ./build || true
+	rm -rf ${PROJECT_BUILD} || true
+	rm -rf ${PROJECT_BIN} || true

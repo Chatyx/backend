@@ -1,0 +1,19 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "User")
+Container(messageSystem, "Message system", "Software system", "Handles creating and reading chats, participants; sending and reading messages")
+Container(mediaSystem, "Media System", "Software system", "Handles uploading media files")
+Container(userSystem, "User system", "Software system", "Handles info about users")
+Container(presenceSystem, "Presence system", "Software system", "Handles user presences")
+Container(notificationSystem, "Notification system", "Software system", "Handles notifications")
+
+Rel(user, messageSystem, "Creates and reads chats, participants; sends and reads messages")
+Rel(user, mediaSystem, "Uploads media files")
+Rel(user, userSystem, "Gets info about a user")
+Rel(user, presenceSystem, "Gets last seen date")
+Rel(messageSystem, presenceSystem, "Sets last seen date when user goes offline")
+Rel(messageSystem, notificationSystem, "Publish notification event if user is offline")
+Rel(notificationSystem, user, "Notifies users about different events")
+
+@enduml

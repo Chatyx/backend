@@ -2,9 +2,10 @@
 
 !/cmd/**
 !/configs/**
-!/docs/**
+!/db/**
+!/api/**
 !/internal/**
 !/pkg/**
-
+!Makefile
 !go.mod
 !go.sum

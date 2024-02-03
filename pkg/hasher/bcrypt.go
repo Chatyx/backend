@@ -1,19 +1,23 @@
 package hasher
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"fmt"
 
-type BCryptPasswordHasher struct{}
+	"golang.org/x/crypto/bcrypt"
+)
 
-func (h BCryptPasswordHasher) Hash(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+type BCrypt struct{}
+
+func (h BCrypt) Hash(s string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(s), bcrypt.MinCost)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("generate hash from password: %v", err)
 	}
 
 	return string(hash), nil
 }
 
-func (h BCryptPasswordHasher) CompareHashAndPassword(hash, password string) bool {
+func (h BCrypt) CompareHashAndPassword(hash, password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }

@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  backend:
+    image: chatyx-backend:latest
+    container_name: chatyx-backend
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+      - "8080:8080"
+    volumes:
+      - ./configs:/chatyx-backend/configs
+    depends_on:
+      - postgres
+      - redis
+    restart: always
+    networks:
+      - chatyx-backend-network
+
+  postgres:
+    image: postgres:15.4
+    container_name: chatyx-postgres
+    environment:
+      - POSTGRES_DB=chatyx_db
+      - POSTGRES_USER=chatyx_user
+      - POSTGRES_PASSWORD=chatyx_password
+    volumes:
+      - ./.data/postgres/data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: always
+    networks:
+      - chatyx-backend-network
+
+  redis:
+    image: redis:7.2
+    container_name: chatyx-redis
+    volumes:
+      - ./.data/redis/data:/data
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - chatyx-backend-network
+
+networks:
+  chatyx-backend-network:

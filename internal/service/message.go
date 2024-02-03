@@ -3,193 +3,223 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/Mort4lis/scht-backend/internal/domain"
-	"github.com/Mort4lis/scht-backend/internal/repository"
-	pkgErrors "github.com/Mort4lis/scht-backend/pkg/errors"
+	"github.com/Chatyx/backend/internal/dto"
+	"github.com/Chatyx/backend/internal/entity"
+	"github.com/Chatyx/backend/pkg/ctxutil"
 )
 
-type messageService struct {
-	chatMemberRepo repository.ChatMemberRepository
-	messageRepo    repository.MessageRepository
-	pubSub         repository.MessagePubSub
+type MessageRepository interface {
+	List(ctx context.Context, obj dto.MessageList) ([]entity.Message, error)
+	Create(ctx context.Context, message *entity.Message) error
 }
 
-func NewMessageService(chatMemberRepo repository.ChatMemberRepository, messageRepo repository.MessageRepository, pubSub repository.MessagePubSub) MessageService {
-	return &messageService{
-		chatMemberRepo: chatMemberRepo,
-		messageRepo:    messageRepo,
-		pubSub:         pubSub,
+type InChatChecker interface {
+	Check(ctx context.Context, chatID entity.ChatID, userID int) error
+}
+
+type MessagePublisher interface {
+	Publish(ctx context.Context, message entity.Message) error
+}
+
+type Message struct {
+	repo      MessageRepository
+	publisher MessagePublisher
+	checker   InChatChecker
+}
+
+func NewMessage(repo MessageRepository, publisher MessagePublisher, checker InChatChecker) *Message {
+	return &Message{
+		repo:      repo,
+		publisher: publisher,
+		checker:   checker,
 	}
 }
 
-func (s *messageService) NewServeSession(ctx context.Context, userID string) (chan<- domain.CreateMessageDTO, <-chan domain.Message, <-chan error, error) {
-	members, err := s.chatMemberRepo.ListByUserID(ctx, userID)
+func (s *Message) List(ctx context.Context, obj dto.MessageList) ([]entity.Message, error) {
+	userID := ctxutil.UserIDFromContext(ctx).ToInt()
+	if err := s.checker.Check(ctx, obj.ChatID, userID); err != nil {
+		return nil, fmt.Errorf("check whether the current user is in the chat or not: %w", err)
+	}
+
+	messages, err := s.repo.List(ctx, obj)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to get list of chat members by user id: %w", err)
+		return nil, fmt.Errorf("list messages: %w", err)
 	}
-
-	chatIDs := make([]string, 0, len(members))
-
-	for _, member := range members {
-		if member.IsInChat() {
-			chatIDs = append(chatIDs, member.ChatID)
-		}
-	}
-
-	inCh := make(chan domain.CreateMessageDTO)
-	outCh := make(chan domain.Message)
-	errCh := make(chan error)
-
-	session := &messageServeSession{
-		userID:         userID,
-		messageService: s,
-		chatMemberRepo: s.chatMemberRepo,
-		subscriber:     s.pubSub.Subscribe(ctx, chatIDs...),
-		inCh:           inCh,
-		outCh:          outCh,
-		errCh:          errCh,
-	}
-	go session.serve(ctx)
-
-	return inCh, outCh, errCh, nil
-}
-
-func (s *messageService) Create(ctx context.Context, dto domain.CreateMessageDTO) (domain.Message, error) {
-	ok, err := s.chatMemberRepo.IsInChat(ctx, domain.ChatMemberIdentity{
-		UserID: dto.SenderID,
-		ChatID: dto.ChatID,
-	})
-	if err != nil {
-		return domain.Message{}, fmt.Errorf("failed to check if sender is in the chat: %w", err)
-	}
-
-	if !ok {
-		return domain.Message{}, fmt.Errorf("member isn't in this chat: %w", domain.ErrChatNotFound)
-	}
-
-	message, err := s.messageRepo.Create(ctx, dto)
-	if err != nil {
-		return domain.Message{}, fmt.Errorf("failed to create message: %w", err)
-	}
-
-	if err = s.pubSub.Publish(ctx, message); err != nil {
-		return domain.Message{}, fmt.Errorf("failed to publish message: %w", err)
-	}
-
-	return message, nil
-}
-
-func (s *messageService) List(ctx context.Context, memberKey domain.ChatMemberIdentity, dto domain.MessageListDTO) (domain.MessageList, error) {
-	ok, err := s.chatMemberRepo.IsInChat(ctx, memberKey)
-	if err != nil {
-		return domain.MessageList{}, fmt.Errorf("failed to check if member is in the chat: %w", err)
-	}
-
-	if !ok {
-		return domain.MessageList{}, fmt.Errorf("member isn't in this chat: %w", domain.ErrChatNotFound)
-	}
-
-	messages, err := s.messageRepo.List(ctx, memberKey.ChatID, dto)
-	if err != nil {
-		return domain.MessageList{}, fmt.Errorf("failed to get list of messages: %w", err)
-	}
-
 	return messages, nil
 }
 
-type messageServeSession struct {
-	userID         string
-	messageService MessageService
-	chatMemberRepo repository.ChatMemberRepository
-	subscriber     repository.MessageSubscriber
+func (s *Message) Create(ctx context.Context, obj dto.MessageCreate) (entity.Message, error) {
+	userID := ctxutil.UserIDFromContext(ctx).ToInt()
+	if err := s.checker.Check(ctx, obj.ChatID, userID); err != nil {
+		return entity.Message{}, fmt.Errorf("check whether the current user is in the chat or not: %w", err)
+	}
 
-	inCh  chan domain.CreateMessageDTO
-	outCh chan domain.Message
-	errCh chan error
+	message := entity.Message{
+		ChatID:      obj.ChatID,
+		SenderID:    userID,
+		Content:     obj.Content,
+		ContentType: obj.ContentType,
+		SentAt:      time.Now(),
+	}
+	if err := s.repo.Create(ctx, &message); err != nil {
+		return entity.Message{}, fmt.Errorf("create message: %w", err)
+	}
+
+	if err := s.publisher.Publish(ctx, message); err != nil {
+		return entity.Message{}, fmt.Errorf("publish message: %w", err)
+	}
+	return message, nil
 }
 
-func (s *messageServeSession) serve(ctx context.Context) {
-	defer close(s.errCh)
-	defer close(s.outCh)
-	defer s.subscriber.Close()
+type ParticipantEventConsumer interface {
+	BeginConsume(ctx context.Context, userID int) (<-chan entity.ParticipantEvent, <-chan error)
+}
 
-	subCh, subErrCh := s.subscriber.MessageChannel()
+type MessageConsumer interface {
+	BeginConsume(ctx context.Context) (<-chan entity.Message, <-chan error)
+	Subscribe(ctx context.Context, chatIDs ...entity.ChatID) error
+	Unsubscribe(ctx context.Context, chatIDs ...entity.ChatID) error
+	Close() error
+}
 
-	for {
-		select {
-		case dto, ok := <-s.inCh:
-			if !ok {
-				return
+type MessageSubscriber interface {
+	Subscribe(ctx context.Context, chatIDs ...entity.ChatID) MessageConsumer
+}
+
+type MessageServeManagerConfig struct {
+	Service          *Message
+	EventConsumer    ParticipantEventConsumer
+	Subscriber       MessageSubscriber
+	GroupRepository  GroupRepository
+	DialogRepository DialogRepository
+}
+
+type MessageServeManager struct {
+	msgSrv     *Message
+	eventCons  ParticipantEventConsumer
+	subscriber MessageSubscriber
+	groupRepo  GroupRepository
+	dialogRepo DialogRepository
+}
+
+func NewMessageServeManager(conf MessageServeManagerConfig) *MessageServeManager {
+	return &MessageServeManager{
+		msgSrv:     conf.Service,
+		eventCons:  conf.EventConsumer,
+		subscriber: conf.Subscriber,
+		groupRepo:  conf.GroupRepository,
+		dialogRepo: conf.DialogRepository,
+	}
+}
+
+func (sm *MessageServeManager) BeginServe(ctx context.Context, inCh <-chan dto.MessageCreate) (<-chan entity.Message, <-chan error, error) {
+	chatIDs, err := sm.listActiveChatIDs(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	outCh, errCh := sm.serve(ctx, chatIDs, inCh)
+	return outCh, errCh, nil
+}
+
+//nolint:lll // too long naming
+func (sm *MessageServeManager) serve(ctx context.Context, chatIDs []entity.ChatID, inCh <-chan dto.MessageCreate) (chan entity.Message, chan error) {
+	curUserID := ctxutil.UserIDFromContext(ctx).ToInt()
+	outCh, errCh := make(chan entity.Message), make(chan error)
+
+	go func() {
+		defer close(outCh)
+		defer close(errCh)
+
+		msgCons := sm.subscriber.Subscribe(ctx, chatIDs...)
+		defer msgCons.Close()
+
+		msgCh, msgErrCh := msgCons.BeginConsume(ctx)
+		eventCh, eventErrCh := sm.eventCons.BeginConsume(ctx, curUserID)
+
+		for {
+			select {
+			case obj, ok := <-inCh:
+				if !ok {
+					return
+				}
+
+				if _, err := sm.msgSrv.Create(ctx, obj); err != nil {
+					errCh <- err
+				}
+			case msg, ok := <-msgCh:
+				if !ok {
+					return
+				}
+
+				outCh <- msg
+			case event, ok := <-eventCh:
+				if !ok {
+					return
+				}
+
+				if err := sm.applyEvent(ctx, msgCons, event); err != nil {
+					errCh <- err
+				}
+			case err := <-msgErrCh:
+				errCh <- err
+			case err := <-eventErrCh:
+				errCh <- err
 			}
+		}
+	}()
 
-			if _, err := s.messageService.Create(ctx, dto); err != nil {
-				s.errCh <- fmt.Errorf("failed to create message: %w", err)
-				return
-			}
-		case message, ok := <-subCh:
-			if !ok {
-				return
-			}
+	return outCh, errCh
+}
 
-			ok, err := s.handleMessage(ctx, message)
-			if err != nil {
-				s.errCh <- fmt.Errorf("failed to handle message: %w", err)
-				return
-			}
-
-			if !ok {
-				continue
-			}
-
-			s.outCh <- message
-		case err := <-subErrCh:
-			s.errCh <- fmt.Errorf("failed to receive message from subscriber: %w", err)
+func (sm *MessageServeManager) listActiveChatIDs(ctx context.Context) ([]entity.ChatID, error) {
+	groupsCh, errCh := make(chan []entity.Group), make(chan error)
+	go func() {
+		groups, groupsErr := sm.groupRepo.List(ctx)
+		if groupsErr != nil {
+			errCh <- fmt.Errorf("list of groups: %w", groupsErr)
 			return
 		}
+
+		groupsCh <- groups
+	}()
+
+	dialogs, err := sm.dialogRepo.List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list of dialogs: %w", err)
 	}
+
+	var groups []entity.Group
+	select {
+	case groups = <-groupsCh:
+	case err = <-errCh:
+		return nil, err
+	}
+
+	chatIDs := make([]entity.ChatID, 0, len(dialogs)+len(groups))
+	for _, dialog := range dialogs {
+		chatIDs = append(chatIDs, entity.ChatID{ID: dialog.ID, Type: entity.DialogChatType})
+	}
+	for _, group := range groups {
+		chatIDs = append(chatIDs, entity.ChatID{ID: group.ID, Type: entity.GroupChatType})
+	}
+
+	return chatIDs, nil
 }
 
-func (s *messageServeSession) handleMessage(ctx context.Context, message domain.Message) (ok bool, err error) {
-	ctxFields := pkgErrors.ContextFields{
-		"message_id": message.ID,
-		"action_id":  message.ActionID,
-		"chat_id":    message.ChatID,
-		"sender_id":  message.SenderID,
-	}
-
-	switch message.ActionID {
-	case domain.MessageSendAction:
-	case domain.MessageJoinAction:
-		ok, err = s.chatMemberRepo.IsInChat(ctx, domain.ChatMemberIdentity{
-			UserID: s.userID,
-			ChatID: message.ChatID,
-		})
-		if err != nil {
-			return false, pkgErrors.WrapInContextError(err, "failed to check if authenticated user is in the chat", ctxFields)
+func (sm *MessageServeManager) applyEvent(ctx context.Context, cons MessageConsumer, event entity.ParticipantEvent) error {
+	switch event.Type {
+	case entity.AddedParticipant:
+		if err := cons.Subscribe(ctx, event.ChatID); err != nil {
+			return fmt.Errorf("subscribe to chat: %w", err)
 		}
-
-		if !ok {
-			return false, nil
-		}
-
-		if message.SenderID == s.userID {
-			if err = s.subscriber.Subscribe(ctx, message.ChatID); err != nil {
-				return false, pkgErrors.WrapInContextError(err, "failed to subscribe to chat", ctxFields)
-			}
-		}
-	case domain.MessageLeaveAction, domain.MessageKickAction:
-		if message.SenderID == s.userID {
-			if err = s.subscriber.Unsubscribe(ctx, message.ChatID); err != nil {
-				return false, pkgErrors.WrapInContextError(err, "failed to unsubscribe from chat", ctxFields)
-			}
-		}
-	default:
-		return false, pkgErrors.ContextError{
-			Message: "unknown action_id for handling the message",
-			Fields:  ctxFields,
+	case entity.RemovedParticipant:
+		if err := cons.Unsubscribe(ctx, event.ChatID); err != nil {
+			return fmt.Errorf("subscribe from chat: %w", err)
 		}
 	}
 
-	return true, nil
+	return nil
 }

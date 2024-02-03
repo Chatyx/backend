@@ -1,0 +1,46 @@
+domain: localhost
+debug: true
+
+log:
+  level: debug
+
+api:
+  listen: ":18080"
+  read_timeout: 15s
+  write_timeout: 15s
+
+chat:
+  listen: ":18081"
+  read_timeout: 15s
+  write_timeout: 15s
+
+cors:
+  allowed_origins:
+    - http://127.0.0.1:3000
+    - http://localhost:3000
+  max_age: 10m
+
+auth:
+  issuer: chatyx
+  sign_key: xNN3f9M9vZLtqHJwX2wtTbCBMpR
+  access_token_ttl: 24h
+  refresh_token_ttl: 720h # 30 days
+
+postgres:
+  conn:
+    host: localhost
+    port: 15432
+    database: chatyx_db_test
+    user: chatyx_user
+    password: chatyx_password
+  max_open_conns: 10
+  min_open_conns: 10
+  conn_max_idle_time: 5m
+
+redis:
+  conn:
+    host: localhost
+    port: 16379
+    database: 1
+    user: default
+    password: ""

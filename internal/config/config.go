@@ -1,110 +1,60 @@
 package config
 
 import (
-	"fmt"
-	"os"
-	"sync"
 	"time"
-
-	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/joho/godotenv"
 )
 
-const envFilePath = ".env"
-
-type ListenConfig struct {
-	Type     string `yaml:"type"      env-default:"port"`
-	BindIP   string `yaml:"bind_ip"   env-default:"127.0.0.1"`
-	BindPort int    `yaml:"bind_port" env-default:"8000"`
+type Log struct {
+	Level string `env-default:"debug" yaml:"level"`
 }
 
-type ListenServers struct {
-	API  ListenConfig `yaml:"api"`
-	Chat ListenConfig `yaml:"chat"`
-}
-
-type AuthConfig struct {
-	SignKey         string        `yaml:"sign_key"          env:"SCHT_AUTH_SIGN_KEY" env-required:"true"`
-	AccessTokenTTL  time.Duration `yaml:"access_token_ttl"  env-default:"15"`
-	RefreshTokenTTL time.Duration `yaml:"refresh_token_ttl" env-default:"43200"`
-}
-
-type PostgresConfig struct {
-	Host                  string        `yaml:"host"     env:"SCHT_PG_HOST"     env-required:"true"`
-	Port                  int           `yaml:"port"     env:"SCHT_PG_PORT"     env-required:"true"`
-	Database              string        `yaml:"database" env:"SCHT_PG_DATABASE" env-required:"true"`
-	Username              string        `yaml:"username" env:"SCHT_PG_USERNAME" env-required:"true"`
-	Password              string        `yaml:"password" env:"SCHT_PG_PASSWORD"`
-	MaxConnectionAttempts int           `yaml:"max_conn_attempts" env-default:"3"`
-	FailedConnectionDelay time.Duration `yaml:"failed_conn_delay" env-default:"5"`
-}
-
-type RedisConfig struct {
-	Host                  string        `yaml:"host"     env:"SCHT_REDIS_HOST"     env-required:"true"`
-	Port                  int           `yaml:"port"     env:"SCHT_REDIS_PORT"     env-required:"true"`
-	Username              string        `yaml:"username" env:"SCHT_REDIS_USERNAME" env-required:"true"`
-	Password              string        `yaml:"password" env:"SCHT_REDIS_PASSWORD"`
-	MaxConnectionAttempts int           `yaml:"max_conn_attempts" env-default:"3"`
-	FailedConnectionDelay time.Duration `yaml:"failed_conn_delay" env-default:"5"`
-}
-
-type Logging struct {
-	Level      string `yaml:"level"       env-default:"debug"`
-	FilePath   string `yaml:"filepath"`
-	Rotate     bool   `yaml:"rotate"`
-	MaxSize    int    `yaml:"max_size"`
-	MaxBackups int    `yaml:"max_backups"`
+type Server struct {
+	Listen       string        `env:"LISTEN"      env-default:":8080"  yaml:"listen"`
+	ReadTimeout  time.Duration `env-default:"15s" yaml:"read_timeout"`
+	WriteTimeout time.Duration `env-default:"15s" yaml:"write_timeout"`
 }
 
 type Cors struct {
-	AllowedOrigins []string `yaml:"allowed_origins" env-default:"*"`
-	MaxAge         int      `yaml:"max_age"`
+	AllowedOrigins []string      `env-default:"*" yaml:"allowed_origins"`
+	MaxAge         time.Duration `yaml:"max_age"`
+}
+
+type Auth struct {
+	Issuer          string        `env-default:"chatyx" yaml:"issuer"`
+	SignKey         string        `env:"SIGN_KEY"       env-required:"true"      yaml:"sign_key"`
+	AccessTokenTTL  time.Duration `env-default:"15m"    yaml:"access_token_ttl"`
+	RefreshTokenTTL time.Duration `env-default:"720h"   yaml:"refresh_token_ttl"`
+}
+
+type Conn struct {
+	Host     string        `env:"HOST"        env-default:"localhost" yaml:"host"`
+	Port     string        `env:"PORT"        env-required:"true"     yaml:"port"`
+	Database string        `env:"DB"          env-required:"true"     yaml:"database"`
+	User     string        `env:"USER"        env-required:"true"     yaml:"user"`
+	Password string        `env:"PASSWORD"    yaml:"password"`
+	Timeout  time.Duration `env-default:"15s" yaml:"timeout"`
+}
+
+type Postgres struct {
+	Conn            `yaml:"conn"`
+	MaxOpenConns    int           `yaml:"max_open_conns"`
+	MinOpenConns    int           `yaml:"min_open_conns"`
+	ConnMaxIdleTime time.Duration `yaml:"conn_max_idle_time"`
+	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime"`
+}
+
+type Redis struct {
+	Conn `yaml:"conn"`
 }
 
 type Config struct {
-	IsDebug  bool           `yaml:"is_debug" env-default:"false"`
-	Domain   string         `yaml:"domain"   env-required:"true"`
-	Listen   ListenServers  `yaml:"listen"`
-	Auth     AuthConfig     `yaml:"auth"`
-	Postgres PostgresConfig `yaml:"postgres"`
-	Redis    RedisConfig    `yaml:"redis"`
-	Logging  Logging        `yaml:"logging"`
-	Cors     Cors           `yaml:"cors"`
-}
-
-var (
-	cfg  *Config
-	once sync.Once
-)
-
-func GetConfig(path string) *Config {
-	once.Do(func() {
-		cfg = &Config{}
-
-		if _, err := os.Stat(envFilePath); err == nil {
-			if err = godotenv.Load(envFilePath); err != nil {
-				panic(fmt.Sprintf("Failed to loading env variable from %s file: %v", envFilePath, err))
-			}
-		}
-
-		if err := cleanenv.ReadConfig(path, cfg); err != nil {
-			panic(fmt.Sprintf("Failed to reading config file %s: %v", path, err))
-		}
-
-		cfg.Auth.AccessTokenTTL *= time.Minute
-		cfg.Auth.RefreshTokenTTL *= time.Minute
-		cfg.Postgres.FailedConnectionDelay *= time.Second
-		cfg.Redis.FailedConnectionDelay *= time.Second
-	})
-
-	return cfg
-}
-
-func (c *Config) DBConnectionURL() string {
-	pgCfg := c.Postgres
-
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		pgCfg.Username, pgCfg.Password, pgCfg.Host, pgCfg.Port, pgCfg.Database,
-	)
+	Domain   string   `env-default:"localhost" yaml:"domain"`
+	Debug    bool     `yaml:"debug"`
+	Log      Log      `yaml:"log"`
+	API      Server   `env-prefix:"API_"       yaml:"api"`
+	Chat     Server   `env-prefix:"CHAT_"      yaml:"chat"`
+	Cors     Cors     `yaml:"cors"`
+	Auth     Auth     `yaml:"auth"`
+	Postgres Postgres `env-prefix:"POSTGRES_"  yaml:"postgres"`
+	Redis    Redis    `env-prefix:"REDIS_"     yaml:"redis"`
 }

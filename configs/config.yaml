@@ -1,0 +1,46 @@
+domain: localhost
+debug: true
+
+log:
+  level: debug
+
+api:
+  listen: ":8080" # env: API_LISTEN
+  read_timeout: 15s
+  write_timeout: 15s
+
+chat:
+  listen: ":8081" # env: CHAT_LISTEN
+  read_timeout: 15s
+  write_timeout: 15s
+
+cors:
+  allowed_origins:
+    - http://127.0.0.1:3000
+    - http://localhost:3000
+  max_age: 10m
+
+auth:
+  issuer: chatyx
+  sign_key: xNN3f9M9vZLtqHJwX2wtTbCBMpR # env: SIGN_KEY
+  access_token_ttl: 15m
+  refresh_token_ttl: 720h # 30 days
+
+postgres:
+  conn:
+    host: localhost # env: POSTGRES_HOST
+    port: 5432 # env: POSTGRES_PORT
+    database: chatyx_db # env: POSTGRES_DB
+    user: chatyx_user # env: POSTGRES_USER
+    password: chatyx_password # env: POSTGRES_PASSWORD
+  max_open_conns: 10
+  min_open_conns: 10
+  conn_max_idle_time: 5m
+
+redis:
+  conn:
+    host: localhost # env: REDIS_HOST
+    port: 6379 # env: REDIS_PORT
+    database: 1 # env: REDIS_DB
+    user: default # env: REDIS_USER
+    password: "" # env: REDIS_PASSWORD

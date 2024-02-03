@@ -1,0 +1,1114 @@
+basePath: /api/v1
+definitions:
+  entity.GroupParticipantStatus:
+    enum:
+    - joined
+    - kicked
+    - left
+    type: string
+    x-enum-varnames:
+    - JoinedStatus
+    - KickedStatus
+    - LeftStatus
+  http.Credentials:
+    properties:
+      password:
+        maxLength: 27
+        minLength: 8
+        type: string
+      username:
+        maxLength: 50
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  http.RefreshToken:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  http.TokenPair:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  httputil.Error:
+    properties:
+      code:
+        type: string
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        type: string
+    type: object
+  v1.Dialog:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_blocked:
+        type: boolean
+      partner:
+        $ref: '#/definitions/v1.DialogPartner'
+    type: object
+  v1.DialogCreate:
+    properties:
+      partner:
+        properties:
+          user_id:
+            type: integer
+        required:
+        - user_id
+        type: object
+    type: object
+  v1.DialogList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.Dialog'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.DialogPartner:
+    properties:
+      is_blocked:
+        type: boolean
+      user_id:
+        type: integer
+    type: object
+  v1.DialogUpdate:
+    properties:
+      partner:
+        properties:
+          is_blocked:
+            type: boolean
+        type: object
+    type: object
+  v1.Group:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  v1.GroupCreate:
+    properties:
+      description:
+        maxLength: 10000
+        type: string
+      name:
+        maxLength: 255
+        type: string
+    required:
+    - name
+    type: object
+  v1.GroupList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.Group'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.GroupParticipant:
+    properties:
+      is_admin:
+        type: boolean
+      status:
+        $ref: '#/definitions/entity.GroupParticipantStatus'
+      user_id:
+        type: integer
+    type: object
+  v1.GroupParticipantList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.GroupParticipant'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.GroupParticipantUpdate:
+    properties:
+      status:
+        enum:
+        - joined
+        - left
+        - kicked
+        type: string
+    type: object
+  v1.GroupUpdate:
+    properties:
+      description:
+        maxLength: 10000
+        type: string
+      name:
+        maxLength: 255
+        type: string
+    required:
+    - name
+    type: object
+  v1.Message:
+    properties:
+      content:
+        type: string
+      content_type:
+        type: string
+      delivered_at:
+        type: string
+      id:
+        type: integer
+      is_service:
+        type: boolean
+      sender_id:
+        type: integer
+      sent_at:
+        type: string
+    type: object
+  v1.MessageCreate:
+    properties:
+      content:
+        maxLength: 2000
+        type: string
+      content_type:
+        enum:
+        - text
+        - image
+        type: string
+    required:
+    - content
+    - content_type
+    type: object
+  v1.MessageList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.Message'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.User:
+    properties:
+      bio:
+        type: string
+      birth_date:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      username:
+        type: string
+    type: object
+  v1.UserCreate:
+    properties:
+      bio:
+        maxLength: 10000
+        type: string
+      birth_date:
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      first_name:
+        maxLength: 50
+        type: string
+      last_name:
+        maxLength: 50
+        type: string
+      password:
+        maxLength: 27
+        minLength: 8
+        type: string
+      username:
+        maxLength: 50
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  v1.UserList:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/v1.User'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.UserUpdate:
+    properties:
+      bio:
+        maxLength: 10000
+        type: string
+      birth_date:
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      first_name:
+        maxLength: 50
+        type: string
+      last_name:
+        maxLength: 50
+        type: string
+      username:
+        maxLength: 50
+        type: string
+    required:
+    - email
+    - username
+    type: object
+  v1.UserUpdatePassword:
+    properties:
+      current_password:
+        maxLength: 27
+        minLength: 8
+        type: string
+      new_password:
+        maxLength: 27
+        minLength: 8
+        type: string
+    required:
+    - current_password
+    - new_password
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: mortalis94@gmail.com
+    name: Pavel Korchagin
+  description: REST API for Chatyx backend application
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit/
+  title: Chatyx REST API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Direct authentication by username and password. Successful
+      parameters:
+      - description: Fingerprint header
+        in: header
+        name: X-Fingerprint
+        required: true
+        type: string
+      - description: Credentials body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/http.Credentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.TokenPair'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: User authentication
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Invalidate session by removing refresh token
+      parameters:
+      - description: Refresh token body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/http.RefreshToken'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: User logout
+      tags:
+      - auth
+  /auth/refresh-tokens:
+    post:
+      consumes:
+      - application/json
+      description: Allows to get a pair of tokens (access and refresh)  by exchanging
+        an existing token.
+      parameters:
+      - description: Fingerprint header
+        in: header
+        name: X-Fingerprint
+        required: true
+        type: string
+      - description: Refresh token body
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/http.RefreshToken'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.TokenPair'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Refresh access and refresh token
+      tags:
+      - auth
+  /dialogs:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.DialogList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: List all dialogs
+      tags:
+      - dialogs
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Body to create
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.DialogCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.Dialog'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Create a dialog with a specified partner
+      tags:
+      - dialogs
+  /dialogs/{dialog_id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dialog identity
+        in: path
+        name: dialog_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Dialog'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Get a specified dialog
+      tags:
+      - dialogs
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dialog identity
+        in: path
+        name: dialog_id
+        required: true
+        type: integer
+      - description: Body to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.DialogUpdate'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Update a specified dialog
+      tags:
+      - dialogs
+  /groups:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.GroupList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: List all groups
+      tags:
+      - groups
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Body to create
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.GroupCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.Group'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Create a group
+      tags:
+      - groups
+  /groups/{group_id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Delete a specified group
+      tags:
+      - groups
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Group'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Get a specified group
+      tags:
+      - groups
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      - description: Body to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.GroupUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Group'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Update a specified group
+      tags:
+      - groups
+  /groups/{group_id}/participants:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.GroupParticipantList'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: List all participants for a specified group
+      tags:
+      - group-participants
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      - description: User identity to invite
+        in: query
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.GroupParticipant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Invite a specified participant in a group
+      tags:
+      - group-participants
+  /groups/{group_id}/participants/{user_id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      - description: User identity
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.GroupParticipant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Get a specified participant in a group
+      tags:
+      - group-participants
+    patch:
+      consumes:
+      - application/json
+      description: It can be used to join/kick/leave participant from the group.
+      parameters:
+      - description: Group identity
+        in: path
+        name: group_id
+        required: true
+        type: integer
+      - description: User identity
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Body to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.GroupParticipantUpdate'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Update a specified participant in a group
+      tags:
+      - group-participants
+  /messages:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chat id for dialog or group
+        in: query
+        name: chat_id
+        required: true
+        type: integer
+      - description: Chat type (dialog or group)
+        in: query
+        name: chat_type
+        required: true
+        type: string
+      - description: Message id that excludes already-retrieved messages
+        in: query
+        name: id_after
+        type: integer
+      - description: 'Number of items to list per page (default: 20, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: Sort order (asc or desc)
+        in: query
+        name: sort
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.MessageList'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: List messages for a specified chat
+      tags:
+      - messages
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chat id for dialog or group
+        in: query
+        name: chat_id
+        required: true
+        type: integer
+      - description: Chat type (dialog or group)
+        in: query
+        name: chat_type
+        required: true
+        type: string
+      - description: Body to create
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.MessageCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Send message to the specified chat
+      tags:
+      - messages
+  /users:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.UserList'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: List all existing users
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Body to create
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UserCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/v1.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      summary: Create a new user
+      tags:
+      - users
+  /users/{user_id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: User identity
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Get a specified user
+      tags:
+      - users
+  /users/me:
+    delete:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Delete the current authenticated user
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Body to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UserUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Update information about the current authenticated user
+      tags:
+      - users
+  /users/me/password:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Body to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UserUpdatePassword'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputil.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputil.Error'
+      security:
+      - JWTAuth: []
+      summary: Update the current authenticated user's password
+      tags:
+      - users
+securityDefinitions:
+  JWTAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
