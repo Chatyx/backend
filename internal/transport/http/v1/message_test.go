@@ -11,6 +11,7 @@ import (
 	"github.com/Chatyx/backend/internal/dto"
 	"github.com/Chatyx/backend/internal/entity"
 	"github.com/Chatyx/backend/pkg/validator"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
