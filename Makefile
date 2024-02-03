@@ -3,7 +3,7 @@ PROJECT_BUILD = ${PROJECT_DIR}/build
 PROJECT_BIN = ${PROJECT_DIR}/bin
 $(shell [ -f bin ] || mkdir -p ${PROJECT_BIN})
 
-BINARY_NAME = chatyx
+BINARY_NAME = chatyx-backend
 BRANCH_NAME = $(shell git name-rev --name-only HEAD)
 COMMIT_HASH = $(shell git rev-parse --short HEAD)
 BUILD_TIMESTAMP = $(shell date +"%Y-%m-%d:T%H:%M:%S")
@@ -53,7 +53,7 @@ swagger: .install-swagger
 
 .PHONY: build
 build:
-	go build -ldflags="${LDFLAGS}" -o ${PROJECT_BUILD}/${BINARY_NAME} ./cmd/chatyx-backend
+	go build -ldflags="${LDFLAGS}" -o ${PROJECT_BUILD}/${BINARY_NAME} ./cmd/${BINARY_NAME}
 
 .PHONY: generate
 generate: .install-mockery
@@ -87,4 +87,5 @@ migrate.down: .install-migrate
 
 .PHONY: clean
 clean:
+	rm -rf ${PROJECT_BUILD} || true
 	rm -rf ${PROJECT_BIN} || true
