@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS users
     last_name  VARCHAR(50)              NULL,
     birth_date DATE                     NULL,
     bio        VARCHAR(10000)           NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE NULL,
     deleted_at TIMESTAMP WITH TIME ZONE NULL
 );
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS chats
     uname       VARCHAR(255) UNIQUE      NULL,
     name        VARCHAR(255)             NULL,
     description VARCHAR(10000)           NULL,
-    created_at  TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at  TIMESTAMP WITH TIME ZONE NULL
 );
 
@@ -93,8 +93,8 @@ CREATE TABLE IF NOT EXISTS messages
     chat_type    chat_type                NOT NULL,
     content      VARCHAR(2000)            NOT NULL,
     content_type content_type             NOT NULL,
-    is_service   BOOLEAN DEFAULT FALSE,
-    sent_at      TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_service   BOOLEAN                           DEFAULT FALSE,
+    sent_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     delivered_at TIMESTAMP WITH TIME ZONE
 );
 
