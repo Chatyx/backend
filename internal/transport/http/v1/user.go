@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/Chatyx/backend/internal/dto"
@@ -24,7 +23,7 @@ const (
 )
 
 const (
-	userIDPathParam = "user_id"
+	userIDParam = "user_id"
 )
 
 type User struct {
@@ -199,7 +198,8 @@ func (uc *UserController) create(w http.ResponseWriter, req *http.Request) {
 
 	var bodyObj UserCreate
 
-	if err := httputil.DecodeBody(req.Body, &bodyObj); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Body(&bodyObj); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -246,9 +246,11 @@ func (uc *UserController) create(w http.ResponseWriter, req *http.Request) {
 func (uc *UserController) detail(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
-	userID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(userIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
+	var userID int
+
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Path(userIDParam, &userID, nil); err != nil {
+		httputil.RespondError(ctx, w, err)
 		return
 	}
 
@@ -285,7 +287,8 @@ func (uc *UserController) update(w http.ResponseWriter, req *http.Request) {
 
 	var bodyObj UserUpdate
 
-	if err := httputil.DecodeBody(req.Body, &bodyObj); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Body(&bodyObj); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -337,14 +340,15 @@ func (uc *UserController) update(w http.ResponseWriter, req *http.Request) {
 func (uc *UserController) updatePassword(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
-	var obj UserUpdatePassword
+	var bodyObj UserUpdatePassword
 
-	if err := httputil.DecodeBody(req.Body, &obj); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Body(&bodyObj); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
 
-	if err := uc.validator.Struct(obj); err != nil {
+	if err := uc.validator.Struct(bodyObj); err != nil {
 		ve := validator.Error{}
 		if errors.As(err, &ve) {
 			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
@@ -357,8 +361,8 @@ func (uc *UserController) updatePassword(w http.ResponseWriter, req *http.Reques
 
 	err := uc.service.UpdatePassword(ctx, dto.UserUpdatePassword{
 		UserID:      ctxutil.UserIDFromContext(ctx).ToInt(),
-		CurPassword: obj.Current,
-		NewPassword: obj.New,
+		CurPassword: bodyObj.Current,
+		NewPassword: bodyObj.New,
 	})
 	if err != nil {
 		switch {

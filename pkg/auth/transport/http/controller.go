@@ -140,7 +140,8 @@ func (c *Controller) login(w http.ResponseWriter, req *http.Request) {
 
 	var dto Credentials
 
-	if err := httputil.DecodeBody(req.Body, &dto); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Body(&dto); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -216,11 +217,12 @@ func (c *Controller) logout(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
 	var dto RefreshToken
+	dec := httputil.NewRequestDecoder(req)
 
 	cookie, err := req.Cookie(c.rtc.Name)
 	if err == nil {
 		dto.Token = cookie.Value
-	} else if err = httputil.DecodeBody(req.Body, &dto); err != nil {
+	} else if err = dec.Body(&dto); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -276,11 +278,12 @@ func (c *Controller) refreshTokens(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
 	var dto RefreshToken
+	dec := httputil.NewRequestDecoder(req)
 
 	cookie, err := req.Cookie(c.rtc.Name)
 	if err == nil {
 		dto.Token = cookie.Value
-	} else if err = httputil.DecodeBody(req.Body, &dto); err != nil {
+	} else if err = dec.Body(&dto); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}

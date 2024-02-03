@@ -3,7 +3,6 @@ package httputil
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -16,15 +15,6 @@ const (
 	decodePathSource   = "path"
 	decodeHeaderSource = "header"
 )
-
-func DecodeBody(r io.ReadCloser, v any) error {
-	defer r.Close()
-
-	if err := json.NewDecoder(r).Decode(v); err != nil {
-		return ErrDecodeBodyFailed.Wrap(err)
-	}
-	return nil
-}
 
 type RequestDecoder struct {
 	req *http.Request

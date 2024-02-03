@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/Chatyx/backend/internal/entity"
 	"github.com/Chatyx/backend/pkg/httputil"
@@ -104,9 +103,12 @@ func (pc *GroupParticipantController) Register(mux *httprouter.Router) {
 //	@Router		/groups/{group_id}/participants  [get]
 func (pc *GroupParticipantController) list(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	groupID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(groupIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
+
+	var groupID int
+
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Path(groupIDParam, &groupID, nil); err != nil {
+		httputil.RespondError(ctx, w, err)
 		return
 	}
 
@@ -142,14 +144,18 @@ func (pc *GroupParticipantController) list(w http.ResponseWriter, req *http.Requ
 //	@Router		/groups/{group_id}/participants  [post]
 func (pc *GroupParticipantController) invite(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	groupID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(groupIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
-		return
-	}
-	userID, err := strconv.Atoi(req.URL.Query().Get(userIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodeQueryParamsFailed.Wrap(err))
+
+	var (
+		groupID int
+		userID  int
+	)
+
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.MergeResults(
+		dec.Path(groupIDParam, &groupID, nil),
+		dec.Query(userIDParam, &userID, nil),
+	); err != nil {
+		httputil.RespondError(ctx, w, err)
 		return
 	}
 
@@ -190,14 +196,18 @@ func (pc *GroupParticipantController) invite(w http.ResponseWriter, req *http.Re
 //	@Router		/groups/{group_id}/participants/{user_id}  [get]
 func (pc *GroupParticipantController) detail(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	groupID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(groupIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
-		return
-	}
-	userID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(userIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
+
+	var (
+		groupID int
+		userID  int
+	)
+
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.MergeResults(
+		dec.Path(groupIDParam, &groupID, nil),
+		dec.Path(userIDParam, &userID, nil),
+	); err != nil {
+		httputil.RespondError(ctx, w, err)
 		return
 	}
 
@@ -237,25 +247,24 @@ func (pc *GroupParticipantController) detail(w http.ResponseWriter, req *http.Re
 //	@Router			/groups/{group_id}/participants/{user_id}  [patch]
 func (pc *GroupParticipantController) update(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	groupID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(groupIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
-		return
-	}
-	userID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(userIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
-		return
-	}
 
-	var bodyObj GroupParticipantUpdate
+	var (
+		groupID int
+		userID  int
+		bodyObj GroupParticipantUpdate
+	)
 
-	if err = httputil.DecodeBody(req.Body, &bodyObj); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.MergeResults(
+		dec.Path(groupIDParam, &groupID, nil),
+		dec.Path(userIDParam, &userID, nil),
+		dec.Body(&bodyObj),
+	); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
 
-	if err = pc.validator.Struct(bodyObj); err != nil {
+	if err := pc.validator.Struct(bodyObj); err != nil {
 		ve := validator.Error{}
 		if errors.As(err, &ve) {
 			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
@@ -271,7 +280,7 @@ func (pc *GroupParticipantController) update(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	err = pc.service.UpdateStatus(ctx, groupID, userID, entity.GroupParticipantStatus(*bodyObj.Status))
+	err := pc.service.UpdateStatus(ctx, groupID, userID, entity.GroupParticipantStatus(*bodyObj.Status))
 	if err != nil {
 		switch {
 		case errors.Is(err, entity.ErrGroupNotFound):

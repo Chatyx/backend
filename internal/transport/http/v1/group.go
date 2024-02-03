@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/Chatyx/backend/internal/dto"
@@ -22,7 +21,7 @@ const (
 )
 
 const (
-	groupIDPathParam = "group_id"
+	groupIDParam = "group_id"
 )
 
 type Group struct {
@@ -158,7 +157,8 @@ func (gc *GroupController) create(w http.ResponseWriter, req *http.Request) {
 
 	var bodyObj GroupCreate
 
-	if err := httputil.DecodeBody(req.Body, &bodyObj); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Body(&bodyObj); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -198,9 +198,12 @@ func (gc *GroupController) create(w http.ResponseWriter, req *http.Request) {
 //	@Router		/groups/{group_id}  [get]
 func (gc *GroupController) detail(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	groupID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(groupIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
+
+	var groupID int
+
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Path(groupIDParam, &groupID, nil); err != nil {
+		httputil.RespondError(ctx, w, err)
 		return
 	}
 
@@ -235,20 +238,22 @@ func (gc *GroupController) detail(w http.ResponseWriter, req *http.Request) {
 //	@Router		/groups/{group_id}  [put]
 func (gc *GroupController) update(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	groupID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(groupIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
-		return
-	}
 
-	var bodyObj GroupUpdate
+	var (
+		groupID int
+		bodyObj GroupUpdate
+	)
 
-	if err = httputil.DecodeBody(req.Body, &bodyObj); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.MergeResults(
+		dec.Path(groupIDParam, &groupID, nil),
+		dec.Body(&bodyObj),
+	); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
 
-	if err = gc.validator.Struct(bodyObj); err != nil {
+	if err := gc.validator.Struct(bodyObj); err != nil {
 		ve := validator.Error{}
 		if errors.As(err, &ve) {
 			httputil.RespondError(ctx, w, httputil.ErrValidationFailed.WithData(ve.Fields).Wrap(err))
@@ -292,13 +297,16 @@ func (gc *GroupController) update(w http.ResponseWriter, req *http.Request) {
 //	@Router		/groups/{group_id}  [delete]
 func (gc *GroupController) delete(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	groupID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(groupIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
+
+	var groupID int
+
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Path(groupIDParam, &groupID, nil); err != nil {
+		httputil.RespondError(ctx, w, err)
 		return
 	}
 
-	if err = gc.service.Delete(ctx, groupID); err != nil {
+	if err := gc.service.Delete(ctx, groupID); err != nil {
 		switch {
 		case errors.Is(err, entity.ErrGroupNotFound):
 			httputil.RespondError(ctx, w, errGroupNotFound.Wrap(err))

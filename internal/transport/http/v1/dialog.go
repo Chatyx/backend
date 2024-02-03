@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/Chatyx/backend/internal/dto"
@@ -22,7 +21,7 @@ const (
 )
 
 const (
-	dialogIDPathParam = "dialog_id"
+	dialogIDParam = "dialog_id"
 )
 
 type DialogPartner struct {
@@ -162,7 +161,8 @@ func (dc *DialogController) create(w http.ResponseWriter, req *http.Request) {
 
 	var bodyObj DialogCreate
 
-	if err := httputil.DecodeBody(req.Body, &bodyObj); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Body(&bodyObj); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -212,9 +212,12 @@ func (dc *DialogController) create(w http.ResponseWriter, req *http.Request) {
 //	@Router		/dialogs/{dialog_id}  [get]
 func (dc *DialogController) detail(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	dialogID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(dialogIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
+
+	var dialogID int
+
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.Path(dialogIDParam, &dialogID, nil); err != nil {
+		httputil.RespondError(ctx, w, err)
 		return
 	}
 
@@ -249,15 +252,17 @@ func (dc *DialogController) detail(w http.ResponseWriter, req *http.Request) {
 //	@Router		/dialogs/{dialog_id}  [patch]
 func (dc *DialogController) update(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	dialogID, err := strconv.Atoi(httprouter.ParamsFromContext(ctx).ByName(dialogIDPathParam))
-	if err != nil {
-		httputil.RespondError(ctx, w, httputil.ErrDecodePathParamsFailed.Wrap(err))
-		return
-	}
 
-	var bodyObj DialogUpdate
+	var (
+		dialogID int
+		bodyObj  DialogUpdate
+	)
 
-	if err = httputil.DecodeBody(req.Body, &bodyObj); err != nil {
+	dec := httputil.NewRequestDecoder(req)
+	if err := dec.MergeResults(
+		dec.Path(dialogIDParam, &dialogID, nil),
+		dec.Body(&bodyObj),
+	); err != nil {
 		httputil.RespondError(ctx, w, err)
 		return
 	}
@@ -265,7 +270,7 @@ func (dc *DialogController) update(w http.ResponseWriter, req *http.Request) {
 	obj := bodyObj.DTO()
 	obj.ID = dialogID
 
-	err = dc.service.Update(ctx, obj)
+	err := dc.service.Update(ctx, obj)
 	if err != nil {
 		switch {
 		case errors.Is(err, entity.ErrDialogNotFound):
