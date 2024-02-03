@@ -3,9 +3,7 @@
 ![ci](https://github.com/Mort4lis/scht-backend/actions/workflows/main.yml/badge.svg)
 ![license](https://img.shields.io/github/license/Chatyx/backend)
 ![go-version](https://img.shields.io/github/go-mod/go-version/Chatyx/backend)
-![docker-pulls](https://img.shields.io/docker/pulls/mortalis/chatyx-backend)
-![code-size](https://img.shields.io/github/languages/code-size/Chatyx/backend)
-![total-lines](https://img.shields.io/tokei/lines/github/Chatyx/backend)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Chatyx/backend)](https://goreportcard.com/report/github.com/Chatyx/backend)
 
 ## 📖 Description
 
@@ -22,6 +20,7 @@ Already done:
 * ✅ Block partners in dialogs 
 
 Not done yet:
+* ❌ Support uploading images
 * ❌ View unread messages
 * ❌ Show online/offline statuses of users, as well as when the user was last online
 * ❌ Notifications if user isn't online
