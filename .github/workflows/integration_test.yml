@@ -1,0 +1,50 @@
+name: Integration test
+
+on:
+  workflow_call:
+
+jobs:
+  integration_test:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Moscow
+      DB_USER: chatyx_user
+      DB_PASSWORD: chatyx_password
+      DB_NAME: chatyx_db_test
+
+    services:
+      postgres:
+        image: postgres:15.4
+        env:
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DB_NAME }}
+        options: >-
+          --health-cmd "pg_isready"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 15432:5432
+
+      redis:
+        image: redis:7.2
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 16379:6379
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.21
+
+      - name: Run test
+        run: go test -v ./test/... -run TestAppTestSuite
