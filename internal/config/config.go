@@ -51,8 +51,8 @@ type Config struct {
 	Domain   string   `env-default:"localhost" yaml:"domain"`
 	Debug    bool     `yaml:"debug"`
 	Log      Log      `yaml:"log"`
-	API      Server   `yaml:"api"`
-	Chat     Server   `yaml:"chat"`
+	API      Server   `env-prefix:"API_"       yaml:"api"`
+	Chat     Server   `env-prefix:"CHAT_"      yaml:"chat"`
 	Cors     Cors     `yaml:"cors"`
 	Auth     Auth     `yaml:"auth"`
 	Postgres Postgres `env-prefix:"POSTGRES_"  yaml:"postgres"`
