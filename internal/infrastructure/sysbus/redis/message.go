@@ -35,8 +35,7 @@ func (ps *MessagePublishSubscriber) Publish(ctx context.Context, message entity.
 	return nil
 }
 
-//nolint:ireturn // that's a factory
-func (ps *MessagePublishSubscriber) Subscribe(ctx context.Context, chatIDs ...entity.ChatID) service.MessageConsumer {
+func (ps *MessagePublishSubscriber) Subscribe(ctx context.Context, chatIDs ...entity.ChatID) service.MessageConsumer { //nolint:ireturn,lll // that's a factory
 	channels := chatChannelNames(chatIDs...)
 	return &MessageConsumer{
 		pubSub: ps.cli.Subscribe(ctx, channels...),
