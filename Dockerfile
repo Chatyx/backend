@@ -16,8 +16,8 @@ RUN go mod download
 # Copy application files to the working directory
 COPY . ./
 
-# Build application
-RUN make build PROJECT_BUILD=.
+# Build application and tools
+RUN make build PROJECT_BUILD=. && make .install-migrate
 
 
 FROM alpine:3.18
@@ -28,13 +28,14 @@ WORKDIR /chatyx-backend
 # Copy built binaries, configs and migrations from builder to the /chatyx-backend directory
 COPY --from=builder /chatyx-backend/db/migrations ./db/migrations
 COPY --from=builder /chatyx-backend/configs ./configs
-COPY --from=builder /chatyx-backend/chatyx ./
+COPY --from=builder /chatyx-backend/chatyx-backend ./
+COPY --from=builder /chatyx-backend/bin/migrate ./
 
 # Define volumes
 VOLUME ./configs
 
 # Expose ports
-EXPOSE 8000 8080
+EXPOSE 8080 8081
 
 # Execute built binary
-CMD ./chatyx
+CMD ./chatyx-backend
