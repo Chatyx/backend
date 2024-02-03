@@ -30,7 +30,10 @@ func (r *MessageRepository) List(ctx context.Context, obj dto.MessageList) ([]en
 	b := builder.Select("id", "sender_id", "chat_id", "chat_type",
 		"content", "content_type", "is_service", "sent_at", "delivered_at").
 		From("messages").
-		Where(sq.Eq{"chat_id": obj.ChatID.ID, "chat_type": obj.ChatID.Type})
+		Where(sq.And{
+			sq.Eq{"chat_id": obj.ChatID.ID},
+			sq.Eq{"chat_type": obj.ChatID.Type},
+		})
 
 	if obj.Sort == dto.DescSort {
 		if obj.IDAfter == 0 {
