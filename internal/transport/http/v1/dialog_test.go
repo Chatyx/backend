@@ -238,7 +238,7 @@ func TestDialogController_detail(t *testing.T) {
 			name:                 "Decode path param error",
 			dialogIDPathParam:    uuid.New().String(),
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"decode path params error"}`,
+			expectedResponseBody: `{"code":"CM0003","message":"decode path params error","data":{"dialog_id":"failed to parse int"}}`,
 		},
 		{
 			name:              "Dialog is not found",
@@ -318,7 +318,7 @@ func TestDialogController_update(t *testing.T) {
 			name:                 "Decode path param error",
 			dialogIDPathParam:    uuid.New().String(),
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"decode path params error"}`,
+			expectedResponseBody: `{"code":"CM0003","message":"decode path params error","data":{"dialog_id":"failed to parse int"}}`,
 		},
 		{
 			name:                 "Decode body error",

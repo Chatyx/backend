@@ -68,7 +68,7 @@ func TestGroupParticipantController_list(t *testing.T) {
 			name:                 "Decode path param error",
 			groupIDPathParam:     uuid.New().String(),
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"decode path params error"}`,
+			expectedResponseBody: `{"code":"CM0003","message":"decode path params error","data":{"group_id":"failed to parse int"}}`,
 		},
 		{
 			name:             "Group is not found",
@@ -152,14 +152,14 @@ func TestGroupParticipantController_invite(t *testing.T) {
 			groupIDPathParam:     uuid.New().String(),
 			userIDQueryParam:     "2",
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"decode path params error"}`,
+			expectedResponseBody: `{"code":"CM0003","message":"decode path params error","data":{"group_id":"failed to parse int"}}`,
 		},
 		{
 			name:                 "Decode query param error",
 			groupIDPathParam:     "1",
 			userIDQueryParam:     uuid.New().String(),
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0005","message":"decode query params error"}`,
+			expectedResponseBody: `{"code":"CM0005","message":"decode query params error","data":{"user_id":"failed to parse int"}}`,
 		},
 		{
 			name:             "Group is not found",
@@ -279,14 +279,14 @@ func TestGroupParticipantController_detail(t *testing.T) {
 			groupIDPathParam:     uuid.New().String(),
 			userIDPathParam:      "2",
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"decode path params error"}`,
+			expectedResponseBody: `{"code":"CM0003","message":"decode path params error","data":{"group_id":"failed to parse int"}}`,
 		},
 		{
 			name:                 "Decode user_id path param error",
 			groupIDPathParam:     "1",
 			userIDPathParam:      uuid.New().String(),
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"decode path params error"}`,
+			expectedResponseBody: `{"code":"CM0003","message":"decode path params error","data":{"user_id":"failed to parse int"}}`,
 		},
 		{
 			name:             "Group is not found",
@@ -389,7 +389,7 @@ func TestGroupParticipantController_update(t *testing.T) {
 			userIDPathParam:      "2",
 			requestBody:          `{"status":"kicked"}`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"decode path params error"}`,
+			expectedResponseBody: `{"code":"CM0003","message":"decode path params error","data":{"group_id":"failed to parse int"}}`,
 		},
 		{
 			name:                 "Decode user_id path param error",
@@ -397,7 +397,7 @@ func TestGroupParticipantController_update(t *testing.T) {
 			userIDPathParam:      uuid.New().String(),
 			requestBody:          `{"status":"kicked"}`,
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"decode path params error"}`,
+			expectedResponseBody: `{"code":"CM0003","message":"decode path params error","data":{"user_id":"failed to parse int"}}`,
 		},
 		{
 			name:                 "Decode body error",

@@ -288,7 +288,7 @@ func TestUserController_detail(t *testing.T) {
 			name:                 "Decode path param error",
 			userIDPathParam:      uuid.New().String(),
 			expectedStatusCode:   http.StatusBadRequest,
-			expectedResponseBody: `{"code":"CM0003","message":"decode path params error"}`,
+			expectedResponseBody: `{"code":"CM0003","message":"decode path params error","data":{"user_id":"failed to parse int"}}`,
 		},
 		{
 			name:            "User is not found",
