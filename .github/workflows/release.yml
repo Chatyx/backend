@@ -7,3 +7,6 @@ on:
 jobs:
   publish:
     uses: ./.github/workflows/publish.yml
+    secrets:
+      username: ${{ secrets.DOCKER_USERNAME }}
+      password: ${{ secrets.DOCKER_PASSWORD }}
